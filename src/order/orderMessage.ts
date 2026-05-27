@@ -3,8 +3,15 @@ export const ORDER_RAW_REQUEST_OPEN_TAG = '<raw_request>'
 export const ORDER_RAW_REQUEST_CLOSE_TAG = '</raw_request>'
 export const ORDER_RAW_REQUEST_MAX_CHARS = 4000
 
-const ORDER_PREFIX_RE = /^\s*\[ORDER\]\s*/i
-const RAW_REQUEST_BLOCK_RE = /<raw_request>\s*\n?([\s\S]*?)\n?\s*<\/raw_request>/i
+export const ORDER_PREFIX_RE = /^\s*\[ORDER\]\s*/i
+export const RAW_REQUEST_BLOCK_RE =
+  /<raw_request>\s*\n?([\s\S]*?)\n?\s*<\/raw_request>/i
+export const ORDER_METADATA_TXID_RE = /^txid:\s*(.+)$/im
+export const ORDER_METADATA_ORDER_ID_RE = /^order id:\s*(.+)$/im
+export const ORDER_METADATA_SERVICE_ID_RE = /^service id:\s*(.+)$/im
+export const ORDER_METADATA_SKILL_NAME_RE = /^skill name:\s*(.+)$/im
+export const ORDER_METADATA_OUTPUT_TYPE_RE = /^output type:\s*(.+)$/im
+export const ORDER_PRICE_LINE_RE = /^支付金额\s+(\S+)\s+(\S+)\s*$/im
 
 function normalizeMultilineText(value: unknown): string {
   return typeof value === 'string' ? value.replace(/\r\n?/g, '\n').trim() : ''
@@ -124,6 +131,12 @@ export function normalizeOrderRawRequest(value: unknown): string {
 export function extractOrderRawRequest(plaintext: string): string {
   const source = String(plaintext || '').replace(/\r\n?/g, '\n')
   const match = source.match(RAW_REQUEST_BLOCK_RE)
+  return match?.[1] ? match[1].trim() : ''
+}
+
+export function extractMetadataLine(plaintext: string, pattern: RegExp): string {
+  const source = String(plaintext || '').replace(/\r\n?/g, '\n')
+  const match = source.match(pattern)
   return match?.[1] ? match[1].trim() : ''
 }
 

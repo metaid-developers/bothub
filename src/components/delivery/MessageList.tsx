@@ -3,13 +3,13 @@ import type { DeliveryMessage } from '@/delivery/messageStore'
 import { MessageBubble } from './MessageBubble'
 
 export interface MessageListProps {
-  peerGlobalMetaId: string | null
+  sessionKey: string | null
   messages: DeliveryMessage[]
   selfGlobalMetaId: string
 }
 
 export function MessageList({
-  peerGlobalMetaId,
+  sessionKey,
   messages,
   selfGlobalMetaId,
 }: MessageListProps) {
@@ -17,9 +17,9 @@ export function MessageList({
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [peerGlobalMetaId, messages.length])
+  }, [sessionKey, messages.length])
 
-  if (!peerGlobalMetaId) {
+  if (!sessionKey) {
     return (
       <div className="flex h-full min-h-[320px] items-center justify-center rounded-card border border-dashed border-hub-border bg-hub-surface/40 p-6 text-sm text-hub-muted">
         Select a session to view messages
@@ -30,7 +30,7 @@ export function MessageList({
   if (messages.length === 0) {
     return (
       <div className="flex h-full min-h-[320px] items-center justify-center rounded-card border border-hub-border bg-hub-surface/40 p-6 text-sm text-hub-muted">
-        No messages yet for this peer
+        No messages yet for this session
       </div>
     )
   }

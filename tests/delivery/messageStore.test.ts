@@ -1,13 +1,16 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import { clearTestSessionStorage } from '../setup'
 import { useMessageStore, type DeliveryMessage } from '@/delivery/messageStore'
+import { buildOrderPayload } from '@/order/buildOrderPayload'
+
+const SELF = 'idqself'
 
 function sampleMessage(
   overrides: Partial<DeliveryMessage> & Pick<DeliveryMessage, 'id' | 'peerGlobalMetaId'>,
 ): DeliveryMessage {
   return {
     fromGlobalMetaId: 'idqpeer',
-    toGlobalMetaId: 'idqself',
+    toGlobalMetaId: SELF,
     content: 'hello',
     rawContent: 'hello',
     encryption: 'ecdh',
@@ -20,11 +23,11 @@ function sampleMessage(
 describe('messageStore', () => {
   beforeEach(() => {
     clearTestSessionStorage()
-    useMessageStore.setState({ byPeer: {}, selectedPeerGlobalMetaId: null })
+    useMessageStore.setState({ byPeer: {}, selectedSessionKey: null })
   })
 
-  it('appends messages sorted by timestamp ascending', () => {
-    const { append, messagesForPeer } = useMessageStore.getState()
+  it('appends messages sorted by timestamp ascending within a session', () => {
+    const { append, messagesForSession } = useMessageStore.getState()
     append(
       sampleMessage({
         id: 'm2',
@@ -42,16 +45,16 @@ describe('messageStore', () => {
       }),
     )
 
-    expect(messagesForPeer('idqpeer').map((m) => m.id)).toEqual(['m1', 'm2'])
+    expect(messagesForSession('idqpeer', SELF).map((m) => m.id)).toEqual(['m1', 'm2'])
   })
 
   it('deduplicates by message id', () => {
-    const { append, messagesForPeer } = useMessageStore.getState()
+    const { append, messagesForSession } = useMessageStore.getState()
     const row = sampleMessage({ id: 'dup', peerGlobalMetaId: 'idqpeer' })
     append(row)
     append({ ...row, content: 'changed' })
-    expect(messagesForPeer('idqpeer')).toHaveLength(1)
-    expect(messagesForPeer('idqpeer')[0]?.content).toBe('hello')
+    expect(messagesForSession('idqpeer', SELF)).toHaveLength(1)
+    expect(messagesForSession('idqpeer', SELF)[0]?.content).toBe('hello')
   })
 
   it('lists sessions by latest message timestamp', () => {
@@ -71,6 +74,42 @@ describe('messageStore', () => {
       }),
     )
 
-    expect(listSessions().map((s) => s.peerGlobalMetaId)).toEqual(['peer-b', 'peer-a'])
+    expect(listSessions(SELF).map((s) => s.peerGlobalMetaId)).toEqual(['peer-b', 'peer-a'])
+  })
+
+  it('splits order and default sessions for the same peer', () => {
+    const orderRef = 'e'.repeat(64)
+    const orderPayload = buildOrderPayload({
+      displayText: 'Store split',
+      rawRequest: 'z',
+      price: '0',
+      currency: 'SPACE',
+      orderReference: orderRef,
+      serviceId: 'pin-store',
+      skillName: 'store-skill',
+      outputType: 'text',
+    })
+    const { append, listSessions, messagesForSession } = useMessageStore.getState()
+    append(
+      sampleMessage({
+        id: 'order-1',
+        peerGlobalMetaId: 'idqpeer',
+        fromGlobalMetaId: SELF,
+        content: orderPayload,
+        timestamp: 1,
+      }),
+    )
+    append(
+      sampleMessage({
+        id: 'chat-1',
+        peerGlobalMetaId: 'idqpeer',
+        content: 'general chat',
+        timestamp: 2,
+      }),
+    )
+
+    expect(listSessions(SELF)).toHaveLength(2)
+    expect(messagesForSession(`idqpeer:${orderRef}`, SELF)).toHaveLength(1)
+    expect(messagesForSession('idqpeer', SELF)).toHaveLength(1)
   })
 })

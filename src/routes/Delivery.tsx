@@ -2,7 +2,7 @@ import { useCallback, useMemo } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { MessageList } from '@/components/delivery/MessageList'
 import { SessionsList } from '@/components/delivery/SessionsList'
-import { buildSessionList, useMessageStore } from '@/delivery/messageStore'
+import { useMessageStore } from '@/delivery/messageStore'
 import { useWallet } from '@/wallet/useWallet'
 
 const SESSION_PARAM = 'session'
@@ -12,38 +12,44 @@ export function DeliveryPage() {
   const walletStatus = useWallet((s) => s.status)
   const identity = useWallet((s) => s.identity)
   const walletConnected = walletStatus === 'connected' && identity != null
+  const selfGlobalMetaId = identity?.globalMetaId ?? ''
 
   const byPeer = useMessageStore((s) => s.byPeer)
-  const selectedPeerFromStore = useMessageStore((s) => s.selectedPeerGlobalMetaId)
-  const setSelectedPeer = useMessageStore((s) => s.setSelectedPeer)
-  const messagesForPeer = useMessageStore((s) => s.messagesForPeer)
+  const selectedSessionFromStore = useMessageStore((s) => s.selectedSessionKey)
+  const setSelectedSession = useMessageStore((s) => s.setSelectedSession)
+  const listSessions = useMessageStore((s) => s.listSessions)
+  const messagesForSession = useMessageStore((s) => s.messagesForSession)
 
-  const sessions = useMemo(() => buildSessionList(byPeer), [byPeer])
-
-  const sessionFromUrl = searchParams.get(SESSION_PARAM)?.trim() || null
-  const peerFromSessionKey = sessionFromUrl?.split(':')[0]?.trim() || null
-
-  const selectedPeer =
-    peerFromSessionKey || selectedPeerFromStore || sessions[0]?.peerGlobalMetaId || null
-
-  const messages = useMemo(
-    () => (selectedPeer ? messagesForPeer(selectedPeer) : []),
-    [messagesForPeer, selectedPeer],
+  const sessions = useMemo(
+    () => listSessions(selfGlobalMetaId),
+    [byPeer, listSessions, selfGlobalMetaId],
   )
 
-  const selectPeer = useCallback(
-    (peerGlobalMetaId: string) => {
-      setSelectedPeer(peerGlobalMetaId)
+  const sessionFromUrl = searchParams.get(SESSION_PARAM)?.trim() || null
+  const selectedSession =
+    sessionFromUrl || selectedSessionFromStore || sessions[0]?.sessionKey || null
+
+  const messages = useMemo(
+    () =>
+      selectedSession && selfGlobalMetaId
+        ? messagesForSession(selectedSession, selfGlobalMetaId)
+        : [],
+    [messagesForSession, selectedSession, selfGlobalMetaId, byPeer],
+  )
+
+  const selectSession = useCallback(
+    (sessionKey: string) => {
+      setSelectedSession(sessionKey)
       setSearchParams(
         (prev) => {
           const next = new URLSearchParams(prev)
-          next.set(SESSION_PARAM, peerGlobalMetaId)
+          next.set(SESSION_PARAM, sessionKey)
           return next
         },
         { replace: true },
       )
     },
-    [setSearchParams, setSelectedPeer],
+    [setSearchParams, setSelectedSession],
   )
 
   return (
@@ -64,8 +70,8 @@ export function DeliveryPage() {
           </h2>
           <SessionsList
             sessions={sessions}
-            selectedPeerGlobalMetaId={selectedPeer}
-            onSelectPeer={selectPeer}
+            selectedSessionKey={selectedSession}
+            onSelectSession={selectSession}
             walletConnected={walletConnected}
           />
         </aside>
@@ -75,9 +81,9 @@ export function DeliveryPage() {
             Messages
           </h2>
           <MessageList
-            peerGlobalMetaId={selectedPeer}
+            sessionKey={selectedSession}
             messages={messages}
-            selfGlobalMetaId={identity?.globalMetaId ?? ''}
+            selfGlobalMetaId={selfGlobalMetaId}
           />
         </div>
       </div>

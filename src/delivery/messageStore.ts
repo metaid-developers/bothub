@@ -1,5 +1,9 @@
 import { create } from 'zustand'
 import { createJSONStorage, persist } from 'zustand/middleware'
+import {
+  buildGroupedSessionList,
+  messagesForSession as resolveMessagesForSession,
+} from '@/delivery/sessionGrouping'
 
 export interface DeliveryMessage {
   id: string
@@ -19,18 +23,21 @@ export interface DeliveryMessage {
 }
 
 export interface DeliverySession {
+  sessionKey: string
   peerGlobalMetaId: string
+  orderCorrelationId: string | null
+  serviceLabel: string | null
   lastMessage: DeliveryMessage
   messageCount: number
 }
 
 interface MessageStoreState {
   byPeer: Record<string, DeliveryMessage[]>
-  selectedPeerGlobalMetaId: string | null
+  selectedSessionKey: string | null
   append: (message: DeliveryMessage) => void
-  setSelectedPeer: (peerGlobalMetaId: string | null) => void
-  listSessions: () => DeliverySession[]
-  messagesForPeer: (peerGlobalMetaId: string) => DeliveryMessage[]
+  setSelectedSession: (sessionKey: string | null) => void
+  listSessions: (selfGlobalMetaId: string) => DeliverySession[]
+  messagesForSession: (sessionKey: string, selfGlobalMetaId: string) => DeliveryMessage[]
 }
 
 const STORAGE_KEY = 'bothub-delivery-messages'
@@ -40,28 +47,6 @@ function sortMessagesAsc(messages: DeliveryMessage[]): DeliveryMessage[] {
     if (a.timestamp !== b.timestamp) return a.timestamp - b.timestamp
     return a.id.localeCompare(b.id)
   })
-}
-
-export function buildSessionList(
-  byPeer: Record<string, DeliveryMessage[]>,
-): DeliverySession[] {
-  return Object.entries(byPeer)
-    .map(([peerGlobalMetaId, messages]) => {
-      const sorted = sortMessagesAsc(messages)
-      const lastMessage = sorted[sorted.length - 1]
-      if (!lastMessage) return null
-      return {
-        peerGlobalMetaId,
-        lastMessage,
-        messageCount: sorted.length,
-      }
-    })
-    .filter((row): row is DeliverySession => row != null)
-    .sort(
-      (a, b) =>
-        b.lastMessage.timestamp - a.lastMessage.timestamp ||
-        b.lastMessage.id.localeCompare(a.lastMessage.id),
-    )
 }
 
 function upsertMessage(
@@ -83,7 +68,7 @@ export const useMessageStore = create<MessageStoreState>()(
   persist(
     (set, get) => ({
       byPeer: {},
-      selectedPeerGlobalMetaId: null,
+      selectedSessionKey: null,
 
       append: (message) => {
         set((state) => ({
@@ -91,16 +76,15 @@ export const useMessageStore = create<MessageStoreState>()(
         }))
       },
 
-      setSelectedPeer: (peerGlobalMetaId) => {
-        set({ selectedPeerGlobalMetaId: peerGlobalMetaId })
+      setSelectedSession: (sessionKey) => {
+        set({ selectedSessionKey: sessionKey?.trim() || null })
       },
 
-      listSessions: () => buildSessionList(get().byPeer),
+      listSessions: (selfGlobalMetaId) =>
+        buildGroupedSessionList(get().byPeer, selfGlobalMetaId),
 
-      messagesForPeer: (peerGlobalMetaId) => {
-        const peer = peerGlobalMetaId.trim()
-        return sortMessagesAsc(get().byPeer[peer] ?? [])
-      },
+      messagesForSession: (sessionKey, selfGlobalMetaId) =>
+        resolveMessagesForSession(get().byPeer, sessionKey, selfGlobalMetaId),
     }),
     {
       name: STORAGE_KEY,

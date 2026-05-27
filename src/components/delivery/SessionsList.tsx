@@ -1,24 +1,19 @@
 import { clsx } from 'clsx'
 import type { DeliverySession } from '@/delivery/messageStore'
+import { sessionPreviewText } from '@/delivery/messageDisplay'
 import { truncateGlobalMetaId } from '@/wallet/format'
 
 export interface SessionsListProps {
   sessions: DeliverySession[]
-  selectedPeerGlobalMetaId: string | null
-  onSelectPeer: (peerGlobalMetaId: string) => void
+  selectedSessionKey: string | null
+  onSelectSession: (sessionKey: string) => void
   walletConnected: boolean
-}
-
-function previewText(content: string): string {
-  const oneLine = content.replace(/\s+/g, ' ').trim()
-  if (oneLine.length <= 80) return oneLine
-  return `${oneLine.slice(0, 77)}…`
 }
 
 export function SessionsList({
   sessions,
-  selectedPeerGlobalMetaId,
-  onSelectPeer,
+  selectedSessionKey,
+  onSelectSession,
   walletConnected,
 }: SessionsListProps) {
   if (!walletConnected) {
@@ -40,12 +35,12 @@ export function SessionsList({
   return (
     <ul className="flex flex-col gap-1" aria-label="Delivery sessions">
       {sessions.map((session) => {
-        const selected = session.peerGlobalMetaId === selectedPeerGlobalMetaId
+        const selected = session.sessionKey === selectedSessionKey
         return (
-          <li key={session.peerGlobalMetaId}>
+          <li key={session.sessionKey}>
             <button
               type="button"
-              onClick={() => onSelectPeer(session.peerGlobalMetaId)}
+              onClick={() => onSelectSession(session.sessionKey)}
               className={clsx(
                 'w-full rounded-card border px-3 py-3 text-left transition-colors',
                 selected
@@ -56,8 +51,13 @@ export function SessionsList({
               <div className="font-semibold text-white">
                 {truncateGlobalMetaId(session.peerGlobalMetaId)}
               </div>
+              {session.serviceLabel ? (
+                <p className="mt-0.5 text-xs font-medium text-hub-accent">
+                  {session.serviceLabel}
+                </p>
+              ) : null}
               <p className="mt-1 line-clamp-2 text-xs text-hub-muted">
-                {previewText(session.lastMessage.content)}
+                {sessionPreviewText(session.lastMessage.content)}
               </p>
               <p className="mt-1 text-[11px] text-hub-muted">
                 {session.messageCount} message{session.messageCount === 1 ? '' : 's'}
