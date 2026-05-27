@@ -20,7 +20,7 @@ describe('App smoke', () => {
     expect(screen.getByRole('link', { name: 'Bot Hub' })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Delivery' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '连接钱包' })).toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: 'Bot Hub' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Services' })).toBeInTheDocument()
   })
 
   it('navigates to Delivery route', () => {

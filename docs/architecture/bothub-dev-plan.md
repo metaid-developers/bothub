@@ -85,11 +85,7 @@
 - `src/main.tsx` — wrap app in `<QueryClientProvider>`.
 - `.env.example` — add `VITE_META_SOCKET_BASE_URL`.
 
-- [ ] **Step 1:** translate the spec's response JSON into TypeScript types byte-for-byte. Reuse field names exactly (`currentPinId`, `sourceServicePinId`, `disabled`, etc.).
-- [ ] **Step 2:** write `listServices` and `getServiceDetail`. When `import.meta.env.VITE_USE_AGGREGATOR_MOCK === 'true'`, return `src/mocks/aggregator/*.json` (no network). Otherwise fetch `${VITE_META_SOCKET_BASE_URL}/api/bot-hub/...`. Normalize `code !== 0` into thrown `AggregatorError({ code, message })`.
-- [ ] **Step 3:** fixtures: copy the example JSON from the spec into `tests/fixtures/aggregator/`. Modify one item to include `null` provider fields; add an MRC20-priced item.
-- [ ] **Step 4:** Vitest with `msw` (or vi.stubGlobal('fetch', ...)) — verify successful parse + error mapping for `40000/40400/50000`.
-- [ ] **Step 5:** add `useServicesQuery` (infinite query keyed by filters) and `useServiceDetailQuery`.
+- [x] **M2 complete** — types, client, mock, queries, tests (commit `ab3151c`).
 
 **Verify:** `pnpm test api` green. Manual: with `VITE_META_SOCKET_BASE_URL=https://staging.example` and a live aggregator, a simple debug route logs the list.
 
@@ -114,11 +110,11 @@
 **Files (modify):**
 - `src/App.tsx` — route `/` to `BotHub`.
 
-- [ ] **Step 1:** static layout matching the mockup left→middle (`OnlineBotsSidebar` + `ServicesPanel`), Tailwind grid. Right panel (detail) is M4.
-- [ ] **Step 2:** `ServiceCard` renders: `serviceIcon`, `displayName`, `description` (line-clamp-2), provider row (avatar + name + `providerSkill` chip), price + currency badge, rating ⭐.
-- [ ] **Step 3:** `FiltersBar` controlled component → emits `{ keyword, currency, outputType, sortBy, order }`. Debounce keyword 300ms.
-- [ ] **Step 4:** wire `useServicesQuery` infinite scroll (cursor). Show skeleton on initial load, "load more" sentinel at the bottom.
-- [ ] **Step 5:** `OnlineBotsSidebar` for now is a static placeholder listing top providers from current page's items (group by `providerGlobalMetaId`). Real online status deferred (R4 in design).
+- [x] **Step 1:** static layout matching the mockup left→middle (`OnlineBotsSidebar` + `ServicesPanel`), Tailwind grid. Right panel (detail) is M4.
+- [x] **Step 2:** `ServiceCard` renders: `serviceIcon`, `displayName`, `description` (line-clamp-2), provider row (avatar + name + `providerSkill` chip), price + currency badge, rating ⭐.
+- [x] **Step 3:** `FiltersBar` controlled component → emits `{ keyword, currency, outputType, sortBy, order }`. Debounce keyword 300ms.
+- [x] **Step 4:** wire `useServicesQuery` infinite scroll (cursor). Show skeleton on initial load, "load more" sentinel at the bottom.
+- [x] **Step 5:** `OnlineBotsSidebar` for now is a static placeholder listing top providers from current page's items (group by `providerGlobalMetaId`). Real online status deferred (R4 in design).
 
 **Verify:**
 - `pnpm test components/hub` green.
