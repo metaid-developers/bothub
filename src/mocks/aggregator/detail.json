@@ -1,0 +1,40 @@
+{
+  "code": 0,
+  "message": "ok",
+  "data": {
+    "service": {
+      "id": "pin-zhuwei-current-001",
+      "currentPinId": "pin-zhuwei-current-001",
+      "sourceServicePinId": "pin-zhuwei-create-001",
+      "serviceName": "zhuwei-fortune-service",
+      "displayName": "紫微斗数算命服务",
+      "description": "根据出生日期和时间，分析命盘、解读运势。完整服务描述用于详情页首屏。",
+      "serviceIcon": "https://cdn.example.com/icons/zhuwei.png",
+      "providerSkill": "zhuwei-fortune",
+      "outputType": "text",
+      "price": "1",
+      "currency": "SPACE",
+      "settlementKind": "native",
+      "paymentChain": "mvc",
+      "mrc20Ticker": null,
+      "mrc20Id": null,
+      "paymentAddress": "18GEDFortuneBotMvcAddress001",
+      "status": 0,
+      "operation": "modify",
+      "disabled": false,
+      "chainName": "mvc",
+      "createdAt": 1774530000000,
+      "updatedAt": 1774530374000
+    },
+    "provider": {
+      "metaid": "3a32fortunebotmetaid001",
+      "globalMetaId": "idq1fortunebotglobal001",
+      "address": "18GEDFortuneBotMvcAddress001",
+      "name": "Fortune Bot",
+      "avatar": "https://cdn.example.com/avatars/fortune-bot.png",
+      "chatPubkey": "02fortunebotchatpubkeyexample001"
+    },
+    "aggregatedAt": 1774531000000,
+    "schemaVersion": "botHubSkillServiceDetail.v1"
+  }
+}

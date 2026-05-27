@@ -1,0 +1,40 @@
+{
+  "code": 0,
+  "message": "ok",
+  "data": {
+    "service": {
+      "id": "fixture-pin-001",
+      "currentPinId": "fixture-pin-001",
+      "sourceServicePinId": "fixture-pin-create-001",
+      "serviceName": "fixture-fortune",
+      "displayName": "Fixture Fortune Service",
+      "description": "Fixture detail service description",
+      "serviceIcon": "https://fixtures.example/icon-001.png",
+      "providerSkill": "fixture-fortune",
+      "outputType": "text",
+      "price": "2",
+      "currency": "SPACE",
+      "settlementKind": "native",
+      "paymentChain": "mvc",
+      "mrc20Ticker": null,
+      "mrc20Id": null,
+      "paymentAddress": "18FIXTURE001",
+      "status": 0,
+      "operation": "create",
+      "disabled": false,
+      "chainName": "mvc",
+      "createdAt": 1774500000000,
+      "updatedAt": 1774500000000
+    },
+    "provider": {
+      "metaid": "metaid-fixture-001",
+      "globalMetaId": "global-fixture-001",
+      "address": "18FIXTURE001",
+      "name": "Fixture Bot",
+      "avatar": "https://fixtures.example/avatar-001.png",
+      "chatPubkey": "02fixturechatpubkey001"
+    },
+    "aggregatedAt": 1774532000000,
+    "schemaVersion": "botHubSkillServiceDetail.v1"
+  }
+}
