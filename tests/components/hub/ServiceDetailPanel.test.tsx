@@ -85,7 +85,7 @@ describe('ServiceDetailPanel', () => {
 
     const payButton = screen.getByRole('button', { name: 'Pay & Request' })
     expect(payButton).toBeDisabled()
-    expect(payButton).toHaveAttribute('title', expect.stringContaining('Connect'))
+    expect(payButton).toHaveAttribute('title', expect.stringMatching(/Metalet|Connect|连接/))
   })
 
   it('enables Pay & Request when wallet is connected', () => {

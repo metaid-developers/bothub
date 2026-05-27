@@ -1,9 +1,10 @@
 import type { KeyboardEvent } from 'react'
 import { clsx } from 'clsx'
 import type { SkillServiceListItem } from '@/api/aggregator.types'
+import { t } from '@/i18n'
 import { formatPrice } from '@/lib/format'
 
-const PROVIDER_FALLBACK_NAME = 'Unknown Bot'
+const PROVIDER_FALLBACK_NAME = () => t('hub.unknownBot')
 
 function ServiceIcon({ service }: { service: SkillServiceListItem }) {
   const initial = service.displayName.trim().charAt(0).toUpperCase() || '?'
@@ -82,7 +83,7 @@ export interface ServiceCardProps {
 
 export function ServiceCard({ service, className, selected, onSelect }: ServiceCardProps) {
   const price = formatPrice(service.price, service.currency)
-  const providerName = service.providerName?.trim() || PROVIDER_FALLBACK_NAME
+  const providerName = service.providerName?.trim() || PROVIDER_FALLBACK_NAME()
   const selectable = Boolean(onSelect)
 
   const handleCardClick = () => {

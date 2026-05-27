@@ -1,6 +1,8 @@
 import { useMemo } from 'react'
 import { clsx } from 'clsx'
 import type { SkillServiceListItem } from '@/api/aggregator.types'
+import { EmptyState } from '@/components/common/EmptyState'
+import { t } from '@/i18n'
 
 export interface OnlineBotGroup {
   providerGlobalMetaId: string
@@ -9,8 +11,6 @@ export interface OnlineBotGroup {
   providerSkill: string | null
   serviceCount: number
 }
-
-const PROVIDER_FALLBACK_NAME = 'Unknown Bot'
 
 function groupProviders(services: SkillServiceListItem[]): OnlineBotGroup[] {
   const map = new Map<string, OnlineBotGroup>()
@@ -32,7 +32,7 @@ function groupProviders(services: SkillServiceListItem[]): OnlineBotGroup[] {
     }
     map.set(id, {
       providerGlobalMetaId: id,
-      providerName: item.providerName?.trim() || PROVIDER_FALLBACK_NAME,
+      providerName: item.providerName?.trim() || t('hub.unknownBot'),
       providerAvatar: item.providerAvatar,
       providerSkill: item.providerSkill,
       serviceCount: 1,
@@ -76,26 +76,29 @@ function BotAvatar({ name, avatar }: { name: string; avatar: string | null }) {
 export interface OnlineBotsSidebarProps {
   services: SkillServiceListItem[]
   className?: string
+  id?: string
 }
 
-export function OnlineBotsSidebar({ services, className }: OnlineBotsSidebarProps) {
+export function OnlineBotsSidebar({ services, className, id }: OnlineBotsSidebarProps) {
   const bots = useMemo(() => groupProviders(services), [services])
 
   return (
     <aside
-      className={clsx(
-        'hidden w-full shrink-0 flex-col lg:flex lg:w-56 xl:w-60',
-        className,
-      )}
-      aria-label="Online bots"
+      id={id}
+      className={clsx('w-full shrink-0 flex-col', className)}
+      aria-label={t('hub.onlineBots')}
     >
       <h2 className="font-display text-xs font-semibold uppercase tracking-[0.14em] text-hub-muted">
-        Online bots
+        {t('hub.onlineBots')}
       </h2>
       <ul className="mt-4 flex list-none flex-col gap-1 p-0">
         {bots.length === 0 ? (
-          <li className="rounded-xl border border-dashed border-hub-border px-3 py-6 text-center text-xs text-hub-muted">
-            Bots appear as services load
+          <li>
+            <EmptyState
+              title={t('hub.onlineBots')}
+              description={t('hub.onlineBotsEmpty')}
+              className="px-3 py-6"
+            />
           </li>
         ) : (
           bots.map((bot) => (
@@ -105,7 +108,8 @@ export function OnlineBotsSidebar({ services, className }: OnlineBotsSidebarProp
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-medium text-white">{bot.providerName}</p>
                   <p className="truncate text-xs text-hub-muted">
-                    {bot.providerSkill ?? `${bot.serviceCount} service${bot.serviceCount === 1 ? '' : 's'}`}
+                    {bot.providerSkill ??
+                      `${bot.serviceCount} service${bot.serviceCount === 1 ? '' : 's'}`}
                   </p>
                 </div>
               </div>

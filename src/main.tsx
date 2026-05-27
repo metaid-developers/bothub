@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { BrowserRouter } from 'react-router-dom'
 import App from './App'
+import { ErrorBoundary } from './components/common/ErrorBoundary'
 import { useSocket } from './ws/useSocket'
 import { useWallet } from './wallet/useWallet'
 import './styles/globals.css'
@@ -46,7 +47,9 @@ createRoot(document.getElementById('root')!).render(
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
         <WalletHydrator>
-          <App />
+          <ErrorBoundary>
+            <App />
+          </ErrorBoundary>
         </WalletHydrator>
       </BrowserRouter>
     </QueryClientProvider>

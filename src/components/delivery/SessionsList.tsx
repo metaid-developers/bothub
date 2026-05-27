@@ -1,6 +1,8 @@
 import { clsx } from 'clsx'
+import { EmptyState } from '@/components/common/EmptyState'
 import type { DeliverySession } from '@/delivery/messageStore'
 import { sessionPreviewText } from '@/delivery/messageDisplay'
+import { t } from '@/i18n'
 import { truncateGlobalMetaId } from '@/wallet/format'
 
 export interface SessionsListProps {
@@ -8,6 +10,7 @@ export interface SessionsListProps {
   selectedSessionKey: string | null
   onSelectSession: (sessionKey: string) => void
   walletConnected: boolean
+  loading?: boolean
 }
 
 export function SessionsList({
@@ -15,25 +18,34 @@ export function SessionsList({
   selectedSessionKey,
   onSelectSession,
   walletConnected,
+  loading = false,
 }: SessionsListProps) {
   if (!walletConnected) {
     return (
-      <div className="rounded-card border border-dashed border-hub-border bg-hub-surface/40 p-4 text-sm text-hub-muted">
-        Connect your Metalet wallet to receive private chat over Socket.IO.
-      </div>
+      <EmptyState
+        title={t('delivery.walletNotConnectedTitle')}
+        description={t('delivery.walletNotConnectedHint')}
+        className="py-8"
+      />
     )
+  }
+
+  if (loading) {
+    return null
   }
 
   if (sessions.length === 0) {
     return (
-      <div className="rounded-card border border-dashed border-hub-border bg-hub-surface/40 p-4 text-sm text-hub-muted">
-        No sessions yet. Incoming simplemsg notifications will appear here.
-      </div>
+      <EmptyState
+        title={t('delivery.noSessionsTitle')}
+        description={t('delivery.noSessionsHint')}
+        className="py-8"
+      />
     )
   }
 
   return (
-    <ul className="flex flex-col gap-1" aria-label="Delivery sessions">
+    <ul className="flex flex-col gap-1" aria-label={t('delivery.sessions')}>
       {sessions.map((session) => {
         const selected = session.sessionKey === selectedSessionKey
         return (

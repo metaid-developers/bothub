@@ -7,6 +7,7 @@ import type {
   SkillServiceOutputType,
   SkillServiceSortBy,
 } from '@/api/aggregator.types'
+import { t } from '@/i18n'
 
 export interface HubFilters {
   keyword: string
@@ -25,7 +26,7 @@ export const defaultHubFilters: HubFilters = {
 }
 
 const CURRENCIES: { value: SkillServiceCurrency | ''; label: string }[] = [
-  { value: '', label: 'All currencies' },
+  { value: '', label: t('hub.currencyAll') },
   { value: 'SPACE', label: 'SPACE' },
   { value: 'BTC', label: 'BTC' },
   { value: 'DOGE', label: 'DOGE' },
@@ -33,20 +34,20 @@ const CURRENCIES: { value: SkillServiceCurrency | ''; label: string }[] = [
 ]
 
 const OUTPUT_TYPES: { value: SkillServiceOutputType | ''; label: string }[] = [
-  { value: '', label: 'All types' },
-  { value: 'text', label: 'Text' },
-  { value: 'image', label: 'Image' },
-  { value: 'video', label: 'Video' },
-  { value: 'audio', label: 'Audio' },
-  { value: 'other', label: 'Other' },
+  { value: '', label: t('filters.outputAll') },
+  { value: 'text', label: t('filters.text') },
+  { value: 'image', label: t('filters.image') },
+  { value: 'video', label: t('filters.video') },
+  { value: 'audio', label: t('filters.audio') },
+  { value: 'other', label: t('filters.other') },
 ]
 
 const SORT_OPTIONS: { sortBy: SkillServiceSortBy; order: SkillServiceOrder; label: string }[] =
   [
-    { sortBy: 'rating', order: 'desc', label: 'Top rated' },
-    { sortBy: 'updated', order: 'desc', label: 'Recently updated' },
-    { sortBy: 'price', order: 'asc', label: 'Price: low to high' },
-    { sortBy: 'price', order: 'desc', label: 'Price: high to low' },
+    { sortBy: 'rating', order: 'desc', label: t('hub.sortTopRated') },
+    { sortBy: 'updated', order: 'desc', label: t('hub.sortRecent') },
+    { sortBy: 'price', order: 'asc', label: t('hub.sortPriceAsc') },
+    { sortBy: 'price', order: 'desc', label: t('hub.sortPriceDesc') },
   ]
 
 const KEYWORD_DEBOUNCE_MS = 300
@@ -84,17 +85,15 @@ export function FiltersBar({ value, onChange, className }: FiltersBarProps) {
     >
       <div>
         <h1 className="font-display text-2xl font-semibold tracking-tight text-white">
-          Services
+          {t('hub.servicesTitle')}
         </h1>
-        <p className="mt-1 text-sm text-hub-muted">
-          Browse on-chain skill services from connected bots
-        </p>
+        <p className="mt-1 text-sm text-hub-muted">{t('hub.servicesSubtitle')}</p>
       </div>
 
-      <div className="flex flex-1 flex-col gap-3 sm:max-w-2xl lg:flex-row lg:items-center lg:justify-end">
+      <div className="flex flex-1 flex-col gap-3 sm:max-w-2xl md:flex-row md:items-center md:justify-end">
         <div className="relative min-w-0 flex-1">
           <label htmlFor={searchId} className="sr-only">
-            Search services
+            {t('hub.searchServices')}
           </label>
           <MagnifyingGlassIcon
             className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-hub-muted"
@@ -103,7 +102,7 @@ export function FiltersBar({ value, onChange, className }: FiltersBarProps) {
           <input
             id={searchId}
             type="search"
-            placeholder="Search services…"
+            placeholder={t('hub.searchPlaceholder')}
             value={keywordDraft}
             onChange={(e) => setKeywordDraft(e.target.value)}
             className="w-full rounded-xl border border-hub-border bg-hub-surface2 py-2.5 pl-10 pr-3 text-sm text-white placeholder:text-hub-muted/80 focus:border-hub-accent/60 focus:outline-none focus:ring-2 focus:ring-hub-accent/25"
@@ -113,7 +112,7 @@ export function FiltersBar({ value, onChange, className }: FiltersBarProps) {
         <div className="flex flex-wrap items-center gap-2">
           <FunnelIcon className="hidden h-4 w-4 text-hub-muted sm:block" aria-hidden />
           <select
-            aria-label="Currency filter"
+            aria-label={t('filters.currency')}
             value={value.currency}
             onChange={(e) =>
               onChange({
@@ -130,7 +129,7 @@ export function FiltersBar({ value, onChange, className }: FiltersBarProps) {
             ))}
           </select>
           <select
-            aria-label="Output type filter"
+            aria-label={t('filters.outputType')}
             value={value.outputType}
             onChange={(e) =>
               onChange({
@@ -147,7 +146,7 @@ export function FiltersBar({ value, onChange, className }: FiltersBarProps) {
             ))}
           </select>
           <select
-            aria-label="Sort services"
+            aria-label={t('filters.sort')}
             value={sortKey}
             onChange={(e) => {
               const match = SORT_OPTIONS.find(

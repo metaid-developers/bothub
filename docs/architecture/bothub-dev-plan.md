@@ -250,11 +250,11 @@
 **Files (modify):**
 - All UI to use `t('...')` strings.
 
-- [ ] **Step 1:** loading skeletons across list, detail, sessions.
-- [ ] **Step 2:** empty states: "no services found", "no messages yet", "wallet not connected".
-- [ ] **Step 3:** error toasts for aggregator/MS WS failures; "retry" button.
-- [ ] **Step 4:** basic responsive: 1-column under 768px; collapsible sidebar.
-- [ ] **Step 5:** README updates (run dev / test / build).
+- [x] **Step 1:** loading skeletons across list, detail, sessions.
+- [x] **Step 2:** empty states: "no services found", "no messages yet", "wallet not connected".
+- [x] **Step 3:** error toasts for aggregator/MS WS failures; "retry" button.
+- [x] **Step 4:** basic responsive: 1-column under 768px; collapsible sidebar.
+- [x] **Step 5:** README updates (run dev / test / build).
 
 **Verify:**
 - `pnpm test` all green.

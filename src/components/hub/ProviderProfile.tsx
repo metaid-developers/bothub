@@ -2,7 +2,9 @@ import { clsx } from 'clsx'
 import type { ProviderInfo } from '@/api/aggregator.types'
 import { formatAddress } from '@/lib/format'
 
-const PROVIDER_FALLBACK_NAME = 'Unknown Bot'
+import { t } from '@/i18n'
+
+const PROVIDER_FALLBACK_NAME = () => t('hub.unknownBot')
 
 export interface ProviderProfileProps {
   provider: ProviderInfo
@@ -31,7 +33,7 @@ function ProviderAvatar({ name, avatar }: { name: string; avatar: string | null 
 }
 
 export function ProviderProfile({ provider, className }: ProviderProfileProps) {
-  const name = provider.name?.trim() || PROVIDER_FALLBACK_NAME
+  const name = provider.name?.trim() || PROVIDER_FALLBACK_NAME()
   const chatPubkey = provider.chatPubkey?.trim() ?? ''
   const truncatedPubkey = chatPubkey ? formatAddress(chatPubkey, 8, 6) : null
 
@@ -59,7 +61,7 @@ export function ProviderProfile({ provider, className }: ProviderProfileProps) {
               </span>
             </p>
           ) : (
-            <p className="mt-1 text-[11px] text-hub-muted/80">No chat pubkey on file</p>
+            <p className="mt-1 text-[11px] text-hub-muted/80">{t('hub.noChatPubkey')}</p>
           )}
         </div>
       </div>

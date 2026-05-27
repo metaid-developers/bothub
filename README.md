@@ -22,12 +22,30 @@
 
 ```bash
 pnpm install
-cp .env.example .env
-pnpm dev      # http://localhost:5176
-pnpm test
-pnpm typecheck
+cp .env.example .env   # 按需调整 VITE_* 变量
+pnpm dev               # http://localhost:5176
+```
+
+### 测试与构建
+
+```bash
+pnpm test        # Vitest 单元/组件测试（一次性运行）
+pnpm test:watch  # 监听模式
+pnpm typecheck   # TypeScript 工程检查
+pnpm build       # tsc + Vite 生产构建 → dist/
+pnpm preview     # 预览 dist 产物
+pnpm lint        # ESLint
 ```
 
 - 设计稿布局：`docs/design/bothub-mockup.png`
-- 聚合 API 未上线前：`VITE_USE_AGGREGATOR_MOCK=true`（默认）使用本地 fixtures（M2）
+- 聚合 API 未上线前：`VITE_USE_AGGREGATOR_MOCK=true`（默认）使用本地 fixtures
+- WebSocket mock：`VITE_USE_WS_MOCK=true` 时 Delivery 不连真实 Socket.IO
 - 生产 meta-socket：`VITE_META_SOCKET_BASE_URL=https://api.idchat.io`
+
+## MVP UI（M8）
+
+- 加载骨架：服务列表、详情、会话
+- 空状态：无服务、无消息、未连钱包
+- 错误态：聚合 API / WebSocket 失败可重试
+- 响应式：&lt;768px 单列；Hub 在线 Bot 侧栏可折叠
+- 文案：`src/i18n` 轻量 typed map（zh-CN），无 i18n 库

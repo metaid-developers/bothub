@@ -1,9 +1,12 @@
 import { useCallback, useMemo } from 'react'
 import { useSearchParams } from 'react-router-dom'
+import { WsErrorBanner } from '@/components/common/WsErrorBanner'
 import { MessageList } from '@/components/delivery/MessageList'
 import { SessionsList } from '@/components/delivery/SessionsList'
 import { useMessageStore } from '@/delivery/messageStore'
+import { t } from '@/i18n'
 import { useWallet } from '@/wallet/useWallet'
+import { useSocket } from '@/ws/useSocket'
 
 const SESSION_PARAM = 'session'
 
@@ -12,6 +15,7 @@ export function DeliveryPage() {
   const walletStatus = useWallet((s) => s.status)
   const identity = useWallet((s) => s.identity)
   const walletConnected = walletStatus === 'connected' && identity != null
+  const wsConnecting = useSocket((s) => s.status === 'connecting')
   const selfGlobalMetaId = identity?.globalMetaId ?? ''
 
   const byPeer = useMessageStore((s) => s.byPeer)
@@ -56,29 +60,30 @@ export function DeliveryPage() {
     <section aria-labelledby="delivery-heading" className="space-y-4">
       <div>
         <h1 id="delivery-heading" className="font-display text-2xl font-semibold">
-          Delivery
+          {t('delivery.title')}
         </h1>
-        <p className="mt-2 max-w-xl text-hub-muted">
-          Private simplemsg sessions delivered over meta-socket Socket.IO.
-        </p>
+        <p className="mt-2 max-w-xl text-hub-muted">{t('delivery.subtitle')}</p>
       </div>
 
-      <div className="grid min-h-[420px] gap-4 lg:grid-cols-[minmax(220px,280px)_1fr]">
-        <aside aria-label="Sessions">
+      <WsErrorBanner />
+
+      <div className="grid min-h-[420px] gap-4 md:grid-cols-[minmax(220px,280px)_1fr]">
+        <aside aria-label={t('delivery.sessions')}>
           <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-hub-muted">
-            Sessions
+            {t('delivery.sessions')}
           </h2>
           <SessionsList
             sessions={sessions}
             selectedSessionKey={selectedSession}
             onSelectSession={selectSession}
             walletConnected={walletConnected}
+            loading={walletConnected && wsConnecting && sessions.length === 0}
           />
         </aside>
 
-        <div>
+        <div className="min-w-0">
           <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-hub-muted">
-            Messages
+            {t('delivery.messages')}
           </h2>
           <MessageList
             sessionKey={selectedSession}

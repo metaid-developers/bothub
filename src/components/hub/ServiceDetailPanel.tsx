@@ -3,12 +3,13 @@ import { clsx } from 'clsx'
 import { XMarkIcon } from '@heroicons/react/24/outline'
 import type { SkillServiceCore } from '@/api/aggregator.types'
 import { useServiceDetailQuery } from '@/api/queries'
+import { ErrorState } from '@/components/common/ErrorState'
+import { ServiceDetailSkeleton } from '@/components/common/LoadingSkeleton'
 import { ProviderProfile } from '@/components/hub/ProviderProfile'
 import { RequestModal } from '@/components/hub/RequestModal'
+import { t } from '@/i18n'
 import { formatPrice } from '@/lib/format'
 import { useWallet } from '@/wallet/useWallet'
-
-const WALLET_REQUIRED_TOOLTIP = 'Connect your Metalet wallet to pay and request this service'
 
 export interface ServiceDetailRating {
   avg: number
@@ -70,10 +71,12 @@ function PricingBlock({ service }: { service: SkillServiceCore }) {
 
   return (
     <section className="rounded-xl border border-hub-border/80 bg-hub-surface2/40 p-3" aria-label="Pricing">
-      <h3 className="text-[11px] font-semibold uppercase tracking-wide text-hub-muted">Pricing</h3>
+      <h3 className="text-[11px] font-semibold uppercase tracking-wide text-hub-muted">
+        {t('hub.pricing')}
+      </h3>
       <dl className="mt-2 space-y-2 text-sm">
         <div className="flex items-baseline justify-between gap-2">
-          <dt className="text-hub-muted">Price</dt>
+          <dt className="text-hub-muted">{t('hub.price')}</dt>
           <dd className="text-right font-semibold text-hub-accent">
             {price.amount}{' '}
             <span className="text-[11px] font-medium uppercase tracking-wide text-hub-muted">
@@ -82,21 +85,21 @@ function PricingBlock({ service }: { service: SkillServiceCore }) {
           </dd>
         </div>
         <div className="flex justify-between gap-2">
-          <dt className="text-hub-muted">Settlement</dt>
+          <dt className="text-hub-muted">{t('hub.settlement')}</dt>
           <dd className="font-medium capitalize text-white">{service.settlementKind}</dd>
         </div>
         <div className="flex justify-between gap-2">
-          <dt className="text-hub-muted">Payment chain</dt>
+          <dt className="text-hub-muted">{t('hub.paymentChain')}</dt>
           <dd className="font-mono text-xs uppercase text-white/90">{service.paymentChain}</dd>
         </div>
         {isMrc20 ? (
           <>
             <div className="flex justify-between gap-2">
-              <dt className="text-hub-muted">MRC20 ticker</dt>
+              <dt className="text-hub-muted">{t('hub.mrc20Ticker')}</dt>
               <dd className="font-mono text-xs text-white/90">{service.mrc20Ticker ?? '—'}</dd>
             </div>
             <div className="flex justify-between gap-2">
-              <dt className="text-hub-muted">MRC20 id</dt>
+              <dt className="text-hub-muted">{t('hub.mrc20Id')}</dt>
               <dd className="truncate font-mono text-xs text-white/90" title={service.mrc20Id ?? undefined}>
                 {service.mrc20Id ?? '—'}
               </dd>
@@ -105,22 +108,6 @@ function PricingBlock({ service }: { service: SkillServiceCore }) {
         ) : null}
       </dl>
     </section>
-  )
-}
-
-function DetailSkeleton() {
-  return (
-    <div className="animate-pulse space-y-4 p-1" aria-busy="true" aria-label="Loading service details">
-      <div className="flex gap-3">
-        <div className="h-16 w-16 rounded-xl bg-hub-surface2" />
-        <div className="flex-1 space-y-2">
-          <div className="h-5 w-3/4 rounded bg-hub-surface2" />
-          <div className="h-3 w-1/2 rounded bg-hub-surface2" />
-        </div>
-      </div>
-      <div className="h-24 rounded-xl bg-hub-surface2" />
-      <div className="h-28 rounded-xl bg-hub-surface2" />
-    </div>
   )
 }
 
@@ -135,7 +122,7 @@ export function ServiceDetailPanel({
   const walletStatus = useWallet((s) => s.status)
   const walletIdentity = useWallet((s) => s.identity)
   const walletConnected = walletStatus === 'connected' && walletIdentity != null
-  const { data, isLoading, isError, error } = useServiceDetailQuery(serviceId)
+  const { data, isLoading, isError, error, refetch } = useServiceDetailQuery(serviceId)
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -158,7 +145,7 @@ export function ServiceDetailPanel({
   }, [onClose])
 
   const payDisabled = !walletConnected
-  const payTooltip = payDisabled ? WALLET_REQUIRED_TOOLTIP : undefined
+  const payTooltip = payDisabled ? t('wallet.requiredPay') : undefined
 
   return (
     <aside
@@ -172,30 +159,26 @@ export function ServiceDetailPanel({
     >
       <div className="mb-3 flex items-start justify-between gap-2">
         <p className="font-display text-xs font-semibold uppercase tracking-wide text-hub-muted">
-          Service detail
+          {t('hub.serviceDetail')}
         </p>
         <button
           type="button"
           onClick={onClose}
           className="rounded-lg p-1 text-hub-muted transition hover:bg-hub-surface2 hover:text-white"
-          aria-label="Close service detail"
+          aria-label={t('hub.closeDetail')}
         >
           <XMarkIcon className="h-5 w-5" aria-hidden />
         </button>
       </div>
 
-      {isLoading ? <DetailSkeleton /> : null}
+      {isLoading ? <ServiceDetailSkeleton label={t('hub.loadingDetail')} /> : null}
 
       {isError ? (
-        <div
-          className="rounded-xl border border-red-500/30 bg-red-950/20 px-3 py-6 text-center text-sm text-red-200"
-          role="alert"
-        >
-          Could not load service details
-          {error instanceof Error ? (
-            <p className="mt-2 text-xs text-red-300/80">{error.message}</p>
-          ) : null}
-        </div>
+        <ErrorState
+          title={t('hub.detailError')}
+          message={error instanceof Error ? error.message : undefined}
+          onRetry={() => void refetch()}
+        />
       ) : null}
 
       {data ? (
@@ -235,7 +218,7 @@ export function ServiceDetailPanel({
             onClick={() => setRequestOpen(true)}
             className="w-full rounded-xl bg-hub-accent py-2.5 text-sm font-semibold text-hub-bg transition enabled:hover:bg-hub-accent-hover disabled:cursor-not-allowed disabled:opacity-60"
           >
-            Pay &amp; Request
+            {t('hub.payRequest')}
           </button>
 
           {walletIdentity && requestOpen ? (

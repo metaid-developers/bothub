@@ -1,3 +1,4 @@
+import { t } from '@/i18n'
 import { useWallet } from '@/wallet/useWallet'
 import { truncateGlobalMetaId } from '@/wallet/format'
 import { MetaletNotInstalledError } from '@/wallet/metalet'
@@ -29,7 +30,7 @@ export function WalletConnectButton() {
           onClick={() => void disconnect()}
           className="rounded-lg border border-hub-border bg-hub-surface2 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:border-hub-accent/40 hover:bg-hub-accent/10"
         >
-          断开
+          {t('wallet.disconnect')}
         </button>
       </div>
     )
@@ -43,7 +44,7 @@ export function WalletConnectButton() {
         disabled={status === 'connecting'}
         className="rounded-lg bg-hub-accent px-4 py-1.5 text-sm font-semibold text-white transition-colors hover:bg-hub-accent-hover disabled:opacity-60"
       >
-        {status === 'connecting' ? '连接中…' : '连接钱包'}
+        {status === 'connecting' ? t('wallet.connecting') : t('wallet.connect')}
       </button>
       {status === 'error' && errorMessage ? (
         <span className="max-w-[200px] truncate text-xs text-red-400" title={errorMessage}>

@@ -1,5 +1,7 @@
 import { useEffect, useRef } from 'react'
+import { EmptyState } from '@/components/common/EmptyState'
 import type { DeliveryMessage } from '@/delivery/messageStore'
+import { t } from '@/i18n'
 import { MessageBubble } from './MessageBubble'
 
 export interface MessageListProps {
@@ -21,24 +23,27 @@ export function MessageList({
 
   if (!sessionKey) {
     return (
-      <div className="flex h-full min-h-[320px] items-center justify-center rounded-card border border-dashed border-hub-border bg-hub-surface/40 p-6 text-sm text-hub-muted">
-        Select a session to view messages
-      </div>
+      <EmptyState
+        title={t('delivery.selectSession')}
+        className="min-h-[320px] py-16"
+      />
     )
   }
 
   if (messages.length === 0) {
     return (
-      <div className="flex h-full min-h-[320px] items-center justify-center rounded-card border border-hub-border bg-hub-surface/40 p-6 text-sm text-hub-muted">
-        No messages yet for this session
-      </div>
+      <EmptyState
+        title={t('delivery.noMessagesTitle')}
+        description={t('delivery.noMessagesHint')}
+        className="min-h-[320px] py-16"
+      />
     )
   }
 
   return (
     <div
       className="flex h-full min-h-[320px] flex-col gap-3 overflow-y-auto rounded-card border border-hub-border bg-hub-surface/40 p-4"
-      aria-label="Message timeline"
+      aria-label={t('delivery.messages')}
     >
       {messages.map((message) => (
         <MessageBubble

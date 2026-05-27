@@ -1,27 +1,11 @@
 import { useEffect, useMemo, useRef } from 'react'
-import { clsx } from 'clsx'
 import { useServicesQuery, type ServicesQueryParams } from '@/api/queries'
 import type { SkillServiceListItem } from '@/api/aggregator.types'
+import { EmptyState } from '@/components/common/EmptyState'
+import { ErrorState } from '@/components/common/ErrorState'
+import { ServiceListSkeleton } from '@/components/common/LoadingSkeleton'
 import { ServiceCard } from '@/components/hub/ServiceCard'
-
-function ServiceCardSkeleton() {
-  return (
-    <div
-      className="animate-pulse rounded-card border border-hub-border bg-hub-surface p-4"
-      aria-hidden
-    >
-      <div className="flex gap-3">
-        <div className="h-14 w-14 rounded-xl bg-hub-surface2" />
-        <div className="flex-1 space-y-2">
-          <div className="h-4 w-3/4 rounded bg-hub-surface2" />
-          <div className="h-3 w-1/2 rounded bg-hub-surface2" />
-          <div className="h-8 w-full rounded bg-hub-surface2" />
-        </div>
-      </div>
-      <div className="mt-4 h-10 rounded-xl bg-hub-surface2" />
-    </div>
-  )
-}
+import { t } from '@/i18n'
 
 export interface ServicesPanelProps {
   queryParams: ServicesQueryParams
@@ -39,8 +23,17 @@ export function ServicesPanel({
   selectedServiceId,
 }: ServicesPanelProps) {
   const loadMoreRef = useRef<HTMLDivElement>(null)
-  const { data, isLoading, isError, error, fetchNextPage, hasNextPage, isFetchingNextPage } =
-    useServicesQuery(queryParams)
+  const {
+    data,
+    isLoading,
+    isError,
+    error,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+    refetch,
+    isRefetching,
+  } = useServicesQuery(queryParams)
 
   const services = useMemo(
     () => data?.pages.flatMap((page) => page.list) ?? [],
@@ -69,52 +62,40 @@ export function ServicesPanel({
 
   if (isLoading) {
     return (
-      <div
-        className={clsx('grid gap-4 sm:grid-cols-2', className)}
-        aria-busy="true"
-        aria-label="Loading services"
-      >
-        {Array.from({ length: 4 }, (_, i) => (
-          <ServiceCardSkeleton key={i} />
-        ))}
-      </div>
+      <ServiceListSkeleton
+        className={className}
+        label={t('hub.loadingServices')}
+      />
     )
   }
 
   if (isError) {
     return (
-      <div
-        className={clsx(
-          'rounded-card border border-red-500/30 bg-red-950/20 px-4 py-8 text-center text-sm text-red-200',
-          className,
-        )}
-        role="alert"
-      >
-        Could not load services
-        {error instanceof Error ? (
-          <p className="mt-2 text-xs text-red-300/80">{error.message}</p>
-        ) : null}
-      </div>
+      <ErrorState
+        className={className}
+        title={t('hub.servicesError')}
+        message={error instanceof Error ? error.message : undefined}
+        onRetry={() => void refetch()}
+      />
     )
   }
 
   if (services.length === 0) {
     return (
-      <div
-        className={clsx(
-          'rounded-card border border-dashed border-hub-border bg-hub-surface/50 px-6 py-16 text-center',
-          className,
-        )}
-      >
-        <p className="font-display text-lg font-semibold text-white">No services found</p>
-        <p className="mt-2 text-sm text-hub-muted">Try clearing filters or another keyword.</p>
-      </div>
+      <EmptyState
+        className={className}
+        title={t('hub.noServicesTitle')}
+        description={t('hub.noServicesHint')}
+      />
     )
   }
 
   return (
     <div className={className}>
-      <ul className="grid list-none gap-4 p-0 sm:grid-cols-2" aria-label="Skill services">
+      <ul
+        className="grid list-none gap-4 p-0 md:grid-cols-2"
+        aria-label="Skill services"
+      >
         {services.map((service) => (
           <li key={`${service.id}-${service.updatedAt}`}>
             <ServiceCard
@@ -128,12 +109,12 @@ export function ServicesPanel({
 
       <div ref={loadMoreRef} className="h-4 w-full" aria-hidden />
 
-      {isFetchingNextPage ? (
-        <p className="mt-4 text-center text-sm text-hub-muted">Loading more…</p>
+      {isFetchingNextPage || isRefetching ? (
+        <p className="mt-4 text-center text-sm text-hub-muted">{t('hub.loadingMore')}</p>
       ) : hasNextPage ? (
-        <p className="mt-4 text-center text-sm text-hub-muted">Scroll for more</p>
+        <p className="mt-4 text-center text-sm text-hub-muted">{t('hub.scrollMore')}</p>
       ) : services.length > 0 ? (
-        <p className="mt-4 text-center text-xs text-hub-muted/80">End of list</p>
+        <p className="mt-4 text-center text-xs text-hub-muted/80">{t('hub.endOfList')}</p>
       ) : null}
     </div>
   )

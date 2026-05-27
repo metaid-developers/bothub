@@ -2,6 +2,7 @@ import type { ReactNode } from 'react'
 import { NavLink } from 'react-router-dom'
 import { clsx } from 'clsx'
 import { WalletConnectButton } from '@/components/WalletConnectButton'
+import { t } from '@/i18n'
 
 const tabClass = ({ isActive }: { isActive: boolean }) =>
   clsx(
@@ -28,7 +29,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             <NavLink to="/" end className={tabClass}>
               {({ isActive }) => (
                 <>
-                  Bot Hub
+                  {t('nav.botHub')}
                   <TabIndicator isActive={isActive} />
                 </>
               )}
@@ -36,7 +37,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             <NavLink to="/delivery" className={tabClass}>
               {({ isActive }) => (
                 <>
-                  Delivery
+                  {t('nav.delivery')}
                   <TabIndicator isActive={isActive} />
                 </>
               )}
