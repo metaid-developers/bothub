@@ -7,3 +7,8 @@ export function getMetaSocketBaseUrl(): string {
 export function useAggregatorMock(): boolean {
   return import.meta.env.VITE_USE_AGGREGATOR_MOCK === 'true'
 }
+
+/** When true, skip real Socket.IO and accept injected mock envelopes only. */
+export function useWsMock(): boolean {
+  return import.meta.env.VITE_USE_WS_MOCK === 'true'
+}

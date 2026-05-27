@@ -23,6 +23,33 @@ Object.defineProperty(globalThis, 'localStorage', {
   configurable: true,
 })
 
+const sessionStore = new Map<string, string>()
+
+const sessionStorageMock: Storage = {
+  getItem: (key) => sessionStore.get(key) ?? null,
+  setItem: (key, value) => {
+    sessionStore.set(key, value)
+  },
+  removeItem: (key) => {
+    sessionStore.delete(key)
+  },
+  clear: () => sessionStore.clear(),
+  key: (index) => Array.from(sessionStore.keys())[index] ?? null,
+  get length() {
+    return sessionStore.size
+  },
+}
+
+Object.defineProperty(globalThis, 'sessionStorage', {
+  value: sessionStorageMock,
+  writable: true,
+  configurable: true,
+})
+
 export function clearTestLocalStorage() {
   localStore.clear()
+}
+
+export function clearTestSessionStorage() {
+  sessionStore.clear()
 }

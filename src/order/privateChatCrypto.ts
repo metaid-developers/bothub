@@ -28,3 +28,16 @@ export function ecdhEncryptWithSharedSecret(plaintext: string, sharedSecretHex: 
   )
   return cipherParams.toString()
 }
+
+/** Inverse of {@link ecdhEncryptWithSharedSecret} for incoming simplemsg ciphertext. */
+export function ecdhDecryptWithSharedSecret(cipherText: string, sharedSecretHex: string): string {
+  try {
+    const bytes = CryptoJS.AES.decrypt(
+      String(cipherText ?? ''),
+      String(sharedSecretHex ?? ''),
+    )
+    return bytes.toString(CryptoJS.enc.Utf8)
+  } catch {
+    return ''
+  }
+}
