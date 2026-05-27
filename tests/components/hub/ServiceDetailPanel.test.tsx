@@ -1,6 +1,7 @@
 import type { ComponentProps } from 'react'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { MemoryRouter } from 'react-router-dom'
 import { describe, expect, it, vi, beforeEach } from 'vitest'
 import type { SkillServiceDetailData } from '@/api/aggregator.types'
 import { ServiceDetailPanel } from '@/components/hub/ServiceDetailPanel'
@@ -31,14 +32,16 @@ function renderPanel(
   return {
     onClose,
     ...render(
-      <QueryClientProvider client={queryClient}>
-        <ServiceDetailPanel
-          serviceId="pin-zhuwei-current-001"
-          rating={{ avg: 4.8, count: 12 }}
-          onClose={onClose}
-          {...props}
-        />
-      </QueryClientProvider>,
+      <MemoryRouter>
+        <QueryClientProvider client={queryClient}>
+          <ServiceDetailPanel
+            serviceId="pin-zhuwei-current-001"
+            rating={{ avg: 4.8, count: 12 }}
+            onClose={onClose}
+            {...props}
+          />
+        </QueryClientProvider>
+      </MemoryRouter>,
     ),
   }
 }
@@ -86,12 +89,40 @@ describe('ServiceDetailPanel', () => {
   })
 
   it('enables Pay & Request when wallet is connected', () => {
-    useWallet.mockImplementation((selector: (state: { status: string }) => unknown) =>
-      selector({ status: 'connected' }),
+    useWallet.mockImplementation(
+      (selector: (state: { status: string; identity: unknown }) => unknown) =>
+        selector({
+          status: 'connected',
+          identity: {
+            globalMetaId: 'idq1test',
+            mvcAddress: '1Mvc',
+            btcAddress: 'bc1q',
+            dogeAddress: 'D',
+          },
+        }),
     )
     renderPanel()
 
     expect(screen.getByRole('button', { name: 'Pay & Request' })).toBeEnabled()
+  })
+
+  it('opens request modal when Pay & Request is clicked', () => {
+    useWallet.mockImplementation(
+      (selector: (state: { status: string; identity: unknown }) => unknown) =>
+        selector({
+          status: 'connected',
+          identity: {
+            globalMetaId: 'idq1test',
+            mvcAddress: '1Mvc',
+            btcAddress: 'bc1q',
+            dogeAddress: 'D',
+          },
+        }),
+    )
+    renderPanel()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Pay & Request' }))
+    expect(screen.getByRole('dialog', { name: /pay & request/i })).toBeInTheDocument()
   })
 
   it('calls onClose when Escape is pressed', () => {

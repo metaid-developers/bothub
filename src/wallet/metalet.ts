@@ -1,4 +1,4 @@
-import type { GlobalMetaidResult, MetaletWalletApi, TransferTask } from './types'
+import type { EcdhResult, GlobalMetaidResult, MetaletWalletApi, TransferTask } from './types'
 
 export class MetaletNotInstalledError extends Error {
   constructor() {
@@ -46,6 +46,13 @@ export async function transfer(params: { tasks: TransferTask[] }): Promise<unkno
 
 export async function createPin(params: Record<string, unknown>): Promise<unknown> {
   return getWallet().createPin(params)
+}
+
+export async function ecdh(params: {
+  externalPubKey: string
+  path?: string
+}): Promise<EcdhResult> {
+  return getWallet().ecdh(params)
 }
 
 export async function eciesEncrypt(params: { message: string }): Promise<{ encrypted: string }> {

@@ -1,14 +1,14 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { clsx } from 'clsx'
 import { XMarkIcon } from '@heroicons/react/24/outline'
 import type { SkillServiceCore } from '@/api/aggregator.types'
 import { useServiceDetailQuery } from '@/api/queries'
 import { ProviderProfile } from '@/components/hub/ProviderProfile'
+import { RequestModal } from '@/components/hub/RequestModal'
 import { formatPrice } from '@/lib/format'
 import { useWallet } from '@/wallet/useWallet'
 
 const WALLET_REQUIRED_TOOLTIP = 'Connect your Metalet wallet to pay and request this service'
-const PAY_READY_TOOLTIP = 'Payment and request flow ships in the next milestone'
 
 export interface ServiceDetailRating {
   avg: number
@@ -131,8 +131,10 @@ export function ServiceDetailPanel({
   className,
 }: ServiceDetailPanelProps) {
   const panelRef = useRef<HTMLElement>(null)
+  const [requestOpen, setRequestOpen] = useState(false)
   const walletStatus = useWallet((s) => s.status)
-  const walletConnected = walletStatus === 'connected'
+  const walletIdentity = useWallet((s) => s.identity)
+  const walletConnected = walletStatus === 'connected' && walletIdentity != null
   const { data, isLoading, isError, error } = useServiceDetailQuery(serviceId)
 
   useEffect(() => {
@@ -156,7 +158,7 @@ export function ServiceDetailPanel({
   }, [onClose])
 
   const payDisabled = !walletConnected
-  const payTooltip = payDisabled ? WALLET_REQUIRED_TOOLTIP : PAY_READY_TOOLTIP
+  const payTooltip = payDisabled ? WALLET_REQUIRED_TOOLTIP : undefined
 
   return (
     <aside
@@ -230,10 +232,21 @@ export function ServiceDetailPanel({
             type="button"
             disabled={payDisabled}
             title={payTooltip}
+            onClick={() => setRequestOpen(true)}
             className="w-full rounded-xl bg-hub-accent py-2.5 text-sm font-semibold text-hub-bg transition enabled:hover:bg-hub-accent-hover disabled:cursor-not-allowed disabled:opacity-60"
           >
             Pay &amp; Request
           </button>
+
+          {walletIdentity && requestOpen ? (
+            <RequestModal
+              open={requestOpen}
+              onClose={() => setRequestOpen(false)}
+              service={data.service}
+              provider={data.provider}
+              wallet={walletIdentity}
+            />
+          ) : null}
         </div>
       ) : null}
     </aside>

@@ -1,0 +1,14 @@
+[ORDER] MRC20 token order
+<raw_request>
+Pay with DEMO-MRC20 token.
+</raw_request>
+支付金额 100 DEMO-MRC20
+txid: dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd
+payment chain: btc
+settlement kind: mrc20
+mrc20 ticker: DEMO
+mrc20 id: mrc20-genesis-id-demo-001
+commit txid: eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+service id: pin-mrc20-001
+skill name: demo-mrc20-skill
+output type: image

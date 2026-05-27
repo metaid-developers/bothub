@@ -18,6 +18,7 @@ const mockWallet = {
   getBalance: vi.fn(),
   transfer: vi.fn(),
   createPin: vi.fn(),
+  ecdh: vi.fn(),
   eciesEncrypt: vi.fn(),
   eciesDecrypt: vi.fn(),
   on: vi.fn(),

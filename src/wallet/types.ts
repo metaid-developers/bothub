@@ -20,6 +20,13 @@ export interface TransferTask {
   receivers: Array<{ address: string; amount: string }>
 }
 
+export interface EcdhResult {
+  sharedSecret: string
+  externalPubKey?: string
+  ecdhPubKey?: string
+  creatorPubkey?: string
+}
+
 export interface MetaletWalletApi {
   connect: () => Promise<unknown>
   disconnect: () => Promise<unknown>
@@ -27,6 +34,7 @@ export interface MetaletWalletApi {
   getBalance: (params?: { path?: string }) => Promise<unknown>
   transfer: (params: { tasks: TransferTask[] }) => Promise<unknown>
   createPin: (params: Record<string, unknown>) => Promise<unknown>
+  ecdh: (params: { externalPubKey: string; path?: string }) => Promise<EcdhResult>
   eciesEncrypt: (params: { message: string }) => Promise<{ encrypted: string }>
   eciesDecrypt: (params: { encrypted: string }) => Promise<{ message: string }>
   on: (eventName: string, handler: (...args: unknown[]) => void) => void

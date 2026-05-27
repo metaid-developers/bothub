@@ -1,0 +1,11 @@
+[ORDER] BTC paid order
+<raw_request>
+Need BTC settlement test order.
+</raw_request>
+支付金额 0.00001 BTC
+txid: cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+payment chain: btc
+settlement kind: native
+service id: pin-btc-001
+skill name: btc-skill
+output type: text

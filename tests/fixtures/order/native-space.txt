@@ -1,0 +1,11 @@
+[ORDER] Paid fortune reading
+<raw_request>
+Please analyze my chart for career luck in 2026.
+</raw_request>
+支付金额 1 SPACE
+txid: bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+payment chain: mvc
+settlement kind: native
+service id: pin-space-001
+skill name: zhuwei-fortune
+output type: text
