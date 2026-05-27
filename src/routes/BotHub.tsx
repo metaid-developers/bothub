@@ -1,4 +1,5 @@
 import { useCallback, useMemo, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import type { ServicesQueryParams } from '@/api/queries'
 import type { SkillServiceListItem } from '@/api/aggregator.types'
 import {
@@ -7,7 +8,13 @@ import {
   type HubFilters,
 } from '@/components/hub/FiltersBar'
 import { OnlineBotsSidebar } from '@/components/hub/OnlineBotsSidebar'
+import {
+  ServiceDetailPanel,
+  type ServiceDetailRating,
+} from '@/components/hub/ServiceDetailPanel'
 import { ServicesPanel } from '@/components/hub/ServicesPanel'
+
+const SERVICE_SEARCH_PARAM = 'service'
 
 function toQueryParams(filters: HubFilters): ServicesQueryParams {
   return {
@@ -19,21 +26,47 @@ function toQueryParams(filters: HubFilters): ServicesQueryParams {
   }
 }
 
-/** M4: detail panel selection — placeholder until ServiceDetailPanel ships */
 export function useSelectedServiceId(): [
   string | undefined,
   (id: string | undefined) => void,
 ] {
-  const [selectedServiceId, setSelectedServiceId] = useState<string | undefined>()
+  const [searchParams, setSearchParams] = useSearchParams()
+  const selectedServiceId = searchParams.get(SERVICE_SEARCH_PARAM) ?? undefined
+
+  const setSelectedServiceId = useCallback(
+    (id: string | undefined) => {
+      setSearchParams(
+        (prev) => {
+          const next = new URLSearchParams(prev)
+          if (id) {
+            next.set(SERVICE_SEARCH_PARAM, id)
+          } else {
+            next.delete(SERVICE_SEARCH_PARAM)
+          }
+          return next
+        },
+        { replace: true },
+      )
+    },
+    [setSearchParams],
+  )
+
   return [selectedServiceId, setSelectedServiceId]
 }
 
 export function BotHubPage() {
   const [filters, setFilters] = useState<HubFilters>(defaultHubFilters)
   const [pageServices, setPageServices] = useState<SkillServiceListItem[]>([])
-  const [, setSelectedServiceId] = useSelectedServiceId()
+  const [selectedServiceId, setSelectedServiceId] = useSelectedServiceId()
 
   const queryParams = useMemo(() => toQueryParams(filters), [filters])
+
+  const selectedRating = useMemo((): ServiceDetailRating | null => {
+    if (!selectedServiceId) return null
+    const item = pageServices.find((s) => s.id === selectedServiceId)
+    if (!item || item.ratingCount <= 0) return null
+    return { avg: item.ratingAvg, count: item.ratingCount }
+  }, [pageServices, selectedServiceId])
 
   const handleServicesLoaded = useCallback((items: SkillServiceListItem[]) => {
     setPageServices(items)
@@ -46,6 +79,10 @@ export function BotHubPage() {
     [setSelectedServiceId],
   )
 
+  const handleCloseDetail = useCallback(() => {
+    setSelectedServiceId(undefined)
+  }, [setSelectedServiceId])
+
   return (
     <div className="flex flex-col gap-6 lg:flex-row lg:items-start">
       <OnlineBotsSidebar services={pageServices} />
@@ -56,23 +93,29 @@ export function BotHubPage() {
           queryParams={queryParams}
           onServicesLoaded={handleServicesLoaded}
           onSelectService={handleSelectService}
+          selectedServiceId={selectedServiceId}
         />
       </div>
 
-      <aside
-        className="hidden w-72 shrink-0 xl:block"
-        aria-label="Service detail"
-        data-m4-placeholder
-      >
-        <div className="sticky top-20 rounded-card border border-dashed border-hub-border/80 bg-hub-surface/40 px-5 py-12 text-center">
-          <p className="font-display text-sm font-medium text-hub-muted">
-            Select a service
-          </p>
-          <p className="mt-2 text-xs leading-relaxed text-hub-muted/70">
-            Details and Pay &amp; Request flow open here in the next milestone.
-          </p>
-        </div>
-      </aside>
+      <div className="hidden w-80 shrink-0 xl:block">
+        {selectedServiceId ? (
+          <ServiceDetailPanel
+            serviceId={selectedServiceId}
+            rating={selectedRating}
+            onClose={handleCloseDetail}
+          />
+        ) : (
+          <aside
+            className="sticky top-20 rounded-card border border-dashed border-hub-border/80 bg-hub-surface/40 px-5 py-12 text-center"
+            aria-label="Service detail"
+          >
+            <p className="font-display text-sm font-medium text-hub-muted">Select a service</p>
+            <p className="mt-2 text-xs leading-relaxed text-hub-muted/70">
+              Choose a card to view pricing, provider profile, and Pay &amp; Request.
+            </p>
+          </aside>
+        )}
+      </div>
     </div>
   )
 }

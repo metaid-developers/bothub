@@ -1,3 +1,4 @@
+import type { KeyboardEvent } from 'react'
 import { clsx } from 'clsx'
 import type { SkillServiceListItem } from '@/api/aggregator.types'
 import { formatPrice } from '@/lib/format'
@@ -75,18 +76,38 @@ function RatingStars({ avg, count }: { avg: number; count: number }) {
 export interface ServiceCardProps {
   service: SkillServiceListItem
   className?: string
-  /** M4: wire selection; M3 keeps button inert */
+  selected?: boolean
   onSelect?: (service: SkillServiceListItem) => void
 }
 
-export function ServiceCard({ service, className, onSelect }: ServiceCardProps) {
+export function ServiceCard({ service, className, selected, onSelect }: ServiceCardProps) {
   const price = formatPrice(service.price, service.currency)
   const providerName = service.providerName?.trim() || PROVIDER_FALLBACK_NAME
+  const selectable = Boolean(onSelect)
+
+  const handleCardClick = () => {
+    onSelect?.(service)
+  }
+
+  const handleCardKeyDown = (event: KeyboardEvent<HTMLElement>) => {
+    if (!onSelect) return
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault()
+      onSelect(service)
+    }
+  }
 
   return (
     <article
+      data-hub-service-card
+      role={selectable ? 'button' : undefined}
+      tabIndex={selectable ? 0 : undefined}
+      onClick={selectable ? handleCardClick : undefined}
+      onKeyDown={selectable ? handleCardKeyDown : undefined}
       className={clsx(
         'flex h-full flex-col rounded-card border border-hub-border bg-hub-surface p-4 shadow-[0_12px_40px_-24px_rgba(0,0,0,0.8)] transition hover:border-hub-border/80 hover:bg-hub-surface2/80',
+        selectable && 'cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-hub-accent',
+        selected && 'border-hub-accent/70 ring-1 ring-hub-accent/35',
         className,
       )}
     >
@@ -137,9 +158,9 @@ export function ServiceCard({ service, className, onSelect }: ServiceCardProps) 
       <button
         type="button"
         disabled
-        onClick={() => onSelect?.(service)}
+        onClick={(event) => event.stopPropagation()}
         className="mt-4 w-full rounded-xl bg-hub-accent py-2.5 text-sm font-semibold text-hub-bg opacity-90 transition enabled:hover:bg-hub-accent-hover disabled:cursor-not-allowed"
-        title="Payment flow ships in a later milestone"
+        title="Open service details from the card; payment flow ships in a later milestone"
       >
         Pay &amp; Request
       </button>

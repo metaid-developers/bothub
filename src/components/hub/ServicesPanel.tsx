@@ -27,8 +27,8 @@ export interface ServicesPanelProps {
   queryParams: ServicesQueryParams
   className?: string
   onServicesLoaded?: (items: SkillServiceListItem[]) => void
-  /** M4: selection handler placeholder */
   onSelectService?: (service: SkillServiceListItem) => void
+  selectedServiceId?: string
 }
 
 export function ServicesPanel({
@@ -36,6 +36,7 @@ export function ServicesPanel({
   className,
   onServicesLoaded,
   onSelectService,
+  selectedServiceId,
 }: ServicesPanelProps) {
   const loadMoreRef = useRef<HTMLDivElement>(null)
   const { data, isLoading, isError, error, fetchNextPage, hasNextPage, isFetchingNextPage } =
@@ -116,7 +117,11 @@ export function ServicesPanel({
       <ul className="grid list-none gap-4 p-0 sm:grid-cols-2" aria-label="Skill services">
         {services.map((service) => (
           <li key={`${service.id}-${service.updatedAt}`}>
-            <ServiceCard service={service} onSelect={onSelectService} />
+            <ServiceCard
+              service={service}
+              onSelect={onSelectService}
+              selected={selectedServiceId === service.id}
+            />
           </li>
         ))}
       </ul>

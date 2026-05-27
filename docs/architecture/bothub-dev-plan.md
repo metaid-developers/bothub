@@ -135,9 +135,9 @@
 - `src/routes/BotHub.tsx` — manage `selectedServiceId` state; show panel on right when set.
 - `src/components/hub/ServiceCard.tsx` — `onClick` selects the service.
 
-- [ ] **Step 1:** `ServiceDetailPanel` takes `serviceId`, calls `useServiceDetailQuery`, renders: header (icon + name + rating + provider), description (full), pricing block (price/currency/settlement), provider profile (name/avatar/chatPubkey indicator). No examples/deliverables (not in v1 schema).
-- [ ] **Step 2:** "Pay & Request" button — disabled if wallet not connected (with tooltip).
-- [ ] **Step 3:** ESC + clicking outside closes the panel; URL reflects state via search param (`?service=<id>`) for shareable links.
+- [x] **Step 1:** `ServiceDetailPanel` takes `serviceId`, calls `useServiceDetailQuery`, renders: header (icon + name + rating + provider), description (full), pricing block (price/currency/settlement), provider profile (name/avatar/chatPubkey indicator). No examples/deliverables (not in v1 schema).
+- [x] **Step 2:** "Pay & Request" button — disabled if wallet not connected (with tooltip).
+- [x] **Step 3:** ESC + clicking outside closes the panel; URL reflects state via search param (`?service=<id>`) for shareable links.
 
 **Verify:** clicking a card opens panel with all fields from spec; closing clears URL param.
 
