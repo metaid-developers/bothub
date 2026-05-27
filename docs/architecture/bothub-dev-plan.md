@@ -61,11 +61,7 @@
 **Files (modify):**
 - `src/App.tsx` — add a "Connect Wallet" button in `AppShell`.
 
-- [ ] **Step 1:** define `WalletIdentity = { globalMetaId, mvcAddress, btcAddress, dogeAddress }` in `wallet/types.ts`.
-- [ ] **Step 2:** in `metalet.ts`, export typed wrappers around `window.metaidwallet`: `connect`, `getGlobalMetaid`, `getBalance`, `transfer`, `createPin`, `eciesEncrypt`, `eciesDecrypt`, `on`. Each returns a typed promise; throw `MetaletNotInstalledError` if `window.metaidwallet` is undefined.
-- [ ] **Step 3:** write `tests/wallet/metalet.test.ts` — mock `window.metaidwallet` with vi; assert `getGlobalMetaid` returns the typed shape and `MetaletNotInstalledError` fires when unset.
-- [ ] **Step 4:** zustand store in `useWallet.ts` with `{ identity, status: 'disconnected'|'connecting'|'connected'|'error', connect(), disconnect() }`. Persist `identity` to `localStorage`.
-- [ ] **Step 5:** wire `AppShell` connect button. Show truncated globalMetaId + disconnect when connected.
+- [x] **Step 1–5:** M1 complete — wallet types, metalet adapter, zustand persist, header layout (left tabs Bot Hub/Delivery, right connect wallet).
 
 **Verify:**
 - `pnpm test wallet` passes.

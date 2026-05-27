@@ -15,9 +15,11 @@ function renderApp(initialPath = '/') {
 }
 
 describe('App smoke', () => {
-  it('shows BotHub header and Bot Hub route', () => {
+  it('shows main tabs and connect wallet on Bot Hub route', () => {
     renderApp('/')
-    expect(screen.getByText(/BotHub/i)).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Bot Hub' })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Delivery' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '连接钱包' })).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: 'Bot Hub' })).toBeInTheDocument()
   })
 

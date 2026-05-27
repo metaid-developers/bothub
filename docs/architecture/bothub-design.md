@@ -26,6 +26,7 @@
 | D14 | Visual design | **`frontend-design` skill** + [`docs/design/bothub-mockup.png`](../design/bothub-mockup.png) | Layout only; v1 API has no deliverables/examples/tiers |
 | D15 | Data in dev | **`VITE_USE_AGGREGATOR_MOCK=true`** + fixtures | Aggregator API still building; flip mock off when live |
 | D16 | meta-socket URL | **`https://api.idchat.io`** | `VITE_META_SOCKET_BASE_URL`; override in `.env.local` |
+| D17 | App chrome | **左上 Tab**（Bot Hub / Delivery）+ **右上连接钱包** | 设计稿未标清；实现以此为准 |
 
 ### Reference projects (source of truth when unsure)
 
