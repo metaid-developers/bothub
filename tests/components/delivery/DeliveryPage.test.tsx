@@ -1,11 +1,12 @@
 import { render, screen } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
-import { describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { DeliveryPage } from '@/routes/Delivery'
+import type { WalletIdentity } from '@/wallet/types'
 
 const mocks = vi.hoisted(() => ({
   walletState: {
-    identity: null,
+    identity: null as WalletIdentity | null,
     status: 'disconnected',
   },
   socketState: {
@@ -42,6 +43,15 @@ function expectBefore(first: Element, second: Element) {
 }
 
 describe('DeliveryPage layout', () => {
+  beforeEach(() => {
+    Element.prototype.scrollIntoView = vi.fn()
+    mocks.walletState.identity = null
+    mocks.walletState.status = 'disconnected'
+    mocks.messageState.byPeer = {}
+    mocks.messageState.selectedSessionKey = null
+    vi.clearAllMocks()
+  })
+
   it('orders the mobile workspace as sessions, header, timeline, assets, then composer', () => {
     render(
       <MemoryRouter initialEntries={['/delivery']}>
@@ -53,13 +63,49 @@ describe('DeliveryPage layout', () => {
     const header = screen.getByRole('status', { name: 'No delivery session selected' })
     const timeline = screen.getByText('Select a session to view messages')
     const assets = screen.getByRole('heading', { name: 'Delivered assets' })
-    const composer = screen.getByRole('textbox', {
-      name: 'Follow-up composer coming in Task 7',
-    })
+    const composer = screen.getByRole('textbox', { name: 'Message provider' })
 
     expectBefore(sessions, header)
     expectBefore(header, timeline)
     expectBefore(timeline, assets)
     expectBefore(assets, composer)
+  })
+
+  it('keeps the composer wallet-gated when a disconnected wallet has a cached identity', () => {
+    mocks.walletState.identity = {
+      globalMetaId: 'idqbuyer',
+      mvcAddress: '1BuyerMvc',
+      btcAddress: 'bc1buyer',
+      dogeAddress: 'Dbuyer',
+    }
+    mocks.walletState.status = 'disconnected'
+    mocks.messageState.byPeer = {
+      idqprovider: [
+        {
+          id: 'pin-order',
+          peerGlobalMetaId: 'idqprovider',
+          peerChatPubkey: '04' + 'ab'.repeat(64),
+          fromGlobalMetaId: 'idqbuyer',
+          toGlobalMetaId: 'idqprovider',
+          content: '[ORDER] Cached identity order\norder id: order-1',
+          rawContent: '[ORDER] Cached identity order\norder id: order-1',
+          encryption: 'plain',
+          contentType: 'text/plain',
+          orderCorrelationId: 'order-1',
+          timestamp: 1,
+          pinId: 'pin-order',
+        },
+      ],
+    }
+
+    render(
+      <MemoryRouter initialEntries={['/delivery']}>
+        <DeliveryPage />
+      </MemoryRouter>,
+    )
+
+    expect(screen.getByRole('textbox', { name: 'Message provider' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Send' })).toBeDisabled()
+    expect(screen.getByText('Connect wallet to reply')).toBeInTheDocument()
   })
 })

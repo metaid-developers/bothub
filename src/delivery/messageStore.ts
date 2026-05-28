@@ -1,15 +1,22 @@
 import { create } from 'zustand'
 import { createJSONStorage, persist } from 'zustand/middleware'
-import { getMessagesForSession, getSessionsForWallet } from '@/delivery/db'
+import {
+  getMessagesForSession,
+  getSessionsForWallet,
+  persistOutgoingFollowUp,
+} from '@/delivery/db'
 import type { DeliveryMessageRecord } from '@/delivery/domain'
+import { buildSessionId } from '@/delivery/domain'
 import {
   buildGroupedSessionList,
   messagesForSession as resolveMessagesForSession,
 } from '@/delivery/sessionGrouping'
+import type { WalletIdentity } from '@/wallet/types'
 
 export interface DeliveryMessage {
   id: string
   peerGlobalMetaId: string
+  peerChatPubkey?: string
   fromGlobalMetaId: string
   toGlobalMetaId: string
   /** Display text (decrypted when possible). */
@@ -18,6 +25,7 @@ export interface DeliveryMessage {
   rawContent: string
   encryption: string
   contentType: string
+  orderCorrelationId?: string
   timestamp: number
   pinId?: string
   txId?: string
@@ -27,6 +35,7 @@ export interface DeliveryMessage {
 export interface DeliverySession {
   sessionKey: string
   peerGlobalMetaId: string
+  providerChatPubkey?: string
   orderCorrelationId: string | null
   serviceLabel: string | null
   lastMessage: DeliveryMessage
@@ -38,6 +47,13 @@ interface MessageStoreState {
   selectedSessionKey: string | null
   hydratedWalletGlobalMetaId: string | null
   append: (message: DeliveryMessage) => void
+  appendOutgoingFollowUp: (input: {
+    wallet: WalletIdentity
+    session: DeliverySession
+    content: string
+    rawContent: string
+    pinId: string
+  }) => Promise<void>
   setSelectedSession: (sessionKey: string | null) => void
   hydrateFromDb: (walletGlobalMetaId: string) => Promise<void>
   listSessions: (selfGlobalMetaId: string) => DeliverySession[]
@@ -71,6 +87,7 @@ function upsertMessage(
 function deliveryMessageFromRecord(
   record: DeliveryMessageRecord,
   selfGlobalMetaId: string,
+  fallbackPeerChatPubkey?: string,
 ): DeliveryMessage {
   const peer = record.peerGlobalMetaId.trim()
   const self = selfGlobalMetaId.trim()
@@ -79,12 +96,14 @@ function deliveryMessageFromRecord(
   return {
     id: record.id,
     peerGlobalMetaId: peer,
+    peerChatPubkey: record.peerChatPubkey?.trim() || fallbackPeerChatPubkey,
     fromGlobalMetaId: outgoing ? self : peer,
     toGlobalMetaId: outgoing ? peer : self,
     content: record.content,
     rawContent: record.rawContent,
     encryption: record.encryption,
     contentType: record.contentType,
+    orderCorrelationId: record.orderCorrelationId,
     timestamp: record.timestamp,
     pinId: record.pinId,
     txId: record.txId,
@@ -105,6 +124,68 @@ export const useMessageStore = create<MessageStoreState>()(
         }))
       },
 
+      appendOutgoingFollowUp: async ({ wallet, session, content, rawContent, pinId }) => {
+        const walletGlobalMetaId = wallet.globalMetaId.trim()
+        const providerGlobalMetaId = session.peerGlobalMetaId.trim()
+        if (!walletGlobalMetaId || !providerGlobalMetaId || !pinId.trim()) {
+          throw new Error('Follow-up message is missing required identifiers')
+        }
+
+        const timestamp = Date.now()
+        const sessionId = buildSessionId({
+          walletGlobalMetaId,
+          providerGlobalMetaId,
+          orderCorrelationId: session.orderCorrelationId,
+        })
+        const message: DeliveryMessage = {
+          id: pinId.trim(),
+          peerGlobalMetaId: providerGlobalMetaId,
+          peerChatPubkey: session.providerChatPubkey,
+          fromGlobalMetaId: walletGlobalMetaId,
+          toGlobalMetaId: providerGlobalMetaId,
+          content,
+          rawContent,
+          encryption: 'ecdh',
+          contentType: 'text/plain',
+          orderCorrelationId: session.orderCorrelationId ?? undefined,
+          timestamp,
+          pinId: pinId.trim(),
+        }
+
+        await persistOutgoingFollowUp({
+          session: {
+            id: sessionId,
+            walletGlobalMetaId,
+            providerGlobalMetaId,
+            providerChatPubkey: session.providerChatPubkey,
+            orderCorrelationId: session.orderCorrelationId ?? undefined,
+            serviceLabel: session.serviceLabel ?? undefined,
+            status: 'active',
+            lastMessageId: message.id,
+            lastActivityAt: timestamp,
+            assetCount: 0,
+            unreadCount: 0,
+          },
+          message: {
+            id: message.id,
+            walletGlobalMetaId,
+            sessionId,
+            peerGlobalMetaId: providerGlobalMetaId,
+            peerChatPubkey: session.providerChatPubkey,
+            direction: 'outgoing',
+            content,
+            rawContent,
+            contentType: 'text/plain',
+            encryption: 'ecdh',
+            orderCorrelationId: session.orderCorrelationId ?? undefined,
+            pinId: message.pinId,
+            timestamp,
+            decryptStatus: 'plain',
+          },
+        })
+        get().append(message)
+      },
+
       setSelectedSession: (sessionKey) => {
         set({ selectedSessionKey: sessionKey?.trim() || null })
       },
@@ -117,9 +198,15 @@ export const useMessageStore = create<MessageStoreState>()(
         const messageGroups = await Promise.all(
           sessions.map((session) => getMessagesForSession(session.id)),
         )
-        const messages = messageGroups
-          .flat()
-          .map((record) => deliveryMessageFromRecord(record, wallet))
+        const sessionProviderKeys = new Map(
+          sessions.map((session) => [
+            session.id,
+            session.providerChatPubkey?.trim() || undefined,
+          ]),
+        )
+        const messages = messageGroups.flat().map((record) =>
+          deliveryMessageFromRecord(record, wallet, sessionProviderKeys.get(record.sessionId)),
+        )
 
         set((state) => {
           const walletChanged = state.hydratedWalletGlobalMetaId !== wallet

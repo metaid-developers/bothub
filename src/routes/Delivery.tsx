@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { WsErrorBanner } from '@/components/common/WsErrorBanner'
 import { DeliveredAssetsPanel } from '@/components/delivery/DeliveredAssetsPanel'
+import { DeliveryComposer } from '@/components/delivery/DeliveryComposer'
 import { MessageList } from '@/components/delivery/MessageList'
 import { SessionHeader } from '@/components/delivery/SessionHeader'
 import { SessionsList } from '@/components/delivery/SessionsList'
@@ -16,28 +17,6 @@ import { useWallet } from '@/wallet/useWallet'
 import { useSocket } from '@/ws/useSocket'
 
 const SESSION_PARAM = 'session'
-
-function ComposerPlaceholder() {
-  return (
-    <div className="border-t border-hub-border p-3 md:col-start-2 md:row-start-2">
-      <div className="flex items-center gap-2 rounded-card border border-hub-border bg-hub-surface2/60 px-3 py-2">
-        <input
-          disabled
-          aria-label={t('delivery.composerPlaceholder')}
-          placeholder={t('delivery.composerPlaceholder')}
-          className="min-w-0 flex-1 bg-transparent text-sm text-hub-muted placeholder:text-hub-muted"
-        />
-        <button
-          type="button"
-          disabled
-          className="rounded-card border border-hub-border px-3 py-1.5 text-xs font-medium text-hub-muted"
-        >
-          {t('delivery.sendPlaceholder')}
-        </button>
-      </div>
-    </div>
-  )
-}
 
 export function DeliveryPage() {
   const [searchParams, setSearchParams] = useSearchParams()
@@ -137,7 +116,10 @@ export function DeliveryPage() {
           messages={messages}
           className="md:col-start-3 md:row-span-2 md:row-start-1"
         />
-        <ComposerPlaceholder />
+        <DeliveryComposer
+          wallet={walletConnected ? identity : null}
+          session={selectedSessionDetails}
+        />
       </div>
     </section>
   )

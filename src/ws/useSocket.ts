@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import { decryptIncoming } from '@/delivery/decrypt'
 import { useMessageStore, type DeliveryMessage } from '@/delivery/messageStore'
-import { useWsMock } from '@/api/config'
+import { useWsMock as isWsMockEnabled } from '@/api/config'
 import {
   isPrivateChatForRecipient,
   isPrivateChatItem,
@@ -61,6 +61,7 @@ async function privateChatToDeliveryMessage(
   return {
     id: messageIdFromPrivateChat(item),
     peerGlobalMetaId,
+    peerChatPubkey: peerChatPubKey,
     fromGlobalMetaId: item.fromGlobalMetaId.trim(),
     toGlobalMetaId: item.toGlobalMetaId.trim(),
     content: plaintext || rawContent,
@@ -101,7 +102,7 @@ export const useSocket = create<SocketState>()((set, get) => ({
   },
 
   injectMockEnvelope: (envelope, selfGlobalMetaId) => {
-    if (!import.meta.env.DEV && !useWsMock()) return
+    if (!import.meta.env.DEV && !isWsMockEnabled()) return
     void get().handleEnvelope(envelope, selfGlobalMetaId)
   },
 
@@ -109,7 +110,7 @@ export const useSocket = create<SocketState>()((set, get) => ({
     const gmid = globalMetaId.trim()
     if (!gmid) return
 
-    if (useWsMock()) {
+    if (isWsMockEnabled()) {
       activeController?.disconnect()
       activeController = null
       set({

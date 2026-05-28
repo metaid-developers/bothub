@@ -145,6 +145,47 @@ describe('sessionGrouping', () => {
     expect(sessions[0]?.serviceLabel).toBe('label-skill')
   })
 
+  it('derives provider chat pubkey for grouped sessions', () => {
+    const orderRef = 'e'.repeat(64)
+    const orderPayload = buildOrderPayload({
+      displayText: 'Key test',
+      rawRequest: 'x',
+      price: '0',
+      currency: 'SPACE',
+      orderReference: orderRef,
+      serviceId: 'pin-5',
+      skillName: 'key-skill',
+      outputType: 'text',
+    })
+
+    const sessions = buildGroupedSessionList(
+      {
+        [PEER]: [
+          msg({
+            id: 'o1',
+            fromGlobalMetaId: SELF,
+            toGlobalMetaId: PEER,
+            content: orderPayload,
+            timestamp: 1,
+            peerChatPubkey: 'stored-provider-key',
+          }),
+          msg({
+            id: 'r1',
+            content: `Reply for ${orderRef}`,
+            timestamp: 2,
+            peerChatPubkey: 'incoming-provider-key',
+          }),
+        ],
+      },
+      SELF,
+    )
+
+    expect(sessions[0]).toMatchObject({
+      sessionKey: buildSessionKey(PEER, orderRef),
+      providerChatPubkey: 'stored-provider-key',
+    })
+  })
+
   it('resolves messages for a session key', () => {
     const orderRef = 'd'.repeat(64)
     const orderPayload = buildOrderPayload({

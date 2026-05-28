@@ -76,6 +76,7 @@ export async function persistPendingOrder(
 }> {
   const walletGlobalMetaId = input.wallet.globalMetaId.trim()
   const providerGlobalMetaId = input.provider.globalMetaId.trim()
+  const providerChatPubkey = input.provider.chatPubkey?.trim() || undefined
   const orderCorrelationId = resolveOrderCorrelationId(input.result)
   if (!walletGlobalMetaId) {
     throw new Error('Wallet globalMetaId is required to persist a pending order')
@@ -100,6 +101,7 @@ export async function persistPendingOrder(
     id: orderId,
     walletGlobalMetaId,
     providerGlobalMetaId,
+    providerChatPubkey,
     serviceId: input.service.id,
     serviceName: input.service.serviceName,
     skillName: input.service.providerSkill || input.service.serviceName,
@@ -123,6 +125,7 @@ export async function persistPendingOrder(
     id: sessionId,
     walletGlobalMetaId,
     providerGlobalMetaId,
+    providerChatPubkey,
     orderCorrelationId,
     serviceId: input.service.id,
     serviceLabel: input.service.displayName || input.service.serviceName,
@@ -138,6 +141,7 @@ export async function persistPendingOrder(
     walletGlobalMetaId,
     sessionId,
     peerGlobalMetaId: providerGlobalMetaId,
+    peerChatPubkey: providerChatPubkey,
     direction: 'outgoing',
     content: input.result.orderPayload,
     rawContent: input.result.orderPayload,

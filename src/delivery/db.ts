@@ -224,6 +224,44 @@ export async function getMessagesForSession(
   return sortByNumberAsc(messages, 'timestamp')
 }
 
+export async function persistOutgoingFollowUp(input: {
+  session: DeliverySessionRecord
+  message: DeliveryMessageRecord
+}): Promise<{ session: DeliverySessionRecord; message: DeliveryMessageRecord }> {
+  const db = await openDeliveryDb()
+  const transaction = db.transaction(['sessions', 'messages'], 'readwrite')
+  const done = transactionDone(transaction)
+
+  try {
+    const sessionStore = transaction.objectStore('sessions')
+    const messageStore = transaction.objectStore('messages')
+    const existing = await requestToPromise(
+      sessionStore.get(input.session.id) as IDBRequest<DeliverySessionRecord | undefined>,
+    )
+    const mergedSession: DeliverySessionRecord = {
+      ...input.session,
+      ...existing,
+      providerChatPubkey:
+        input.session.providerChatPubkey?.trim() ||
+        existing?.providerChatPubkey?.trim() ||
+        undefined,
+      lastMessageId: input.message.id,
+      lastActivityAt: input.session.lastActivityAt,
+    }
+
+    sessionStore.put(mergedSession)
+    messageStore.put(input.message)
+    await done
+    return { session: mergedSession, message: input.message }
+  } catch (error) {
+    abortTransaction(transaction)
+    await done.catch(() => undefined)
+    throw error
+  } finally {
+    db.close()
+  }
+}
+
 export async function putAsset(asset: DeliveryAssetRecord): Promise<void> {
   await putRecord('assets', asset)
 }

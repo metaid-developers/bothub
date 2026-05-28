@@ -1,7 +1,13 @@
-import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { IDBFactory, IDBKeyRange } from 'fake-indexeddb'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { IDBFactory, IDBKeyRange, IDBObjectStore } from 'fake-indexeddb'
 import { clearTestSessionStorage } from '../setup'
-import { DELIVERY_DB_NAME, putMessage, putSession } from '@/delivery/db'
+import {
+  DELIVERY_DB_NAME,
+  getMessagesForSession,
+  getSessionsForWallet,
+  putMessage,
+  putSession,
+} from '@/delivery/db'
 import { useMessageStore, type DeliveryMessage } from '@/delivery/messageStore'
 import { buildOrderPayload } from '@/order/buildOrderPayload'
 
@@ -43,6 +49,7 @@ describe('messageStore', () => {
   })
 
   afterEach(async () => {
+    vi.restoreAllMocks()
     await new Promise<void>((resolve, reject) => {
       const request = indexedDB.deleteDatabase(DELIVERY_DB_NAME)
       request.onsuccess = () => resolve()
@@ -144,6 +151,7 @@ describe('messageStore', () => {
       id: sessionId,
       walletGlobalMetaId: SELF,
       providerGlobalMetaId: 'idqpeer',
+      providerChatPubkey: 'stored-provider-key',
       orderCorrelationId: 'pending-order',
       serviceId: 'svc-pending',
       serviceLabel: 'Pending Skill',
@@ -158,6 +166,7 @@ describe('messageStore', () => {
       walletGlobalMetaId: SELF,
       sessionId,
       peerGlobalMetaId: 'idqpeer',
+      peerChatPubkey: 'stored-provider-key',
       direction: 'outgoing',
       content: buildOrderPayload({
         displayText: 'Pending Skill',
@@ -184,11 +193,136 @@ describe('messageStore', () => {
       expect.objectContaining({
         sessionKey: 'idqpeer:pending-order',
         peerGlobalMetaId: 'idqpeer',
+        providerChatPubkey: 'stored-provider-key',
         orderCorrelationId: 'pending-order',
         serviceLabel: 'pending-skill',
         messageCount: 1,
       }),
     ])
+  })
+
+  it('persists outgoing follow-ups with outgoing direction without dropping existing session fields', async () => {
+    await putSession({
+      id: `${SELF}:idqpeer:follow-up-order`,
+      walletGlobalMetaId: SELF,
+      providerGlobalMetaId: 'idqpeer',
+      providerChatPubkey: 'stored-provider-key',
+      orderCorrelationId: 'follow-up-order',
+      serviceId: 'svc-existing',
+      serviceLabel: 'Existing Skill',
+      status: 'delivered',
+      lastMessageId: 'pin-delivery',
+      lastActivityAt: 50,
+      assetCount: 2,
+      unreadCount: 3,
+    })
+
+    await useMessageStore.getState().appendOutgoingFollowUp({
+      wallet: {
+        globalMetaId: SELF,
+        mvcAddress: '1SelfMvc',
+        btcAddress: 'bc1self',
+        dogeAddress: 'Dself',
+      },
+      session: {
+        sessionKey: 'idqpeer:follow-up-order',
+        peerGlobalMetaId: 'idqpeer',
+        providerChatPubkey: 'stored-provider-key',
+        orderCorrelationId: 'follow-up-order',
+        serviceLabel: 'Follow Up Skill',
+        lastMessage: sampleMessage({
+          id: 'pin-order',
+          peerGlobalMetaId: 'idqpeer',
+          fromGlobalMetaId: SELF,
+          toGlobalMetaId: 'idqpeer',
+        }),
+        messageCount: 1,
+      },
+      content: 'Please revise.',
+      rawContent: 'encrypted-follow-up',
+      pinId: 'pin-follow-up',
+    })
+
+    expect(await getSessionsForWallet(SELF)).toEqual([
+      expect.objectContaining({
+        id: `${SELF}:idqpeer:follow-up-order`,
+        providerChatPubkey: 'stored-provider-key',
+        serviceId: 'svc-existing',
+        serviceLabel: 'Existing Skill',
+        status: 'delivered',
+        lastMessageId: 'pin-follow-up',
+        assetCount: 2,
+        unreadCount: 3,
+      }),
+    ])
+    expect(
+      await getMessagesForSession(`${SELF}:idqpeer:follow-up-order`),
+    ).toEqual([
+      expect.objectContaining({
+        id: 'pin-follow-up',
+        direction: 'outgoing',
+        content: 'Please revise.',
+        rawContent: 'encrypted-follow-up',
+        peerChatPubkey: 'stored-provider-key',
+      }),
+    ])
+
+    useMessageStore.setState({ byPeer: {}, selectedSessionKey: null })
+    await useMessageStore.getState().hydrateFromDb(SELF)
+
+    expect(useMessageStore.getState().messagesForSession('idqpeer:follow-up-order', SELF)).toEqual([
+      expect.objectContaining({
+        id: 'pin-follow-up',
+        fromGlobalMetaId: SELF,
+        toGlobalMetaId: 'idqpeer',
+        peerChatPubkey: 'stored-provider-key',
+      }),
+    ])
+  })
+
+  it('does not append outgoing follow-ups to memory when persistence fails', async () => {
+    const originalPut = IDBObjectStore.prototype.put
+    vi.spyOn(IDBObjectStore.prototype, 'put').mockImplementation(function (
+      this: IDBObjectStore,
+      value: unknown,
+    ) {
+      if (this.name === 'messages') {
+        throw new DOMException('Injected message write failure', 'DataError')
+      }
+      return originalPut.call(this, value)
+    })
+
+    await expect(
+      useMessageStore.getState().appendOutgoingFollowUp({
+        wallet: {
+          globalMetaId: SELF,
+          mvcAddress: '1SelfMvc',
+          btcAddress: 'bc1self',
+          dogeAddress: 'Dself',
+        },
+        session: {
+          sessionKey: 'idqpeer:follow-up-order',
+          peerGlobalMetaId: 'idqpeer',
+          providerChatPubkey: 'stored-provider-key',
+          orderCorrelationId: 'follow-up-order',
+          serviceLabel: 'Follow Up Skill',
+          lastMessage: sampleMessage({
+            id: 'pin-order',
+            peerGlobalMetaId: 'idqpeer',
+            fromGlobalMetaId: SELF,
+            toGlobalMetaId: 'idqpeer',
+          }),
+          messageCount: 1,
+        },
+        content: 'Please revise.',
+        rawContent: 'encrypted-follow-up',
+        pinId: 'pin-follow-up',
+      }),
+    ).rejects.toBeTruthy()
+
+    expect(useMessageStore.getState().messagesForSession('idqpeer:follow-up-order', SELF)).toEqual(
+      [],
+    )
   })
 
   it('clears previously hydrated wallet messages when hydrating a different wallet', async () => {

@@ -53,6 +53,25 @@ function isMessageForSelf(message: DeliveryMessage, selfGlobalMetaId: string): b
   )
 }
 
+function providerChatPubkeyForSession(
+  messages: DeliveryMessage[],
+  selfGlobalMetaId: string,
+): string | undefined {
+  const self = selfGlobalMetaId.trim()
+  const fromOutgoingOrder = messages.find(
+    (message) =>
+      message.fromGlobalMetaId.trim() === self && message.peerChatPubkey?.trim(),
+  )
+  if (fromOutgoingOrder?.peerChatPubkey?.trim()) {
+    return fromOutgoingOrder.peerChatPubkey.trim()
+  }
+
+  return [...messages]
+    .reverse()
+    .find((message) => message.peerChatPubkey?.trim())
+    ?.peerChatPubkey?.trim()
+}
+
 export function groupPeerMessagesBySession(
   messages: DeliveryMessage[],
   selfGlobalMetaId: string,
@@ -71,10 +90,16 @@ export function groupPeerMessagesBySession(
     const parsed = parseOrderMessage(message.content)
     const isSelf = message.fromGlobalMetaId.trim() === self
     const correlation = parsed ? getOrderCorrelationId(parsed) : ''
+    const storedCorrelation = message.orderCorrelationId?.trim() ?? ''
 
     if (parsed && isSelf && correlation) {
       knownCorrelations.add(correlation)
       return buildSessionKey(peer, correlation)
+    }
+
+    if (storedCorrelation) {
+      knownCorrelations.add(storedCorrelation)
+      return buildSessionKey(peer, storedCorrelation)
     }
 
     if (correlation && knownCorrelations.has(correlation)) {
@@ -137,6 +162,7 @@ export function buildGroupedSessionList(
       sessions.push({
         sessionKey,
         peerGlobalMetaId: peerGlobalMetaId.trim(),
+        providerChatPubkey: providerChatPubkeyForSession(sorted, selfGlobalMetaId),
         orderCorrelationId,
         serviceLabel,
         lastMessage,
@@ -164,6 +190,7 @@ export function buildSessionList(
     sessions.push({
       sessionKey: peerGlobalMetaId,
       peerGlobalMetaId,
+      providerChatPubkey: providerChatPubkeyForSession(sorted, ''),
       orderCorrelationId: null,
       serviceLabel: null,
       lastMessage,

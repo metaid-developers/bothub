@@ -8,6 +8,7 @@ import {
   getOrdersForWallet,
   getSessionsForWallet,
   openDeliveryDb,
+  persistOutgoingFollowUp,
   putAsset,
   putMessage,
   putOrder,
@@ -210,6 +211,62 @@ describe('delivery IndexedDB facade', () => {
 
     expect((await getOrdersForWallet('wallet-a')).map((item) => item.id)).toEqual([
       'valid-after-failure',
+    ])
+  })
+
+  it('atomically writes outgoing follow-ups without dropping existing session fields', async () => {
+    await putSession(
+      session({
+        status: 'delivered',
+        serviceId: 'existing-service',
+        serviceLabel: 'Existing Service',
+        providerChatPubkey: 'existing-provider-key',
+        lastMessageId: 'delivered-message',
+        lastActivityAt: now - 1,
+        assetCount: 2,
+        unreadCount: 3,
+      }),
+    )
+
+    await persistOutgoingFollowUp({
+      session: session({
+        status: 'active',
+        serviceLabel: 'Replacement Label',
+        providerChatPubkey: 'new-provider-key',
+        lastMessageId: 'follow-up-message',
+        lastActivityAt: now + 1,
+        assetCount: 0,
+        unreadCount: 0,
+      }),
+      message: message({
+        id: 'follow-up-message',
+        direction: 'outgoing',
+        content: 'Please revise this delivery.',
+        rawContent: 'encrypted-follow-up',
+        peerChatPubkey: 'new-provider-key',
+        timestamp: now + 1,
+      }),
+    })
+
+    expect(await getSessionsForWallet('wallet-a')).toEqual([
+      expect.objectContaining({
+        id: 'wallet-a:provider-a:order-a',
+        providerChatPubkey: 'new-provider-key',
+        serviceId: 'existing-service',
+        serviceLabel: 'Existing Service',
+        status: 'delivered',
+        lastMessageId: 'follow-up-message',
+        lastActivityAt: now + 1,
+        assetCount: 2,
+        unreadCount: 3,
+      }),
+    ])
+    expect(await getMessagesForSession('wallet-a:provider-a:order-a')).toEqual([
+      expect.objectContaining({
+        id: 'follow-up-message',
+        direction: 'outgoing',
+        content: 'Please revise this delivery.',
+      }),
     ])
   })
 
