@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from 'react'
+import { useCallback, useEffect, useMemo } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { WsErrorBanner } from '@/components/common/WsErrorBanner'
 import { MessageList } from '@/components/delivery/MessageList'
@@ -21,8 +21,16 @@ export function DeliveryPage() {
   const byPeer = useMessageStore((s) => s.byPeer)
   const selectedSessionFromStore = useMessageStore((s) => s.selectedSessionKey)
   const setSelectedSession = useMessageStore((s) => s.setSelectedSession)
+  const hydrateFromDb = useMessageStore((s) => s.hydrateFromDb)
   const listSessions = useMessageStore((s) => s.listSessions)
   const messagesForSession = useMessageStore((s) => s.messagesForSession)
+
+  useEffect(() => {
+    if (!selfGlobalMetaId) return
+    void hydrateFromDb(selfGlobalMetaId).catch((error) => {
+      console.warn('Could not load saved delivery sessions.', error)
+    })
+  }, [hydrateFromDb, selfGlobalMetaId])
 
   const sessions = useMemo(
     () => listSessions(selfGlobalMetaId),

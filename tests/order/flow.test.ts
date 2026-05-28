@@ -104,9 +104,12 @@ describe('executePayAndRequest', () => {
     expect(body.content).toBeTruthy()
 
     expect(result.paymentTxid).toBe(paymentTxid)
+    expect(result.paymentCommitTxid).toBe('')
     expect(result.orderReference).toBe('')
     expect(result.orderPinId).toBe('pin-order-001')
     expect(result.sessionKey).toBe(`${provider.globalMetaId}:${paymentTxid}`)
+    expect(result.orderPayload).toContain(`txid: ${paymentTxid}`)
+    expect(result.displaySummary).toBe('Please deliver my fortune reading.')
   })
 
   it('happy path: free order skips transfer and uses order reference', async () => {
@@ -131,8 +134,11 @@ describe('executePayAndRequest', () => {
 
     expect(transfer).not.toHaveBeenCalled()
     expect(result.paymentTxid).toBe('')
+    expect(result.paymentCommitTxid).toBe('')
     expect(result.orderReference).toBe(generateRandomHex(32))
     expect(result.sessionKey).toBe(`${provider.globalMetaId}:${result.orderReference}`)
+    expect(result.orderPayload).toContain(`order id: ${result.orderReference}`)
+    expect(result.displaySummary).toBe('Free reading please.')
   })
 
   it('surfaces payment failure when transfer returns no txid', async () => {

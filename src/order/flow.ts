@@ -32,9 +32,12 @@ export interface ExecutePayAndRequestInput {
 
 export interface ExecutePayAndRequestResult {
   paymentTxid: string
+  paymentCommitTxid: string
   orderReference: string
   orderPinId: string
   sessionKey: string
+  orderPayload: string
+  displaySummary: string
 }
 
 export function generateRandomHex(byteLength: number): string {
@@ -243,9 +246,12 @@ export async function executePayAndRequest(
   const sessionTxid = paymentTxid || orderReference
   return {
     paymentTxid,
+    paymentCommitTxid,
     orderReference,
     orderPinId,
     sessionKey: `${providerGmid}:${sessionTxid}`,
+    orderPayload,
+    displaySummary,
   }
 }
 

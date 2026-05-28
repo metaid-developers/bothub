@@ -44,11 +44,22 @@ function sessionLabelFromOrder(
   return order.serviceName || order.skillName || order.displaySummary
 }
 
+function isMessageForSelf(message: DeliveryMessage, selfGlobalMetaId: string): boolean {
+  const self = selfGlobalMetaId.trim()
+  if (!self) return false
+  return (
+    message.fromGlobalMetaId.trim() === self ||
+    message.toGlobalMetaId.trim() === self
+  )
+}
+
 export function groupPeerMessagesBySession(
   messages: DeliveryMessage[],
   selfGlobalMetaId: string,
 ): Map<string, DeliveryMessage[]> {
-  const sorted = sortMessagesAsc(messages)
+  const sorted = sortMessagesAsc(
+    messages.filter((message) => isMessageForSelf(message, selfGlobalMetaId)),
+  )
   const buckets = new Map<string, DeliveryMessage[]>()
   const knownCorrelations = new Set<string>()
   const self = selfGlobalMetaId.trim()

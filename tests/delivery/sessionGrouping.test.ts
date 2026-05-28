@@ -180,4 +180,54 @@ describe('sessionGrouping', () => {
     expect(orderSession.map((m) => m.id)).toEqual(['o1'])
     expect(defaultSession.map((m) => m.id)).toEqual(['t1'])
   })
+
+  it('excludes messages that do not belong to the current wallet', () => {
+    const otherSelf = 'wallet-b'
+    const byPeer = {
+      [PEER]: [
+        msg({
+          id: 'old-wallet-message',
+          fromGlobalMetaId: 'wallet-a',
+          toGlobalMetaId: PEER,
+          content: 'old wallet pending state',
+          timestamp: 1,
+        }),
+      ],
+    }
+
+    expect(buildGroupedSessionList(byPeer, otherSelf)).toEqual([])
+    expect(messagesForSession(byPeer, PEER, otherSelf)).toEqual([])
+  })
+
+  it('keeps messages for the current wallet while filtering unrelated rows', () => {
+    const byPeer = {
+      [PEER]: [
+        msg({
+          id: 'old-wallet-message',
+          fromGlobalMetaId: 'wallet-a',
+          toGlobalMetaId: PEER,
+          content: 'old wallet pending state',
+          timestamp: 1,
+        }),
+        msg({
+          id: 'current-wallet-message',
+          fromGlobalMetaId: 'wallet-b',
+          toGlobalMetaId: PEER,
+          content: 'current wallet state',
+          timestamp: 2,
+        }),
+      ],
+    }
+
+    expect(buildGroupedSessionList(byPeer, 'wallet-b')).toEqual([
+      expect.objectContaining({
+        sessionKey: PEER,
+        lastMessage: expect.objectContaining({ id: 'current-wallet-message' }),
+        messageCount: 1,
+      }),
+    ])
+    expect(messagesForSession(byPeer, PEER, 'wallet-b').map((m) => m.id)).toEqual([
+      'current-wallet-message',
+    ])
+  })
 })

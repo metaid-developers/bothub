@@ -3,6 +3,8 @@ import { clsx } from 'clsx'
 import { useCallback, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import type { ProviderInfo, SkillServiceCore } from '@/api/aggregator.types'
+import { useMessageStore } from '@/delivery/messageStore'
+import { persistPendingOrder } from '@/delivery/orderStore'
 import { formatPrice } from '@/lib/format'
 import {
   buildDeliverySessionPath,
@@ -69,6 +71,13 @@ export function RequestModal({ open, onClose, service, provider, wallet }: Reque
           },
         },
       })
+
+      try {
+        await persistPendingOrder({ wallet, service, provider, prompt, result })
+        await useMessageStore.getState().hydrateFromDb(wallet.globalMetaId)
+      } catch (persistError) {
+        console.warn('Order was sent but could not be saved locally.', persistError)
+      }
 
       setStep('done')
       navigate(buildDeliverySessionPath(result.sessionKey))
