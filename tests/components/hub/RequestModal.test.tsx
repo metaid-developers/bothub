@@ -85,7 +85,7 @@ const result: ExecutePayAndRequestResult = {
 describe('RequestModal', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    useMessageStore.setState({ byPeer: {}, selectedSessionKey: null })
+    useMessageStore.setState({ byPeer: {}, assetsBySession: {}, selectedSessionKey: null })
     executePayAndRequest.mockResolvedValue(result)
     persistPendingOrder.mockResolvedValue({})
     vi.spyOn(useMessageStore.getState(), 'hydrateFromDb').mockResolvedValue()

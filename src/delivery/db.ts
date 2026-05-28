@@ -262,6 +262,71 @@ export async function persistOutgoingFollowUp(input: {
   }
 }
 
+export async function persistDeliveryMessageRows(input: {
+  sessionId: string
+  message: DeliveryMessageRecord
+  assets: DeliveryAssetRecord[]
+  buildSession: (state: {
+    existingSession?: DeliverySessionRecord
+    messages: DeliveryMessageRecord[]
+    assets: DeliveryAssetRecord[]
+  }) => DeliverySessionRecord
+}): Promise<{
+  session: DeliverySessionRecord
+  message: DeliveryMessageRecord
+  assets: DeliveryAssetRecord[]
+}> {
+  const db = await openDeliveryDb()
+  const transaction = db.transaction(['sessions', 'messages', 'assets'], 'readwrite')
+  const done = transactionDone(transaction)
+
+  try {
+    const sessionStore = transaction.objectStore('sessions')
+    const messageStore = transaction.objectStore('messages')
+    const assetStore = transaction.objectStore('assets')
+    const existingSession = await requestToPromise(
+      sessionStore.get(input.sessionId) as IDBRequest<DeliverySessionRecord | undefined>,
+    )
+    const existingMessages = await requestToPromise(
+      messageStore.index('sessionId').getAll(input.sessionId) as IDBRequest<
+        DeliveryMessageRecord[]
+      >,
+    )
+    const existingAssets = await requestToPromise(
+      assetStore.index('sessionId').getAll(input.sessionId) as IDBRequest<
+        DeliveryAssetRecord[]
+      >,
+    )
+    const messages = sortByNumberAsc(
+      [
+        ...existingMessages.filter((message) => message.id !== input.message.id),
+        input.message,
+      ],
+      'timestamp',
+    )
+    const assetsById = new Map(existingAssets.map((asset) => [asset.id, asset]))
+    for (const asset of input.assets) {
+      assetsById.set(asset.id, asset)
+    }
+    const assets = sortByNumberAsc(Array.from(assetsById.values()), 'createdAt')
+    const session = input.buildSession({ existingSession, messages, assets })
+
+    messageStore.put(input.message)
+    for (const asset of input.assets) {
+      assetStore.put(asset)
+    }
+    sessionStore.put(session)
+    await done
+    return { session, message: input.message, assets: input.assets }
+  } catch (error) {
+    abortTransaction(transaction)
+    await done.catch(() => undefined)
+    throw error
+  } finally {
+    db.close()
+  }
+}
+
 export async function putAsset(asset: DeliveryAssetRecord): Promise<void> {
   await putRecord('assets', asset)
 }

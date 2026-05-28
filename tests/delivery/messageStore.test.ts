@@ -3,12 +3,17 @@ import { IDBFactory, IDBKeyRange, IDBObjectStore } from 'fake-indexeddb'
 import { clearTestSessionStorage } from '../setup'
 import {
   DELIVERY_DB_NAME,
+  getAssetsForSession,
   getMessagesForSession,
   getSessionsForWallet,
   putMessage,
   putSession,
 } from '@/delivery/db'
-import { useMessageStore, type DeliveryMessage } from '@/delivery/messageStore'
+import {
+  persistDeliveryMessage,
+  useMessageStore,
+  type DeliveryMessage,
+} from '@/delivery/messageStore'
 import { buildOrderPayload } from '@/order/buildOrderPayload'
 
 const SELF = 'idqself'
@@ -33,6 +38,7 @@ describe('messageStore', () => {
     clearTestSessionStorage()
     useMessageStore.setState({
       byPeer: {},
+      assetsBySession: {},
       selectedSessionKey: null,
       hydratedWalletGlobalMetaId: null,
     })
@@ -267,7 +273,7 @@ describe('messageStore', () => {
       }),
     ])
 
-    useMessageStore.setState({ byPeer: {}, selectedSessionKey: null })
+    useMessageStore.setState({ byPeer: {}, assetsBySession: {}, selectedSessionKey: null })
     await useMessageStore.getState().hydrateFromDb(SELF)
 
     expect(useMessageStore.getState().messagesForSession('idqpeer:follow-up-order', SELF)).toEqual([
@@ -278,6 +284,288 @@ describe('messageStore', () => {
         peerChatPubkey: 'stored-provider-key',
       }),
     ])
+  })
+
+  it('persists parsed delivery assets and updates the session asset count', async () => {
+    const message = sampleMessage({
+      id: 'pin-delivery-1',
+      peerGlobalMetaId: 'idqpeer',
+      content:
+        '[DELIVERY:order-assets] {"result":"Ready","assets":["metafile://image.png","metafile://brief.pdf"]}',
+      rawContent:
+        '[DELIVERY:order-assets] {"result":"Ready","assets":["metafile://image.png","metafile://brief.pdf"]}',
+      timestamp: 20,
+      pinId: 'pin-delivery-1',
+    })
+
+    await persistDeliveryMessage({ walletGlobalMetaId: SELF, message })
+
+    const sessionId = `${SELF}:idqpeer:order-assets`
+    expect(await getAssetsForSession(sessionId)).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: `${sessionId}:metafile://image.png`,
+          messageId: 'pin-delivery-1',
+          uri: 'metafile://image.png',
+          kind: 'image',
+        }),
+        expect.objectContaining({
+          id: `${sessionId}:metafile://brief.pdf`,
+          messageId: 'pin-delivery-1',
+          uri: 'metafile://brief.pdf',
+          kind: 'document',
+        }),
+      ]),
+    )
+    expect(await getAssetsForSession(sessionId)).toHaveLength(2)
+    expect(await getSessionsForWallet(SELF)).toEqual([
+      expect.objectContaining({
+        id: sessionId,
+        status: 'delivered',
+        assetCount: 2,
+        lastMessageId: 'pin-delivery-1',
+        lastActivityAt: 20,
+      }),
+    ])
+  })
+
+  it('marks ORDER_END sessions completed in the persisted session record', async () => {
+    const message = sampleMessage({
+      id: 'pin-end-1',
+      peerGlobalMetaId: 'idqpeer',
+      content: '[ORDER_END:order-end] Order completed',
+      rawContent: '[ORDER_END:order-end] Order completed',
+      timestamp: 30,
+      pinId: 'pin-end-1',
+    })
+
+    await persistDeliveryMessage({ walletGlobalMetaId: SELF, message })
+
+    expect(await getSessionsForWallet(SELF)).toEqual([
+      expect.objectContaining({
+        id: `${SELF}:idqpeer:order-end`,
+        status: 'completed',
+      }),
+    ])
+  })
+
+  it('stores NeedsRating as a reserved protocol signal without creating assets', async () => {
+    const message = sampleMessage({
+      id: 'pin-rating-1',
+      peerGlobalMetaId: 'idqpeer',
+      content: '[NeedsRating:order-rating] Rating will be requested later',
+      rawContent: '[NeedsRating:order-rating] Rating will be requested later',
+      timestamp: 40,
+      pinId: 'pin-rating-1',
+    })
+
+    await persistDeliveryMessage({ walletGlobalMetaId: SELF, message })
+
+    const sessionId = `${SELF}:idqpeer:order-rating`
+    expect(await getMessagesForSession(sessionId)).toEqual([
+      expect.objectContaining({
+        id: 'pin-rating-1',
+        protocolTag: 'needs_rating',
+      }),
+    ])
+    expect(await getSessionsForWallet(SELF)).toEqual([
+      expect.objectContaining({
+        id: sessionId,
+        status: 'completed',
+        assetCount: 0,
+      }),
+    ])
+    expect(await getAssetsForSession(sessionId)).toEqual([])
+  })
+
+  it('hydrates persisted delivery messages so refreshed sessions show assets and completed status', async () => {
+    await persistDeliveryMessage({
+      walletGlobalMetaId: SELF,
+      message: sampleMessage({
+        id: 'pin-delivery-refresh',
+        peerGlobalMetaId: 'idqpeer',
+        content:
+          '[DELIVERY:order-refresh] {"result":"Ready metafile://refresh.png","assets":["metafile://refresh.png"]}',
+        rawContent:
+          '[DELIVERY:order-refresh] {"result":"Ready metafile://refresh.png","assets":["metafile://refresh.png"]}',
+        timestamp: 50,
+        pinId: 'pin-delivery-refresh',
+      }),
+    })
+    await persistDeliveryMessage({
+      walletGlobalMetaId: SELF,
+      message: sampleMessage({
+        id: 'pin-end-refresh',
+        peerGlobalMetaId: 'idqpeer',
+        content: '[ORDER_END:order-refresh] Complete',
+        rawContent: '[ORDER_END:order-refresh] Complete',
+        timestamp: 60,
+        pinId: 'pin-end-refresh',
+      }),
+    })
+
+    useMessageStore.setState({
+      byPeer: {},
+      assetsBySession: {},
+      selectedSessionKey: null,
+      hydratedWalletGlobalMetaId: null,
+    })
+    await useMessageStore.getState().hydrateFromDb(SELF)
+
+    const session = useMessageStore.getState().listSessions(SELF)[0]
+    const messages = useMessageStore
+      .getState()
+      .messagesForSession('idqpeer:order-refresh', SELF)
+
+    expect(session).toMatchObject({
+      sessionKey: 'idqpeer:order-refresh',
+      messageCount: 2,
+    })
+    expect(messages.map((row) => row.id)).toEqual([
+      'pin-delivery-refresh',
+      'pin-end-refresh',
+    ])
+    expect(
+      useMessageStore.getState().assetsBySession[`${SELF}:idqpeer:order-refresh`],
+    ).toEqual([
+      expect.objectContaining({
+        uri: 'metafile://refresh.png',
+        messageId: 'pin-delivery-refresh',
+      }),
+    ])
+    expect(await getAssetsForSession(`${SELF}:idqpeer:order-refresh`)).toHaveLength(1)
+  })
+
+  it.each(['assets', 'sessions'] as const)(
+    'does not leave persisted delivery rows when a later %s write fails',
+    async (storeName) => {
+      const originalPut = IDBObjectStore.prototype.put
+      vi.spyOn(IDBObjectStore.prototype, 'put').mockImplementation(function (
+        this: IDBObjectStore,
+        value: unknown,
+      ) {
+        if (this.name === storeName) {
+          throw new DOMException(`Injected ${storeName} write failure`, 'DataError')
+        }
+        return originalPut.call(this, value)
+      })
+
+      const sessionId = `${SELF}:idqpeer:atomic-failure`
+      await expect(
+        persistDeliveryMessage({
+          walletGlobalMetaId: SELF,
+          message: sampleMessage({
+            id: 'pin-atomic-failure',
+            peerGlobalMetaId: 'idqpeer',
+            content:
+              '[DELIVERY:atomic-failure] {"result":"Ready","assets":["metafile://atomic.png"]}',
+            rawContent:
+              '[DELIVERY:atomic-failure] {"result":"Ready","assets":["metafile://atomic.png"]}',
+            timestamp: 70,
+            pinId: 'pin-atomic-failure',
+          }),
+        }),
+      ).rejects.toBeTruthy()
+
+      expect(await getMessagesForSession(sessionId)).toEqual([])
+      expect(await getAssetsForSession(sessionId)).toEqual([])
+      expect(await getSessionsForWallet(SELF)).toEqual([])
+    },
+  )
+
+  it('keeps same-session delivery aggregates correct across multiple persisted messages', async () => {
+    await persistDeliveryMessage({
+      walletGlobalMetaId: SELF,
+      message: sampleMessage({
+        id: 'pin-delivery-multi',
+        peerGlobalMetaId: 'idqpeer',
+        content:
+          '[DELIVERY:order-multi] {"result":"Ready","assets":["metafile://multi.png"]}',
+        rawContent:
+          '[DELIVERY:order-multi] {"result":"Ready","assets":["metafile://multi.png"]}',
+        timestamp: 80,
+        pinId: 'pin-delivery-multi',
+      }),
+    })
+    await persistDeliveryMessage({
+      walletGlobalMetaId: SELF,
+      message: sampleMessage({
+        id: 'pin-end-multi',
+        peerGlobalMetaId: 'idqpeer',
+        content: '[ORDER_END:order-multi] Complete',
+        rawContent: '[ORDER_END:order-multi] Complete',
+        timestamp: 90,
+        pinId: 'pin-end-multi',
+      }),
+    })
+
+    const sessionId = `${SELF}:idqpeer:order-multi`
+    expect(await getMessagesForSession(sessionId)).toHaveLength(2)
+    expect(await getAssetsForSession(sessionId)).toHaveLength(1)
+    expect(await getSessionsForWallet(SELF)).toEqual([
+      expect.objectContaining({
+        id: sessionId,
+        status: 'completed',
+        assetCount: 1,
+        lastMessageId: 'pin-end-multi',
+        lastActivityAt: 90,
+      }),
+    ])
+  })
+
+  it('clears stale same-wallet hydrated assets when current DB rows have none', async () => {
+    const sessionId = `${SELF}:idqpeer:no-assets`
+    await putSession({
+      id: sessionId,
+      walletGlobalMetaId: SELF,
+      providerGlobalMetaId: 'idqpeer',
+      orderCorrelationId: 'no-assets',
+      status: 'active',
+      lastMessageId: 'pin-no-assets',
+      lastActivityAt: 100,
+      assetCount: 0,
+      unreadCount: 0,
+    })
+    await putMessage({
+      id: 'pin-no-assets',
+      walletGlobalMetaId: SELF,
+      sessionId,
+      peerGlobalMetaId: 'idqpeer',
+      direction: 'incoming',
+      content: '[ORDER_STATUS:no-assets] Working',
+      rawContent: '[ORDER_STATUS:no-assets] Working',
+      contentType: 'text/plain',
+      encryption: 'plain',
+      protocolTag: 'order_status',
+      orderCorrelationId: 'no-assets',
+      pinId: 'pin-no-assets',
+      timestamp: 100,
+      decryptStatus: 'plain',
+    })
+    useMessageStore.setState({
+      byPeer: {},
+      assetsBySession: {
+        [sessionId]: [
+          {
+            id: `${sessionId}:metafile://stale.png`,
+            walletGlobalMetaId: SELF,
+            sessionId,
+            messageId: 'pin-stale',
+            uri: 'metafile://stale.png',
+            pinId: 'stale',
+            filename: 'stale.png',
+            kind: 'image',
+            downloadUrl: 'https://example.test/stale.png',
+            createdAt: 99,
+          },
+        ],
+      },
+      hydratedWalletGlobalMetaId: SELF,
+    })
+
+    await useMessageStore.getState().hydrateFromDb(SELF)
+
+    expect(useMessageStore.getState().assetsBySession).toEqual({})
   })
 
   it('does not append outgoing follow-ups to memory when persistence fails', async () => {

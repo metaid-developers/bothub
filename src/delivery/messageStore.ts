@@ -1,12 +1,25 @@
 import { create } from 'zustand'
 import { createJSONStorage, persist } from 'zustand/middleware'
 import {
+  getAssetsForSession,
   getMessagesForSession,
   getSessionsForWallet,
+  persistDeliveryMessageRows,
   persistOutgoingFollowUp,
 } from '@/delivery/db'
-import type { DeliveryMessageRecord } from '@/delivery/domain'
-import { buildSessionId } from '@/delivery/domain'
+import type {
+  DeliveryAssetRecord,
+  DeliveryMessageRecord,
+} from '@/delivery/domain'
+import { buildAssetId, buildSessionId } from '@/delivery/domain'
+import { extractMetafileAssets } from '@/delivery/assetParser'
+import {
+  findCorrelationInText,
+  getOrderCorrelationId,
+  parseOrderMessage,
+} from '@/delivery/orderParser'
+import { parseDeliveryProtocol } from '@/delivery/protocol'
+import { deriveSessionStatus } from '@/delivery/sessionDisplay'
 import {
   buildGroupedSessionList,
   messagesForSession as resolveMessagesForSession,
@@ -44,6 +57,7 @@ export interface DeliverySession {
 
 interface MessageStoreState {
   byPeer: Record<string, DeliveryMessage[]>
+  assetsBySession: Record<string, DeliveryAssetRecord[]>
   selectedSessionKey: string | null
   hydratedWalletGlobalMetaId: string | null
   append: (message: DeliveryMessage) => void
@@ -73,15 +87,40 @@ function upsertMessage(
   byPeer: Record<string, DeliveryMessage[]>,
   message: DeliveryMessage,
 ): Record<string, DeliveryMessage[]> {
-  const peer = message.peerGlobalMetaId.trim()
+  const normalizedMessage = messageWithDerivedCorrelation(message)
+  const peer = normalizedMessage.peerGlobalMetaId.trim()
   const existing = byPeer[peer] ?? []
-  if (existing.some((row) => row.id === message.id)) {
+  if (existing.some((row) => row.id === normalizedMessage.id)) {
     return byPeer
   }
   return {
     ...byPeer,
-    [peer]: sortMessagesAsc([...existing, message]),
+    [peer]: sortMessagesAsc([...existing, normalizedMessage]),
   }
+}
+
+function messageWithDerivedCorrelation(
+  message: DeliveryMessage,
+  knownCorrelationIds: ReadonlySet<string> = new Set(),
+): DeliveryMessage {
+  const existing = message.orderCorrelationId?.trim()
+  if (existing) return { ...message, orderCorrelationId: existing }
+
+  const protocolCorrelation = parseDeliveryProtocol(message.content).orderCorrelationId.trim()
+  if (protocolCorrelation) {
+    return { ...message, orderCorrelationId: protocolCorrelation }
+  }
+
+  const order = parseOrderMessage(message.content)
+  const orderCorrelation = order ? getOrderCorrelationId(order).trim() : ''
+  if (orderCorrelation) {
+    return { ...message, orderCorrelationId: orderCorrelation }
+  }
+
+  const textMatch = findCorrelationInText(message.content, knownCorrelationIds).trim()
+  if (textMatch) return { ...message, orderCorrelationId: textMatch }
+
+  return message
 }
 
 function deliveryMessageFromRecord(
@@ -111,10 +150,158 @@ function deliveryMessageFromRecord(
   }
 }
 
+function deliveryMessageRecordFromMessage(input: {
+  walletGlobalMetaId: string
+  sessionId: string
+  message: DeliveryMessage
+  protocolTag?: string
+}): DeliveryMessageRecord {
+  const wallet = input.walletGlobalMetaId.trim()
+  const direction = input.message.fromGlobalMetaId.trim() === wallet ? 'outgoing' : 'incoming'
+  const decryptStatus = input.message.decryptError
+    ? 'failed'
+    : input.message.content === input.message.rawContent
+      ? 'plain'
+      : 'decrypted'
+
+  return {
+    id: input.message.id,
+    walletGlobalMetaId: wallet,
+    sessionId: input.sessionId,
+    peerGlobalMetaId: input.message.peerGlobalMetaId.trim(),
+    peerChatPubkey: input.message.peerChatPubkey?.trim() || undefined,
+    direction,
+    content: input.message.content,
+    rawContent: input.message.rawContent,
+    contentType: input.message.contentType,
+    encryption: input.message.encryption,
+    protocolTag: input.protocolTag,
+    orderCorrelationId: input.message.orderCorrelationId?.trim() || undefined,
+    pinId: input.message.pinId,
+    txId: input.message.txId,
+    timestamp: input.message.timestamp,
+    decryptStatus,
+    decryptError: input.message.decryptError,
+  }
+}
+
+function assetRecordFromParsedAsset(input: {
+  walletGlobalMetaId: string
+  sessionId: string
+  message: DeliveryMessage
+  asset: ReturnType<typeof extractMetafileAssets>[number]
+}): DeliveryAssetRecord {
+  return {
+    id: buildAssetId(input.sessionId, input.asset.uri),
+    walletGlobalMetaId: input.walletGlobalMetaId,
+    sessionId: input.sessionId,
+    messageId: input.message.id,
+    orderCorrelationId: input.message.orderCorrelationId?.trim() || undefined,
+    uri: input.asset.uri,
+    pinId: input.asset.pinId,
+    filename: input.asset.filename,
+    extension: input.asset.extension?.replace(/^\./, '') || undefined,
+    kind: input.asset.kind,
+    mimeType: input.asset.mimeType,
+    previewUrl: input.asset.previewUrl,
+    downloadUrl: input.asset.downloadUrl,
+    fallbackUrl: input.asset.fallbackUrl,
+    createdAt: input.message.timestamp,
+  }
+}
+
+function protocolTagForMessage(message: DeliveryMessage): string | undefined {
+  const protocol = parseDeliveryProtocol(message.content)
+  if (protocol.kind !== 'plain') return protocol.kind
+  return parseOrderMessage(message.content) ? 'order' : undefined
+}
+
+function deliveryMessagesFromRecords(
+  records: DeliveryMessageRecord[],
+  walletGlobalMetaId: string,
+): DeliveryMessage[] {
+  return records.map((record) => deliveryMessageFromRecord(record, walletGlobalMetaId))
+}
+
+export async function persistDeliveryMessage(input: {
+  walletGlobalMetaId: string
+  message: DeliveryMessage
+}): Promise<void> {
+  const walletGlobalMetaId = input.walletGlobalMetaId.trim()
+  const peerGlobalMetaId = input.message.peerGlobalMetaId.trim()
+  const messageId = input.message.id.trim()
+  if (!walletGlobalMetaId || !peerGlobalMetaId || !messageId) {
+    throw new Error('Delivery message is missing required identifiers')
+  }
+
+  const sessions = await getSessionsForWallet(walletGlobalMetaId)
+  const peerSessions = sessions.filter(
+    (session) => session.providerGlobalMetaId.trim() === peerGlobalMetaId,
+  )
+  const knownCorrelationIds = new Set(
+    peerSessions
+      .map((session) => session.orderCorrelationId?.trim() || '')
+      .filter(Boolean),
+  )
+  const message = messageWithDerivedCorrelation(input.message, knownCorrelationIds)
+  const orderCorrelationId = message.orderCorrelationId?.trim() || undefined
+  const sessionId = buildSessionId({
+    walletGlobalMetaId,
+    providerGlobalMetaId: peerGlobalMetaId,
+    orderCorrelationId,
+  })
+  const protocol = parseDeliveryProtocol(message.content)
+  const parsedAssets =
+    protocol.kind === 'delivery' ? extractMetafileAssets(protocol.rawText) : []
+  const assetRecords = parsedAssets.map((asset) =>
+    assetRecordFromParsedAsset({
+      walletGlobalMetaId,
+      sessionId,
+      message,
+      asset,
+    }),
+  )
+  const messageRecord = deliveryMessageRecordFromMessage({
+    walletGlobalMetaId,
+    sessionId,
+    message,
+    protocolTag: protocolTagForMessage(message),
+  })
+
+  await persistDeliveryMessageRows({
+    sessionId,
+    message: messageRecord,
+    assets: assetRecords,
+    buildSession: ({ existingSession, messages, assets }) => {
+      const derivedMessages = deliveryMessagesFromRecords(messages, walletGlobalMetaId)
+      const lastMessage = derivedMessages[derivedMessages.length - 1] ?? message
+
+      return {
+        id: sessionId,
+        walletGlobalMetaId,
+        providerGlobalMetaId: peerGlobalMetaId,
+        providerChatPubkey:
+          message.peerChatPubkey?.trim() ||
+          existingSession?.providerChatPubkey?.trim() ||
+          undefined,
+        orderCorrelationId,
+        serviceId: existingSession?.serviceId,
+        serviceLabel: existingSession?.serviceLabel,
+        status: deriveSessionStatus(derivedMessages, walletGlobalMetaId),
+        lastMessageId: lastMessage.id,
+        lastActivityAt: lastMessage.timestamp,
+        assetCount: assets.length,
+        unreadCount: existingSession?.unreadCount ?? 0,
+      }
+    },
+  })
+}
+
 export const useMessageStore = create<MessageStoreState>()(
   persist(
     (set, get) => ({
       byPeer: {},
+      assetsBySession: {},
       selectedSessionKey: null,
       hydratedWalletGlobalMetaId: null,
 
@@ -198,6 +385,9 @@ export const useMessageStore = create<MessageStoreState>()(
         const messageGroups = await Promise.all(
           sessions.map((session) => getMessagesForSession(session.id)),
         )
+        const assetGroups = await Promise.all(
+          sessions.map((session) => getAssetsForSession(session.id)),
+        )
         const sessionProviderKeys = new Map(
           sessions.map((session) => [
             session.id,
@@ -211,11 +401,20 @@ export const useMessageStore = create<MessageStoreState>()(
         set((state) => {
           const walletChanged = state.hydratedWalletGlobalMetaId !== wallet
           const baseByPeer = walletChanged ? {} : state.byPeer
+          const assetsBySession = sessions.reduce<Record<string, DeliveryAssetRecord[]>>(
+            (next, session, index) => {
+              const assets = assetGroups[index] ?? []
+              if (!assets.length) return next
+              return { ...next, [session.id]: assets }
+            },
+            {},
+          )
           return {
             byPeer: messages.reduce(
               (next, message) => upsertMessage(next, message),
               baseByPeer,
             ),
+            assetsBySession,
             hydratedWalletGlobalMetaId: wallet,
             selectedSessionKey: walletChanged ? null : state.selectedSessionKey,
           }

@@ -1,6 +1,10 @@
 import { create } from 'zustand'
 import { decryptIncoming } from '@/delivery/decrypt'
-import { useMessageStore, type DeliveryMessage } from '@/delivery/messageStore'
+import {
+  persistDeliveryMessage,
+  useMessageStore,
+  type DeliveryMessage,
+} from '@/delivery/messageStore'
 import { useWsMock as isWsMockEnabled } from '@/api/config'
 import {
   isPrivateChatForRecipient,
@@ -99,6 +103,12 @@ export const useSocket = create<SocketState>()((set, get) => ({
       get().pushDebug,
     )
     useMessageStore.getState().append(message)
+    try {
+      await persistDeliveryMessage({ walletGlobalMetaId: selfGlobalMetaId, message })
+    } catch (error) {
+      const detail = error instanceof Error ? error.message : String(error)
+      get().pushDebug(`[cache] delivery message was not saved: ${detail}`)
+    }
   },
 
   injectMockEnvelope: (envelope, selfGlobalMetaId) => {

@@ -88,4 +88,22 @@ describe('MessageBubble', () => {
     expect(screen.getByRole('status', { name: 'Rating reserved' })).toBeInTheDocument()
     expect(screen.getByText('Rating will be requested later')).toBeInTheDocument()
   })
+
+  it('keeps NeedsRating as a reserved status without rendering rating UI', () => {
+    render(
+      <MessageBubble
+        message={message('[NeedsRating:order-1] Rating will be requested later')}
+        selfGlobalMetaId="self"
+      />,
+    )
+
+    expect(screen.getByRole('status', { name: 'Rating reserved' })).toBeInTheDocument()
+    expect(screen.queryByRole('form', { name: /rating|review/i })).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole('button', { name: /rate|review|star|submit/i }),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByText(/leave a review|write a review|rate this|submit rating|[★☆]/i),
+    ).not.toBeInTheDocument()
+  })
 })

@@ -6,11 +6,13 @@ import { DeliveryComposer } from '@/components/delivery/DeliveryComposer'
 import { MessageList } from '@/components/delivery/MessageList'
 import { SessionHeader } from '@/components/delivery/SessionHeader'
 import { SessionsList } from '@/components/delivery/SessionsList'
+import { buildSessionId } from '@/delivery/domain'
 import { useMessageStore } from '@/delivery/messageStore'
 import { enrichDeliverySessions } from '@/delivery/sessionDisplay'
 import {
   buildGroupedSessionList,
   messagesForSession as resolveMessagesForSession,
+  parseSessionKey,
 } from '@/delivery/sessionGrouping'
 import { t } from '@/i18n'
 import { useWallet } from '@/wallet/useWallet'
@@ -27,6 +29,7 @@ export function DeliveryPage() {
   const selfGlobalMetaId = identity?.globalMetaId ?? ''
 
   const byPeer = useMessageStore((s) => s.byPeer)
+  const assetsBySession = useMessageStore((s) => s.assetsBySession)
   const selectedSessionFromStore = useMessageStore((s) => s.selectedSessionKey)
   const setSelectedSession = useMessageStore((s) => s.setSelectedSession)
   const hydrateFromDb = useMessageStore((s) => s.hydrateFromDb)
@@ -62,6 +65,16 @@ export function DeliveryPage() {
         : [],
     [byPeer, selectedSession, selfGlobalMetaId],
   )
+  const storedAssets = useMemo(() => {
+    if (!selectedSession || !selfGlobalMetaId) return []
+    const { peerGlobalMetaId, orderCorrelationId } = parseSessionKey(selectedSession)
+    const sessionId = buildSessionId({
+      walletGlobalMetaId: selfGlobalMetaId,
+      providerGlobalMetaId: peerGlobalMetaId,
+      orderCorrelationId,
+    })
+    return assetsBySession[sessionId] ?? []
+  }, [assetsBySession, selectedSession, selfGlobalMetaId])
 
   const selectSession = useCallback(
     (sessionKey: string) => {
@@ -114,6 +127,7 @@ export function DeliveryPage() {
 
         <DeliveredAssetsPanel
           messages={messages}
+          storedAssets={storedAssets}
           className="md:col-start-3 md:row-span-2 md:row-start-1"
         />
         <DeliveryComposer

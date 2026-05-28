@@ -15,6 +15,7 @@ const mocks = vi.hoisted(() => ({
   },
   messageState: {
     byPeer: {},
+    assetsBySession: {},
     selectedSessionKey: null,
     setSelectedSession: vi.fn(),
     hydrateFromDb: vi.fn().mockResolvedValue(undefined),
@@ -48,6 +49,7 @@ describe('DeliveryPage layout', () => {
     mocks.walletState.identity = null
     mocks.walletState.status = 'disconnected'
     mocks.messageState.byPeer = {}
+    mocks.messageState.assetsBySession = {}
     mocks.messageState.selectedSessionKey = null
     vi.clearAllMocks()
   })

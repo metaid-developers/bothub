@@ -1,4 +1,5 @@
 import { extractMetafileAssets, type ParsedDeliveryAsset } from '@/delivery/assetParser'
+import type { DeliveryAssetRecord } from '@/delivery/domain'
 import type { DeliveryMessage, DeliverySession } from '@/delivery/messageStore'
 import { getMessageVariant } from '@/delivery/messageDisplay'
 import { parseDeliveryProtocol } from '@/delivery/protocol'
@@ -36,6 +37,34 @@ export function deliveryAssetsFromMessage(message: DeliveryMessage): ParsedDeliv
 
 export function deliveryAssetsFromMessages(messages: DeliveryMessage[]): ParsedDeliveryAsset[] {
   return uniqueAssets(messages.flatMap((message) => deliveryAssetsFromMessage(message)))
+}
+
+export function deliveryAssetsFromRecords(
+  records: DeliveryAssetRecord[] = [],
+): ParsedDeliveryAsset[] {
+  return uniqueAssets(
+    records.map((record) => ({
+      uri: record.uri,
+      pinId: record.pinId,
+      extension: record.extension ? `.${record.extension.replace(/^\./, '')}` : null,
+      filename: record.filename,
+      kind: record.kind,
+      mimeType: record.mimeType,
+      previewUrl: record.previewUrl || record.downloadUrl,
+      downloadUrl: record.downloadUrl,
+      fallbackUrl: record.fallbackUrl || record.downloadUrl,
+    })),
+  )
+}
+
+export function deliveryAssetsForSession(
+  messages: DeliveryMessage[],
+  records: DeliveryAssetRecord[] = [],
+): ParsedDeliveryAsset[] {
+  return uniqueAssets([
+    ...deliveryAssetsFromMessages(messages),
+    ...deliveryAssetsFromRecords(records),
+  ])
 }
 
 function statusTextIndicatesFailure(text: string): boolean {

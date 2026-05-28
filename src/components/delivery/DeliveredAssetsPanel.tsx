@@ -1,16 +1,22 @@
 import { clsx } from 'clsx'
 import { AssetPreviewCard } from '@/components/delivery/AssetPreviewCard'
+import type { DeliveryAssetRecord } from '@/delivery/domain'
 import type { DeliveryMessage } from '@/delivery/messageStore'
-import { deliveryAssetsFromMessages } from '@/delivery/sessionDisplay'
+import { deliveryAssetsForSession } from '@/delivery/sessionDisplay'
 import { t } from '@/i18n'
 
 export interface DeliveredAssetsPanelProps {
   messages: DeliveryMessage[]
+  storedAssets?: DeliveryAssetRecord[]
   className?: string
 }
 
-export function DeliveredAssetsPanel({ messages, className }: DeliveredAssetsPanelProps) {
-  const assets = deliveryAssetsFromMessages(messages)
+export function DeliveredAssetsPanel({
+  messages,
+  storedAssets = [],
+  className,
+}: DeliveredAssetsPanelProps) {
+  const assets = deliveryAssetsForSession(messages, storedAssets)
   const counts = assets.reduce<Record<string, number>>((acc, asset) => {
     acc[asset.kind] = (acc[asset.kind] ?? 0) + 1
     return acc
