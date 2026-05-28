@@ -3,6 +3,7 @@ import listEnvelope from '../fixtures/meta-socket/service-list-live-shape.json'
 import detailEnvelope from '../fixtures/meta-socket/service-detail-live-shape.json'
 import privateChatHomesEnvelope from '../fixtures/meta-socket/private-chat-homes-live-shape.json'
 import privateChatListEnvelope from '../fixtures/meta-socket/private-chat-list-live-shape.json'
+import privateChatListByIndexEnvelope from '../fixtures/meta-socket/private-chat-list-by-index-live-shape.json'
 import { isPrivateChatItem } from '../../src/ws/privateChat'
 
 function expectPrivateChatItemShape(value: unknown) {
@@ -75,6 +76,22 @@ describe('meta-socket live contract fixtures', () => {
     expect(privateChatListEnvelope.data?.list.length).toBeGreaterThan(0)
 
     for (const row of privateChatListEnvelope.data?.list ?? []) {
+      expectPrivateChatItemShape(row)
+    }
+  })
+
+  it('keeps the private-chat-list-by-index route shape stable', () => {
+    const route =
+      '/api/group-chat/private-chat-list-by-index?metaId=1JzFmwf498bXRyFiJTrxikSP7xh9iZ3JrX&otherMetaId=idq160rca8swdygt7hn59em03nqhr96zmjd4yd668z&startIndex=0&size=20'
+    const query = new URLSearchParams(route.split('?')[1])
+
+    expect(route).toContain('/api/group-chat/private-chat-list-by-index?')
+    expect(query.get('startIndex')).toBe('0')
+    expect(privateChatListByIndexEnvelope.code).toBe(0)
+    expect(Array.isArray(privateChatListByIndexEnvelope.data?.list)).toBe(true)
+    expect(privateChatListByIndexEnvelope.data?.list.length).toBeGreaterThan(0)
+
+    for (const row of privateChatListByIndexEnvelope.data?.list ?? []) {
       expectPrivateChatItemShape(row)
     }
   })
