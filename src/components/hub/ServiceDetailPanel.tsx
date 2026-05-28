@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from 'react'
+import { useState } from 'react'
+import { Dialog } from '@headlessui/react'
 import { clsx } from 'clsx'
 import { XMarkIcon } from '@heroicons/react/24/outline'
 import type { SkillServiceCore } from '@/api/aggregator.types'
@@ -21,7 +22,6 @@ export interface ServiceDetailPanelProps {
   onClose: () => void
   /** List cache rating; detail API does not include ratings in v1 */
   rating?: ServiceDetailRating | null
-  className?: string
 }
 
 function DetailIcon({ service }: { service: SkillServiceCore }) {
@@ -100,7 +100,10 @@ function PricingBlock({ service }: { service: SkillServiceCore }) {
             </div>
             <div className="flex justify-between gap-2">
               <dt className="text-hub-muted">{t('hub.mrc20Id')}</dt>
-              <dd className="truncate font-mono text-xs text-white/90" title={service.mrc20Id ?? undefined}>
+              <dd
+                className="truncate font-mono text-xs text-white/90"
+                title={service.mrc20Id ?? undefined}
+              >
                 {service.mrc20Id ?? '—'}
               </dd>
             </div>
@@ -115,123 +118,107 @@ export function ServiceDetailPanel({
   serviceId,
   onClose,
   rating,
-  className,
 }: ServiceDetailPanelProps) {
-  const panelRef = useRef<HTMLElement>(null)
   const [requestOpen, setRequestOpen] = useState(false)
   const walletStatus = useWallet((s) => s.status)
   const walletIdentity = useWallet((s) => s.identity)
-  const walletConnected = walletStatus === 'connected' && walletIdentity != null
+  const walletConnected = walletStatus === 'connected' && Boolean(walletIdentity?.globalMetaId)
   const { data, isLoading, isError, error, refetch } = useServiceDetailQuery(serviceId)
-
-  useEffect(() => {
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') onClose()
-    }
-    window.addEventListener('keydown', onKeyDown)
-    return () => window.removeEventListener('keydown', onKeyDown)
-  }, [onClose])
-
-  useEffect(() => {
-    const onPointerDown = (event: MouseEvent) => {
-      const target = event.target
-      if (!(target instanceof Element)) return
-      if (panelRef.current?.contains(target)) return
-      if (target.closest('[data-hub-service-card]')) return
-      onClose()
-    }
-    document.addEventListener('mousedown', onPointerDown)
-    return () => document.removeEventListener('mousedown', onPointerDown)
-  }, [onClose])
 
   const payDisabled = !walletConnected
   const payTooltip = payDisabled ? t('wallet.requiredPay') : undefined
 
   return (
-    <aside
-      ref={panelRef}
-      className={clsx(
-        'sticky top-20 rounded-card border border-hub-border bg-hub-surface p-4 shadow-[0_16px_48px_-28px_rgba(0,0,0,0.9)]',
-        className,
-      )}
-      aria-label="Service detail"
-      role="complementary"
-    >
-      <div className="mb-3 flex items-start justify-between gap-2">
-        <p className="font-display text-xs font-semibold uppercase tracking-wide text-hub-muted">
-          {t('hub.serviceDetail')}
-        </p>
-        <button
-          type="button"
-          onClick={onClose}
-          className="rounded-lg p-1 text-hub-muted transition hover:bg-hub-surface2 hover:text-white"
-          aria-label={t('hub.closeDetail')}
+    <Dialog open onClose={onClose} className="relative z-50">
+      <div className="fixed inset-0 bg-black/65 backdrop-blur-sm" aria-hidden="true" />
+
+      <div className="fixed inset-0 flex items-center justify-center p-4 sm:p-6">
+        <Dialog.Panel
+          className={clsx(
+            'relative flex max-h-[min(90vh,720px)] w-full max-w-lg flex-col overflow-hidden',
+            'rounded-card border border-hub-border bg-hub-surface shadow-[0_24px_80px_-20px_rgba(0,0,0,0.85)]',
+          )}
+          aria-label={t('hub.serviceDetail')}
         >
-          <XMarkIcon className="h-5 w-5" aria-hidden />
-        </button>
+          <div className="flex shrink-0 items-start justify-between gap-2 border-b border-hub-border px-5 py-4">
+            <Dialog.Title className="font-display text-sm font-semibold uppercase tracking-wide text-hub-muted">
+              {t('hub.serviceDetail')}
+            </Dialog.Title>
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-lg p-1 text-hub-muted transition hover:bg-hub-surface2 hover:text-white"
+              aria-label={t('hub.closeDetail')}
+            >
+              <XMarkIcon className="h-5 w-5" aria-hidden />
+            </button>
+          </div>
+
+          <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">
+            {isLoading ? <ServiceDetailSkeleton label={t('hub.loadingDetail')} /> : null}
+
+            {isError ? (
+              <ErrorState
+                title={t('hub.detailError')}
+                message={error instanceof Error ? error.message : undefined}
+                onRetry={() => void refetch()}
+              />
+            ) : null}
+
+            {data ? (
+              <div className="space-y-4">
+                <header className="flex gap-3">
+                  <DetailIcon service={data.service} />
+                  <div className="min-w-0 flex-1">
+                    <h2 className="font-display text-lg font-semibold leading-snug text-white">
+                      {data.service.displayName}
+                    </h2>
+                    <p className="mt-0.5 truncate font-mono text-[11px] text-hub-muted">
+                      {data.service.serviceName}
+                    </p>
+                    {data.service.providerSkill ? (
+                      <span className="mt-2 inline-flex rounded-full bg-hub-surface2 px-2 py-0.5 text-[11px] font-medium text-hub-muted">
+                        {data.service.providerSkill}
+                      </span>
+                    ) : null}
+                    {rating ? (
+                      <div className="mt-2">
+                        <RatingStars avg={rating.avg} count={rating.count} />
+                      </div>
+                    ) : null}
+                  </div>
+                </header>
+
+                <p className="text-sm leading-relaxed text-hub-muted">{data.service.description}</p>
+
+                <PricingBlock service={data.service} />
+
+                <ProviderProfile provider={data.provider} />
+
+                <button
+                  type="button"
+                  disabled={payDisabled}
+                  title={payTooltip}
+                  onClick={() => setRequestOpen(true)}
+                  className="w-full rounded-xl bg-hub-accent py-2.5 text-sm font-semibold text-hub-bg transition enabled:hover:bg-hub-accent-hover disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {t('hub.payRequest')}
+                </button>
+
+                {walletIdentity && requestOpen ? (
+                  <RequestModal
+                    open={requestOpen}
+                    onClose={() => setRequestOpen(false)}
+                    service={data.service}
+                    provider={data.provider}
+                    wallet={walletIdentity}
+                  />
+                ) : null}
+              </div>
+            ) : null}
+          </div>
+        </Dialog.Panel>
       </div>
-
-      {isLoading ? <ServiceDetailSkeleton label={t('hub.loadingDetail')} /> : null}
-
-      {isError ? (
-        <ErrorState
-          title={t('hub.detailError')}
-          message={error instanceof Error ? error.message : undefined}
-          onRetry={() => void refetch()}
-        />
-      ) : null}
-
-      {data ? (
-        <div className="space-y-4">
-          <header className="flex gap-3">
-            <DetailIcon service={data.service} />
-            <div className="min-w-0 flex-1">
-              <h2 className="font-display text-base font-semibold leading-snug text-white">
-                {data.service.displayName}
-              </h2>
-              <p className="mt-0.5 truncate font-mono text-[11px] text-hub-muted">
-                {data.service.serviceName}
-              </p>
-              {data.service.providerSkill ? (
-                <span className="mt-2 inline-flex rounded-full bg-hub-surface2 px-2 py-0.5 text-[11px] font-medium text-hub-muted">
-                  {data.service.providerSkill}
-                </span>
-              ) : null}
-              {rating ? (
-                <div className="mt-2">
-                  <RatingStars avg={rating.avg} count={rating.count} />
-                </div>
-              ) : null}
-            </div>
-          </header>
-
-          <p className="text-sm leading-relaxed text-hub-muted">{data.service.description}</p>
-
-          <PricingBlock service={data.service} />
-
-          <ProviderProfile provider={data.provider} />
-
-          <button
-            type="button"
-            disabled={payDisabled}
-            title={payTooltip}
-            onClick={() => setRequestOpen(true)}
-            className="w-full rounded-xl bg-hub-accent py-2.5 text-sm font-semibold text-hub-bg transition enabled:hover:bg-hub-accent-hover disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            {t('hub.payRequest')}
-          </button>
-
-          {walletIdentity && requestOpen ? (
-            <RequestModal
-              open={requestOpen}
-              onClose={() => setRequestOpen(false)}
-              service={data.service}
-              provider={data.provider}
-              wallet={walletIdentity}
-            />
-          ) : null}
-        </div>
-      ) : null}
-    </aside>
+    </Dialog>
   )
 }

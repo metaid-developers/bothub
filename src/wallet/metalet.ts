@@ -1,4 +1,7 @@
+import { normalizeGlobalMetaidResponse } from './normalizeGlobalMetaid'
 import type { EcdhResult, GlobalMetaidResult, MetaletWalletApi, TransferTask } from './types'
+
+export { normalizeGlobalMetaidResponse } from './normalizeGlobalMetaid'
 
 export class MetaletNotInstalledError extends Error {
   constructor() {
@@ -28,12 +31,7 @@ export async function disconnect(): Promise<unknown> {
 
 export async function getGlobalMetaid(): Promise<GlobalMetaidResult> {
   const res = await getWallet().getGlobalMetaid()
-  return {
-    globalMetaId: res.globalMetaId,
-    mvcAddress: res.mvcAddress,
-    btcAddress: res.btcAddress,
-    dogeAddress: res.dogeAddress,
-  }
+  return normalizeGlobalMetaidResponse(res)
 }
 
 export async function getBalance(params?: { path?: string }): Promise<unknown> {

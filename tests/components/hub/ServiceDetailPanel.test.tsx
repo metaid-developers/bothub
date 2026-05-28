@@ -60,10 +60,11 @@ describe('ServiceDetailPanel', () => {
     )
   })
 
-  it('renders detail fields from useServiceDetailQuery', () => {
+  it('renders detail fields from useServiceDetailQuery in a dialog', () => {
     renderPanel()
 
     expect(useServiceDetailQuery).toHaveBeenCalledWith('pin-zhuwei-current-001')
+    expect(screen.getByRole('dialog')).toBeInTheDocument()
     expect(
       screen.getByRole('heading', { name: detailData.service.displayName }),
     ).toBeInTheDocument()
@@ -128,26 +129,8 @@ describe('ServiceDetailPanel', () => {
   it('calls onClose when Escape is pressed', () => {
     const { onClose } = renderPanel()
 
-    fireEvent.keyDown(window, { key: 'Escape' })
-    expect(onClose).toHaveBeenCalledTimes(1)
-  })
-
-  it('calls onClose when clicking outside the panel', () => {
-    const { onClose } = renderPanel()
-
-    fireEvent.mouseDown(document.body)
-    expect(onClose).toHaveBeenCalledTimes(1)
-  })
-
-  it('does not close when clicking a service card', () => {
-    const { onClose } = renderPanel()
-    const card = document.createElement('div')
-    card.setAttribute('data-hub-service-card', '')
-    document.body.appendChild(card)
-
-    fireEvent.mouseDown(card)
-    expect(onClose).not.toHaveBeenCalled()
-    card.remove()
+    fireEvent.keyDown(document, { key: 'Escape' })
+    expect(onClose).toHaveBeenCalled()
   })
 
   it('calls onClose from the close button', () => {

@@ -1,10 +1,8 @@
 import { useCallback, useMemo, useState } from 'react'
 import { ChevronDownIcon, ChevronUpIcon } from '@heroicons/react/24/outline'
 import { useSearchParams } from 'react-router-dom'
-import { clsx } from 'clsx'
 import type { ServicesQueryParams } from '@/api/queries'
 import type { SkillServiceListItem } from '@/api/aggregator.types'
-import { EmptyState } from '@/components/common/EmptyState'
 import {
   defaultHubFilters,
   FiltersBar,
@@ -90,70 +88,54 @@ export function BotHubPage() {
   }, [setSelectedServiceId])
 
   return (
-    <div className="flex flex-col gap-6 md:flex-row md:items-start">
-      <div className="md:hidden">
-        <button
-          type="button"
-          onClick={() => setBotsOpen((open) => !open)}
-          aria-expanded={botsOpen}
-          aria-controls={BOTS_SIDEBAR_ID}
-          className="flex w-full items-center justify-between rounded-card border border-hub-border bg-hub-surface px-4 py-3 text-sm font-semibold text-white"
-        >
-          {t('hub.toggleBots')}
-          {botsOpen ? (
-            <ChevronUpIcon className="h-5 w-5 text-hub-muted" aria-hidden />
-          ) : (
-            <ChevronDownIcon className="h-5 w-5 text-hub-muted" aria-hidden />
-          )}
-        </button>
-        {botsOpen ? (
-          <div className="mt-3">
-            <OnlineBotsSidebar services={pageServices} id={BOTS_SIDEBAR_ID} />
-          </div>
-        ) : null}
-      </div>
-
-      <OnlineBotsSidebar
-        services={pageServices}
-        id={BOTS_SIDEBAR_ID}
-        className="hidden md:flex md:w-56 lg:w-60"
-      />
-
-      <div className="min-w-0 flex-1">
-        <FiltersBar value={filters} onChange={setFilters} />
-        <ServicesPanel
-          queryParams={queryParams}
-          onServicesLoaded={handleServicesLoaded}
-          onSelectService={handleSelectService}
-          selectedServiceId={selectedServiceId}
-        />
-      </div>
-
-      <div
-        className={clsx(
-          'w-full shrink-0',
-          selectedServiceId ? 'block' : 'hidden md:block md:w-80',
-        )}
-      >
-        {selectedServiceId ? (
-          <ServiceDetailPanel
-            serviceId={selectedServiceId}
-            rating={selectedRating}
-            onClose={handleCloseDetail}
-          />
-        ) : (
-          <aside
-            className="sticky top-20 hidden rounded-card border border-dashed border-hub-border/80 bg-hub-surface/40 px-5 py-12 text-center md:block"
-            aria-label={t('hub.serviceDetail')}
+    <>
+      <div className="flex flex-col gap-6 md:flex-row md:items-start">
+        <div className="md:hidden">
+          <button
+            type="button"
+            onClick={() => setBotsOpen((open) => !open)}
+            aria-expanded={botsOpen}
+            aria-controls={BOTS_SIDEBAR_ID}
+            className="flex w-full items-center justify-between rounded-card border border-hub-border bg-hub-surface px-4 py-3 text-sm font-semibold text-white"
           >
-            <EmptyState
-              title={t('hub.selectServiceTitle')}
-              description={t('hub.selectServiceHint')}
-              className="border-0 bg-transparent py-0"
-            />
-          </aside>
-        )}
+            {t('hub.toggleBots')}
+            {botsOpen ? (
+              <ChevronUpIcon className="h-5 w-5 text-hub-muted" aria-hidden />
+            ) : (
+              <ChevronDownIcon className="h-5 w-5 text-hub-muted" aria-hidden />
+            )}
+          </button>
+          {botsOpen ? (
+            <div className="mt-3">
+              <OnlineBotsSidebar services={pageServices} id={BOTS_SIDEBAR_ID} />
+            </div>
+          ) : null}
+        </div>
+
+        <OnlineBotsSidebar
+          services={pageServices}
+          id={BOTS_SIDEBAR_ID}
+          className="hidden md:flex md:w-56 lg:w-60"
+        />
+
+        <div className="min-w-0 flex-1">
+          <FiltersBar value={filters} onChange={setFilters} />
+          <ServicesPanel
+            queryParams={queryParams}
+            onServicesLoaded={handleServicesLoaded}
+            onSelectService={handleSelectService}
+            selectedServiceId={selectedServiceId}
+          />
+        </div>
       </div>
-    </div>
+
+      {selectedServiceId ? (
+        <ServiceDetailPanel
+          serviceId={selectedServiceId}
+          rating={selectedRating}
+          onClose={handleCloseDetail}
+        />
+      ) : null}
+    </>
   )
 }

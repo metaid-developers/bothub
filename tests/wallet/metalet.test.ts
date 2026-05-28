@@ -40,7 +40,7 @@ describe('metalet adapter', () => {
     expect(isMetaletInstalled()).toBe(true)
   })
 
-  it('getGlobalMetaid returns typed identity fields', async () => {
+  it('getGlobalMetaid returns typed identity fields (flat shape)', async () => {
     const result = await getGlobalMetaid()
     expect(result).toEqual({
       globalMetaId: 'idq1testglobalmetaid1234567890',
@@ -49,6 +49,17 @@ describe('metalet adapter', () => {
       dogeAddress: 'DExampleDoge',
     })
     expect(mockWallet.getGlobalMetaid).toHaveBeenCalledOnce()
+  })
+
+  it('getGlobalMetaid normalizes nested Metalet shape', async () => {
+    mockWallet.getGlobalMetaid.mockResolvedValueOnce({
+      mvc: { address: '1MvcNested', globalMetaId: 'idq1nestedmvc' },
+      btc: { address: 'bc1nested', globalMetaId: 'idq1nestedbtc' },
+      doge: { address: 'Dnested', globalMetaId: 'idq1nesteddoge' },
+    })
+    const result = await getGlobalMetaid()
+    expect(result.globalMetaId).toBe('idq1nestedmvc')
+    expect(result.mvcAddress).toBe('1MvcNested')
   })
 
   it('connect delegates to window.metaidwallet', async () => {

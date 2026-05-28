@@ -9,4 +9,8 @@ describe('truncateGlobalMetaId', () => {
   it('returns short strings unchanged', () => {
     expect(truncateGlobalMetaId('short')).toBe('short')
   })
+
+  it('returns em dash for empty input', () => {
+    expect(truncateGlobalMetaId(undefined)).toBe('—')
+  })
 })

@@ -1,4 +1,6 @@
-export function truncateGlobalMetaId(gmid: string, head = 6, tail = 4): string {
-  if (gmid.length <= head + tail + 1) return gmid
-  return `${gmid.slice(0, head)}…${gmid.slice(-tail)}`
+export function truncateGlobalMetaId(gmid: string | undefined | null, head = 6, tail = 4): string {
+  const value = typeof gmid === 'string' ? gmid.trim() : ''
+  if (!value) return '—'
+  if (value.length <= head + tail + 1) return value
+  return `${value.slice(0, head)}…${value.slice(-tail)}`
 }
