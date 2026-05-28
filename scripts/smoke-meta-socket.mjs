@@ -6,6 +6,8 @@ const REQUEST_TIMEOUT_MS = 8000
 const SOCKET_TIMEOUT_MS = 10000
 const baseUrl = normalizeBaseUrl(process.env.META_SOCKET_BASE_URL || DEFAULT_BASE_URL)
 const smokeMetaid = process.env.META_SOCKET_SMOKE_METAID || DEFAULT_SMOKE_METAID
+const privateChatMetaId = process.env.META_SOCKET_PRIVATE_CHAT_METAID || ''
+const privateChatOtherMetaId = process.env.META_SOCKET_PRIVATE_CHAT_OTHER_METAID || ''
 
 function normalizeBaseUrl(value) {
   return value.replace(/\/+$/, '')
@@ -50,6 +52,102 @@ function assertSuccessEnvelope(envelope, label) {
 
 function pickServiceId(service) {
   return service.id || service.currentPinId || service.sourceServicePinId
+}
+
+function classifyIdentity(value) {
+  if (!value) return 'missing'
+  if (/^[13][a-km-zA-HJ-NP-Z1-9]{25,34}$/.test(value)) return 'address-like'
+  if (/^[a-z]{2,}\d[a-z0-9]{20,}$/i.test(value)) return 'local-metaid/globalMetaId-like'
+  return 'unknown'
+}
+
+function isPrivateChatItemShape(value) {
+  return (
+    value &&
+    typeof value === 'object' &&
+    !Array.isArray(value) &&
+    typeof value.fromGlobalMetaId === 'string' &&
+    value.fromGlobalMetaId.trim() &&
+    typeof value.toGlobalMetaId === 'string' &&
+    value.toGlobalMetaId.trim() &&
+    typeof value.content === 'string' &&
+    typeof value.timestamp === 'number' &&
+    Number.isFinite(value.timestamp)
+  )
+}
+
+function summarizePrivateChatRows(rows) {
+  const fieldNames = ['fromGlobalMetaId', 'toGlobalMetaId', 'content', 'timestamp']
+  const usableCount = rows.filter(isPrivateChatItemShape).length
+  return {
+    count: rows.length,
+    privateChatItemCompatible: usableCount === rows.length,
+    compatibleCount: usableCount,
+    normalizationFields: fieldNames,
+  }
+}
+
+async function smokePrivateChat() {
+  if (!privateChatMetaId || !privateChatOtherMetaId) {
+    return {
+      skipped: true,
+      reason:
+        'set META_SOCKET_PRIVATE_CHAT_METAID and META_SOCKET_PRIVATE_CHAT_OTHER_METAID to enable live private-chat checks',
+    }
+  }
+
+  const homesPath = `/api/group-chat/chat/homes/${encodeURIComponent(privateChatMetaId)}`
+  const listPath = `/api/group-chat/private-chat-list?metaId=${encodeURIComponent(
+    privateChatMetaId,
+  )}&otherMetaId=${encodeURIComponent(privateChatOtherMetaId)}&cursor=&size=5`
+
+  const homes = await fetchJson(homesPath, 'private chat homes')
+  assertSuccessEnvelope(homes, 'private chat homes')
+  assert(Array.isArray(homes.data.list), 'private chat homes data.list is not an array')
+
+  const chatList = await fetchJson(listPath, 'private chat list')
+  assertSuccessEnvelope(chatList, 'private chat list')
+  assert(Array.isArray(chatList.data.list), 'private chat list data.list is not an array')
+
+  const homesRows = homes.data.list
+  const messageRows = chatList.data.list
+  const messageSummary = summarizePrivateChatRows(messageRows)
+  assert(
+    messageSummary.privateChatItemCompatible,
+    'private chat list rows cannot be normalized to src/ws/privateChat.ts PrivateChatItem fields',
+  )
+
+  for (const home of homesRows) {
+    if (home?.lastMessage) {
+      assert(
+        isPrivateChatItemShape(home.lastMessage),
+        'private chat homes lastMessage cannot be normalized to src/ws/privateChat.ts PrivateChatItem fields',
+      )
+    }
+  }
+
+  return {
+    skipped: false,
+    urls: {
+      homes: `${baseUrl}${homesPath}`,
+      privateChatList: `${baseUrl}${listPath}`,
+    },
+    identities: {
+      metaId: {
+        value: privateChatMetaId,
+        observedKind: classifyIdentity(privateChatMetaId),
+      },
+      otherMetaId: {
+        value: privateChatOtherMetaId,
+        observedKind: classifyIdentity(privateChatOtherMetaId),
+      },
+    },
+    homes: {
+      count: homesRows.length,
+      hasLastMessage: homesRows.some((home) => Boolean(home?.lastMessage)),
+    },
+    privateChatList: messageSummary,
+  }
 }
 
 async function smokeSocket() {
@@ -136,6 +234,7 @@ async function main() {
   const stats = await fetchJson('/socket/online/stats', 'socket online stats')
   assertSuccessEnvelope(stats, 'socket online stats')
 
+  const privateChat = await smokePrivateChat()
   const heartbeatAck = await smokeSocket()
 
   console.log(
@@ -158,6 +257,7 @@ async function main() {
         onlineStats: stats.data,
         heartbeatAck: Boolean(heartbeatAck !== undefined),
       },
+      privateChat,
     }),
   )
 }

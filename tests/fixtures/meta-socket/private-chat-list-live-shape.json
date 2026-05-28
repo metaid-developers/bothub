@@ -1,0 +1,66 @@
+{
+  "code": 0,
+  "data": {
+    "total": 3,
+    "nextCursor": "",
+    "nextTimestamp": 1777322934,
+    "list": [
+      {
+        "fromGlobalMetaId": "1JzFmwf498bXRyFiJTrxikSP7xh9iZ3JrX",
+        "from": "1JzFmwf498bXRyFiJTrxikSP7xh9iZ3JrX",
+        "fromAddress": "1JzFmwf498bXRyFiJTrxikSP7xh9iZ3JrX",
+        "toGlobalMetaId": "idq160rca8swdygt7hn59em03nqhr96zmjd4yd668z",
+        "to": "idq160rca8swdygt7hn59em03nqhr96zmjd4yd668z",
+        "toAddress": "",
+        "txId": "93517e61b84bc15bc3c91069d0588b08d250c401f85a66e99ed2de5d1efa3448i0",
+        "pinId": "93517e61b84bc15bc3c91069d0588b08d250c401f85a66e99ed2de5d1efa3448i0",
+        "protocol": "bc1p20k3x2c4mglfxr5wa5sgtgechwstpld80kru2cg4gmm4urvuaqqsvapxu0:/protocols/simplemsg",
+        "content": "U2FsdGVkX1/KvdC9CUfUhxFt0rtA+ZZ8/wnvKYksIuQ=",
+        "contentType": "text/plain",
+        "encryption": "",
+        "timestamp": 1777322934,
+        "chain": "mvc",
+        "blockHeight": 170729,
+        "index": -1
+      },
+      {
+        "fromGlobalMetaId": "1JzFmwf498bXRyFiJTrxikSP7xh9iZ3JrX",
+        "from": "1JzFmwf498bXRyFiJTrxikSP7xh9iZ3JrX",
+        "fromAddress": "1JzFmwf498bXRyFiJTrxikSP7xh9iZ3JrX",
+        "toGlobalMetaId": "idq160rca8swdygt7hn59em03nqhr96zmjd4yd668z",
+        "to": "idq160rca8swdygt7hn59em03nqhr96zmjd4yd668z",
+        "toAddress": "",
+        "txId": "5a0b063184af9c6930604843a9c3b016146c03af95eca41ee785789fe51d34d7i0",
+        "pinId": "5a0b063184af9c6930604843a9c3b016146c03af95eca41ee785789fe51d34d7i0",
+        "protocol": "bc1p20k3x2c4mglfxr5wa5sgtgechwstpld80kru2cg4gmm4urvuaqqsvapxu0:/protocols/simplemsg",
+        "content": "U2FsdGVkX1+xQsOeefC+8NQV8qHQQkfqxNJvLQh9GkM=",
+        "contentType": "text/plain",
+        "encryption": "",
+        "timestamp": 1777322934,
+        "chain": "mvc",
+        "blockHeight": 170729,
+        "index": -1
+      },
+      {
+        "fromGlobalMetaId": "1JzFmwf498bXRyFiJTrxikSP7xh9iZ3JrX",
+        "from": "1JzFmwf498bXRyFiJTrxikSP7xh9iZ3JrX",
+        "fromAddress": "1JzFmwf498bXRyFiJTrxikSP7xh9iZ3JrX",
+        "toGlobalMetaId": "idq160rca8swdygt7hn59em03nqhr96zmjd4yd668z",
+        "to": "idq160rca8swdygt7hn59em03nqhr96zmjd4yd668z",
+        "toAddress": "",
+        "txId": "41b4efe33c2ddf73d3089e0b91853c1a44a57661cbf6ac20018d99435696bb8bi0",
+        "pinId": "41b4efe33c2ddf73d3089e0b91853c1a44a57661cbf6ac20018d99435696bb8bi0",
+        "protocol": "bc1p20k3x2c4mglfxr5wa5sgtgechwstpld80kru2cg4gmm4urvuaqqsvapxu0:/protocols/simplemsg",
+        "content": "U2FsdGVkX18KhWHWHGLOL2yOWsWicR9CvcPxQbWce5s=",
+        "contentType": "text/plain",
+        "encryption": "",
+        "timestamp": 1777322934,
+        "chain": "mvc",
+        "blockHeight": 170729,
+        "index": -1
+      }
+    ]
+  },
+  "message": "",
+  "processingTime": 1779975818273
+}
