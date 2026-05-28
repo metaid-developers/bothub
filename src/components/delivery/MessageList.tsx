@@ -42,7 +42,7 @@ export function MessageList({
 
   return (
     <div
-      className="flex h-full min-h-[320px] flex-col gap-3 overflow-y-auto rounded-card border border-hub-border bg-hub-surface/40 p-4"
+      className="flex h-full min-h-[360px] flex-col gap-3 overflow-y-auto bg-hub-surface/20 p-4"
       aria-label={t('delivery.messages')}
     >
       {messages.map((message) => (

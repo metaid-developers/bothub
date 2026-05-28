@@ -1,5 +1,5 @@
 import type { DeliveryMessage } from '@/delivery/messageStore'
-import { isOrderMessage } from '@/delivery/orderParser'
+import { isOrderMessage, parseOrderMessage } from '@/delivery/orderParser'
 import { parseDeliveryProtocol } from '@/delivery/protocol'
 
 export type MessageBubbleVariant =
@@ -35,6 +35,29 @@ export function getMessageVariant(message: DeliveryMessage): MessageBubbleVarian
 }
 
 export function sessionPreviewText(content: string): string {
+  const order = parseOrderMessage(content)
+  if (order) {
+    return truncatePreview(order.displaySummary || 'Order')
+  }
+
+  const protocol = parseDeliveryProtocol(content)
+  if (protocol.kind === 'delivery') {
+    return truncatePreview(protocol.displayText || 'Delivery received')
+  }
+  if (protocol.kind === 'order_status') {
+    return truncatePreview(protocol.displayText || 'Order status update')
+  }
+  if (protocol.kind === 'order_end') {
+    return truncatePreview(protocol.displayText || 'Order completed')
+  }
+  if (protocol.kind === 'needs_rating') {
+    return truncatePreview(protocol.displayText || 'Rating reserved')
+  }
+
+  return truncatePreview(content)
+}
+
+function truncatePreview(content: string): string {
   const oneLine = content.replace(/\s+/g, ' ').trim()
   if (oneLine.length <= 80) return oneLine
   return `${oneLine.slice(0, 77)}…`

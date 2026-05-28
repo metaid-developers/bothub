@@ -1,14 +1,43 @@
 import { useCallback, useEffect, useMemo } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { WsErrorBanner } from '@/components/common/WsErrorBanner'
+import { DeliveredAssetsPanel } from '@/components/delivery/DeliveredAssetsPanel'
 import { MessageList } from '@/components/delivery/MessageList'
+import { SessionHeader } from '@/components/delivery/SessionHeader'
 import { SessionsList } from '@/components/delivery/SessionsList'
 import { useMessageStore } from '@/delivery/messageStore'
+import { enrichDeliverySessions } from '@/delivery/sessionDisplay'
+import {
+  buildGroupedSessionList,
+  messagesForSession as resolveMessagesForSession,
+} from '@/delivery/sessionGrouping'
 import { t } from '@/i18n'
 import { useWallet } from '@/wallet/useWallet'
 import { useSocket } from '@/ws/useSocket'
 
 const SESSION_PARAM = 'session'
+
+function ComposerPlaceholder() {
+  return (
+    <div className="border-t border-hub-border p-3 md:col-start-2 md:row-start-2">
+      <div className="flex items-center gap-2 rounded-card border border-hub-border bg-hub-surface2/60 px-3 py-2">
+        <input
+          disabled
+          aria-label={t('delivery.composerPlaceholder')}
+          placeholder={t('delivery.composerPlaceholder')}
+          className="min-w-0 flex-1 bg-transparent text-sm text-hub-muted placeholder:text-hub-muted"
+        />
+        <button
+          type="button"
+          disabled
+          className="rounded-card border border-hub-border px-3 py-1.5 text-xs font-medium text-hub-muted"
+        >
+          {t('delivery.sendPlaceholder')}
+        </button>
+      </div>
+    </div>
+  )
+}
 
 export function DeliveryPage() {
   const [searchParams, setSearchParams] = useSearchParams()
@@ -22,8 +51,6 @@ export function DeliveryPage() {
   const selectedSessionFromStore = useMessageStore((s) => s.selectedSessionKey)
   const setSelectedSession = useMessageStore((s) => s.setSelectedSession)
   const hydrateFromDb = useMessageStore((s) => s.hydrateFromDb)
-  const listSessions = useMessageStore((s) => s.listSessions)
-  const messagesForSession = useMessageStore((s) => s.messagesForSession)
 
   useEffect(() => {
     if (!selfGlobalMetaId) return
@@ -33,20 +60,28 @@ export function DeliveryPage() {
   }, [hydrateFromDb, selfGlobalMetaId])
 
   const sessions = useMemo(
-    () => listSessions(selfGlobalMetaId),
-    [byPeer, listSessions, selfGlobalMetaId],
+    () => buildGroupedSessionList(byPeer, selfGlobalMetaId),
+    [byPeer, selfGlobalMetaId],
+  )
+
+  const enrichedSessions = useMemo(
+    () => enrichDeliverySessions(sessions, byPeer, selfGlobalMetaId),
+    [byPeer, sessions, selfGlobalMetaId],
   )
 
   const sessionFromUrl = searchParams.get(SESSION_PARAM)?.trim() || null
   const selectedSession =
-    sessionFromUrl || selectedSessionFromStore || sessions[0]?.sessionKey || null
+    sessionFromUrl || selectedSessionFromStore || enrichedSessions[0]?.sessionKey || null
+
+  const selectedSessionDetails =
+    enrichedSessions.find((session) => session.sessionKey === selectedSession) ?? null
 
   const messages = useMemo(
     () =>
       selectedSession && selfGlobalMetaId
-        ? messagesForSession(selectedSession, selfGlobalMetaId)
+        ? resolveMessagesForSession(byPeer, selectedSession, selfGlobalMetaId)
         : [],
-    [messagesForSession, selectedSession, selfGlobalMetaId, byPeer],
+    [byPeer, selectedSession, selfGlobalMetaId],
   )
 
   const selectSession = useCallback(
@@ -75,30 +110,34 @@ export function DeliveryPage() {
 
       <WsErrorBanner />
 
-      <div className="grid min-h-[420px] gap-4 md:grid-cols-[minmax(220px,280px)_1fr]">
-        <aside aria-label={t('delivery.sessions')}>
+      <div className="grid min-h-[560px] overflow-hidden rounded-card border border-hub-border bg-hub-surface/30 md:grid-cols-[minmax(220px,280px)_minmax(0,1fr)_minmax(220px,280px)] md:grid-rows-[minmax(0,1fr)_auto]">
+        <aside aria-label={t('delivery.sessions')} className="border-b border-hub-border p-3 md:row-span-2 md:border-b-0 md:border-r">
           <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-hub-muted">
             {t('delivery.sessions')}
           </h2>
           <SessionsList
-            sessions={sessions}
+            sessions={enrichedSessions}
             selectedSessionKey={selectedSession}
             onSelectSession={selectSession}
             walletConnected={walletConnected}
-            loading={walletConnected && wsConnecting && sessions.length === 0}
+            loading={walletConnected && wsConnecting && enrichedSessions.length === 0}
           />
         </aside>
 
-        <div className="min-w-0">
-          <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-hub-muted">
-            {t('delivery.messages')}
-          </h2>
+        <div className="flex min-w-0 flex-col md:col-start-2 md:row-start-1">
+          <SessionHeader session={selectedSessionDetails} />
           <MessageList
             sessionKey={selectedSession}
             messages={messages}
             selfGlobalMetaId={selfGlobalMetaId}
           />
         </div>
+
+        <DeliveredAssetsPanel
+          messages={messages}
+          className="md:col-start-3 md:row-span-2 md:row-start-1"
+        />
+        <ComposerPlaceholder />
       </div>
     </section>
   )
