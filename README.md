@@ -39,6 +39,21 @@ cp .env.example .env   # 按需调整 VITE_* 变量
 pnpm dev               # http://localhost:5176
 ```
 
+真实 meta-socket 本地联调：
+
+```bash
+pnpm smoke:meta-socket
+```
+
+将以下配置写入 `.env` 后启动：
+
+```bash
+VITE_META_SOCKET_BASE_URL=/meta-socket
+VITE_USE_AGGREGATOR_MOCK=false
+VITE_USE_WS_MOCK=false
+pnpm dev
+```
+
 ### 测试与构建
 
 ```bash

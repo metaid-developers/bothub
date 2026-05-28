@@ -1,0 +1,41 @@
+{
+  "code": 0,
+  "data": {
+    "service": {
+      "id": "de703c3c1bd5e99f1040f1b1c79d18d40027b52855f0050fcadcea6243673a8ei0",
+      "currentPinId": "de703c3c1bd5e99f1040f1b1c79d18d40027b52855f0050fcadcea6243673a8ei0",
+      "sourceServicePinId": "de703c3c1bd5e99f1040f1b1c79d18d40027b52855f0050fcadcea6243673a8ei0",
+      "serviceName": "openagentkey-mock-starter-key",
+      "displayName": "OpenAgentKey Mock Starter Key",
+      "description": "Issues one mock OpenAgentKey Starter API key for acceptance testing.",
+      "serviceIcon": "",
+      "providerSkill": "new-api-vendor-skill",
+      "outputType": "text",
+      "price": "0",
+      "currency": "SPACE",
+      "settlementKind": "native",
+      "paymentChain": "mvc",
+      "mrc20Ticker": null,
+      "mrc20Id": null,
+      "paymentAddress": "1NrF9VhSM9q88pe5wmNqU7a1xMD6BVeRRu",
+      "status": 0,
+      "operation": "create",
+      "disabled": false,
+      "chainName": "mvc",
+      "createdAt": 1779623170,
+      "updatedAt": 1779623170
+    },
+    "provider": {
+      "metaid": "1NrF9VhSM9q88pe5wmNqU7a1xMD6BVeRRu",
+      "globalMetaId": "1NrF9VhSM9q88pe5wmNqU7a1xMD6BVeRRu",
+      "address": "1NrF9VhSM9q88pe5wmNqU7a1xMD6BVeRRu",
+      "name": "GUNDAN-001",
+      "avatar": "",
+      "chatPubkey": "04e92f6e347d5545f5d84f1ef6fd63b75840fc5119e4f0107a0e5346ca506bac388f55cd9373af33e6f2df82eb20dbebddd9638aeb26196d01eb15407aa1333bd4"
+    },
+    "aggregatedAt": 1779974062546,
+    "schemaVersion": "botHubSkillServiceDetail.v1"
+  },
+  "message": "",
+  "processingTime": 1779974062546
+}
