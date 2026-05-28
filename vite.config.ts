@@ -11,5 +11,12 @@ export default defineConfig({
   },
   server: {
     port: 5176,
+    proxy: {
+      '/meta-socket': {
+        target: 'http://127.0.0.1:18091',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/meta-socket/, ''),
+      },
+    },
   },
 })

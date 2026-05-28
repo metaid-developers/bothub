@@ -83,6 +83,22 @@ describe('aggregator client', () => {
       expect(data.total).toBe(3)
     })
 
+    it('listServices preserves relative meta-socket base when building endpoint URLs', async () => {
+      vi.stubEnv('VITE_META_SOCKET_BASE_URL', '/meta-socket/')
+      const fetchMock = vi.fn().mockResolvedValue({
+        json: async () => listFixture,
+      })
+      vi.stubGlobal('fetch', fetchMock)
+
+      const { listServices } = await loadAggregator()
+      await listServices({ size: 3, chainName: 'mvc', sortBy: 'updated', order: 'desc' })
+
+      expect(fetchMock).toHaveBeenCalledOnce()
+      expect(fetchMock.mock.calls[0][0]).toBe(
+        '/meta-socket/api/bot-hub/skill-service/list?size=3&chainName=mvc&sortBy=updated&order=desc',
+      )
+    })
+
     it('getServiceDetail fetches detail endpoint with encoded id', async () => {
       const fetchMock = vi.fn().mockResolvedValue({
         json: async () => detailFixture,

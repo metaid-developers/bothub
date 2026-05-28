@@ -79,7 +79,8 @@ export const useWallet = create<WalletState>()(
         status: state.status === 'connected' ? 'connected' : 'disconnected',
       }),
       onRehydrateStorage: () => (state) => {
-        if (!state?.identity?.globalMetaId?.trim()) {
+        if (!state) return
+        if (!state.identity?.globalMetaId?.trim()) {
           state.identity = null
           state.status = 'disconnected'
           state.errorMessage = null

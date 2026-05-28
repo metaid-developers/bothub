@@ -1,4 +1,4 @@
-import { getMetaSocketBaseUrl, useAggregatorMock } from '@/api/config'
+import { getNormalizedMetaSocketBaseUrl, useAggregatorMock } from '@/api/config'
 import type {
   ApiEnvelope,
   GetServiceDetailParams,
@@ -64,7 +64,7 @@ export async function listServices(
     return unwrapEnvelope(mockListEnvelope as ApiEnvelope<SkillServiceListData>)
   }
 
-  const baseUrl = getMetaSocketBaseUrl().replace(/\/$/, '')
+  const baseUrl = getNormalizedMetaSocketBaseUrl()
   const url = `${baseUrl}/api/bot-hub/skill-service/list${buildListQuery(params)}`
   const response = await fetch(url)
   const envelope = (await response.json()) as ApiEnvelope<SkillServiceListData>
@@ -79,7 +79,7 @@ export async function getServiceDetail(
     return unwrapEnvelope(mockDetailEnvelope as ApiEnvelope<SkillServiceDetailData>)
   }
 
-  const baseUrl = getMetaSocketBaseUrl().replace(/\/$/, '')
+  const baseUrl = getNormalizedMetaSocketBaseUrl()
   const encodedId = encodeURIComponent(serviceId)
   const url = `${baseUrl}/api/bot-hub/skill-service/detail/${encodedId}${buildDetailQuery(params)}`
   const response = await fetch(url)

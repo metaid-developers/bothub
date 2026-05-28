@@ -1,5 +1,5 @@
 import { io, type Socket } from 'socket.io-client'
-import { getMetaSocketBaseUrl } from '@/api/config'
+import { getNormalizedMetaSocketBaseUrl } from '@/api/config'
 import { parseSocketEnvelope, type SocketEnvelope } from './envelope'
 
 export type SocketConnectionStatus = 'disconnected' | 'connecting' | 'connected' | 'error'
@@ -18,22 +18,37 @@ export interface ConnectSocketOptions {
 
 const HEARTBEAT_MS = 30_000
 const RECONNECTION_DELAY_MAX_MS = 30_000
+const SOCKET_PATH = '/socket/socket.io'
+
+interface SocketEndpoint {
+  uri?: string
+  path: string
+}
 
 function normalizeBaseUrl(baseUrl: string): string {
   return baseUrl.replace(/\/+$/, '')
 }
 
-export function buildSocketUrl(baseUrl: string, globalMetaId: string): string {
-  const root = normalizeBaseUrl(baseUrl)
-  const params = new URLSearchParams({
-    metaid: globalMetaId.trim(),
-    type: 'app',
-  })
-  return `${root}/socket/socket.io?${params.toString()}`
+function isRelativeBaseUrl(baseUrl: string): boolean {
+  return baseUrl.startsWith('/')
+}
+
+function buildSocketEndpoint(baseUrl: string): SocketEndpoint {
+  if (isRelativeBaseUrl(baseUrl)) {
+    return { path: `${baseUrl}${SOCKET_PATH}` }
+  }
+
+  const url = new URL(baseUrl)
+  return {
+    uri: url.origin,
+    path: `${normalizeBaseUrl(url.pathname)}${SOCKET_PATH}`,
+  }
 }
 
 export function connectSocket(options: ConnectSocketOptions): SocketController {
-  const baseUrl = normalizeBaseUrl(options.baseUrl ?? getMetaSocketBaseUrl())
+  const baseUrl = options.baseUrl
+    ? normalizeBaseUrl(options.baseUrl)
+    : getNormalizedMetaSocketBaseUrl()
   const globalMetaId = options.globalMetaId.trim()
 
   if (!baseUrl || !globalMetaId) {
@@ -44,13 +59,19 @@ export function connectSocket(options: ConnectSocketOptions): SocketController {
 
   options.onStatus?.('connecting')
 
-  const socket: Socket = io(`${baseUrl}/socket/socket.io`, {
+  const socketEndpoint = buildSocketEndpoint(baseUrl)
+  const socketOptions = {
+    path: socketEndpoint.path,
     query: { metaid: globalMetaId, type: 'app' },
     transports: ['websocket', 'polling'],
     reconnection: true,
     reconnectionDelay: 1_000,
     reconnectionDelayMax: RECONNECTION_DELAY_MAX_MS,
-  })
+  }
+
+  const socket: Socket = socketEndpoint.uri
+    ? io(socketEndpoint.uri, socketOptions)
+    : io(socketOptions)
 
   let heartbeatTimer: ReturnType<typeof setInterval> | undefined
 
