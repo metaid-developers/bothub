@@ -7,7 +7,8 @@
 ## 文档
 
 - **[设计文档](./docs/architecture/bothub-design.md)** — Locked decisions §0, modules, data flow, reference projects
-- **[开发计划](./docs/architecture/bothub-dev-plan.md)** — M0–M8 baseline + M9–M13 productization plan
+- **[下一阶段产品化设计](./docs/architecture/buyer-productization-design.md)** — caller/buyer 侧上线产品规格、Delivery 数字成果管理、IndexedDB、meta-socket 契约
+- **[开发计划](./docs/architecture/bothub-dev-plan.md)** — M0–M8 历史 baseline；下一版 implementation plan 将基于 P0–P4 产品化设计重写
 - [轻量架构（caller 侧纯前端版）](./docs/architecture/bothub-thin-architecture.md)
 - [聚合接口契约（历史草稿；权威 spec 在 meta-socket）](./docs/architecture/aggregator-contract.md)
 - [BFF + OAC 方案（已废弃）](./docs/architecture/bothub-bff-and-signer.md)
@@ -19,13 +20,13 @@
 - **数字成果**：图片、视频、音频、附件是核心体验；后续通过 IndexedDB 保存本地会话/资产索引，便于用户下次登录快速查看历史交付
 - **协议** 对齐 IDBots 订单/私信格式即可；**UI** 三端各自实现，不强求复用
 
-## 产品化方向（M9+）
+## 下一阶段产品化方向（P0+）
 
-- 修复发布地基：构建、meta-socket API 边界、纯静态部署说明。
-- 产品化 Pay & Request：下单后立即进入可追踪 Delivery session。
-- 重构 Delivery 工作台：Sessions、Timeline、Order Summary、底部继续输入框。
-- 做好数字成果：解析 `metafile://`、预览/下载、Delivered Assets 区、IndexedDB 缓存。
-- 同步历史：meta-socket 私聊历史 + Socket.IO 推送合并去重，刷新后可恢复。
+- **P0 Release foundation**：构建、meta-socket API/socket 边界、纯静态部署说明。
+- **P1 Buyer order flow**：用户输入请求、确认价格、支付/发单，下单后立即进入可追踪 Delivery session。
+- **P2 Delivery workspace**：Sessions、Timeline、Session Header、Delivered Assets、底部继续输入框。
+- **P3 Digital asset manager**：解析 `metafile://`、图片/视频/音频/附件预览下载、IndexedDB 资产索引。
+- **P4 History sync & release cut**：meta-socket 私聊历史 + Socket.IO 推送合并去重，刷新后可恢复。
 
 首版不做退款和评价 UI，但数据模型会保留 order/payment/message/asset 标识，方便后续快速接入。
 
