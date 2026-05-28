@@ -58,6 +58,18 @@ describe('MessageBubble', () => {
     expect(screen.queryByText(/"assets"/)).not.toBeInTheDocument()
   })
 
+  it('renders compact asset previews inside delivery messages', () => {
+    render(
+      <MessageBubble
+        message={message('[DELIVERY:order-1] {"result":"Done","assets":["metafile://pin.png","metafile://pin.png"]}')}
+        selfGlobalMetaId="self"
+      />,
+    )
+
+    expect(screen.getByRole('img', { name: 'pin.png' })).toBeInTheDocument()
+    expect(screen.getAllByRole('link', { name: /download/i })).toHaveLength(1)
+  })
+
   it('renders completion and rating-reserved messages with distinct accessible labels', () => {
     render(
       <>

@@ -5,6 +5,7 @@ import { getMessageVariant } from '@/delivery/messageDisplay'
 import { parseOrderMessage } from '@/delivery/orderParser'
 import { parseDeliveryProtocol } from '@/delivery/protocol'
 import { deliveryAssetsFromMessage } from '@/delivery/sessionDisplay'
+import { AssetPreviewCard } from '@/components/delivery/AssetPreviewCard'
 
 export interface MessageBubbleProps {
   message: DeliveryMessage
@@ -158,6 +159,13 @@ function DeliveryBubble({ message }: { message: DeliveryMessage }) {
         <p className="mt-2 text-xs text-hub-muted">
           {assets.length} asset{assets.length === 1 ? '' : 's'} attached
         </p>
+        {assets.length > 0 ? (
+          <div className="mt-2 grid max-w-full grid-cols-2 gap-2">
+            {assets.map((asset) => (
+              <AssetPreviewCard key={asset.uri} asset={asset} />
+            ))}
+          </div>
+        ) : null}
       </article>
     </div>
   )

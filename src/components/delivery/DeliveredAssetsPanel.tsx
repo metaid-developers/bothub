@@ -1,4 +1,5 @@
 import { clsx } from 'clsx'
+import { AssetPreviewCard } from '@/components/delivery/AssetPreviewCard'
 import type { DeliveryMessage } from '@/delivery/messageStore'
 import { deliveryAssetsFromMessages } from '@/delivery/sessionDisplay'
 import { t } from '@/i18n'
@@ -10,6 +11,13 @@ export interface DeliveredAssetsPanelProps {
 
 export function DeliveredAssetsPanel({ messages, className }: DeliveredAssetsPanelProps) {
   const assets = deliveryAssetsFromMessages(messages)
+  const counts = assets.reduce<Record<string, number>>((acc, asset) => {
+    acc[asset.kind] = (acc[asset.kind] ?? 0) + 1
+    return acc
+  }, {})
+  const kindCounts = ['image', 'video', 'audio', 'document', 'archive', 'other']
+    .map((kind) => ({ kind, count: counts[kind] ?? 0 }))
+    .filter(({ count }) => count > 0)
 
   return (
     <aside
@@ -31,24 +39,23 @@ export function DeliveredAssetsPanel({ messages, className }: DeliveredAssetsPan
       {assets.length === 0 ? (
         <p className="mt-4 text-sm text-hub-muted">{t('delivery.noAssetsYet')}</p>
       ) : (
-        <ul className="mt-4 flex flex-col gap-2">
-          {assets.map((asset) => (
-            <li key={asset.uri} className="border-b border-hub-border/70 pb-2 last:border-0">
-              <p className="truncate text-sm font-medium text-white">{asset.filename}</p>
-              <div className="mt-1 flex items-center justify-between gap-3 text-[11px] text-hub-muted">
-                <span className="capitalize">{asset.kind}</span>
-                <a
-                  href={asset.downloadUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="font-medium text-hub-accent hover:underline"
-                >
-                  {t('delivery.downloadAsset')}
-                </a>
-              </div>
-            </li>
-          ))}
-        </ul>
+        <>
+          <div className="mt-3 flex flex-wrap gap-1.5">
+            {kindCounts.map(({ kind, count }) => (
+              <span
+                key={kind}
+                className="rounded-full border border-hub-border bg-hub-surface2 px-2 py-0.5 text-[11px] text-hub-muted"
+              >
+                {kind} {count}
+              </span>
+            ))}
+          </div>
+          <div className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2 md:grid-cols-1">
+            {assets.map((asset) => (
+              <AssetPreviewCard key={asset.uri} asset={asset} />
+            ))}
+          </div>
+        </>
       )}
     </aside>
   )
