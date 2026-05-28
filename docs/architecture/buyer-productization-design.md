@@ -236,10 +236,14 @@ Open contract:
 
 ### 7.3 Socket.IO push
 
-Connect:
+Connect with Socket.IO's `path` option instead of treating `/socket/socket.io` as a namespace:
 
-```text
-wss://<meta-socket-host>/socket/socket.io?metaid=<globalMetaId>&type=app
+```ts
+io('<meta-socket-base-url>', {
+  path: '/socket/socket.io',
+  query: { metaid: '<globalMetaId>', type: 'app' },
+  transports: ['websocket', 'polling'],
+})
 ```
 
 Listen on `message` events and accept:
@@ -574,7 +578,7 @@ Required coverage:
 
 Manual verification:
 
-- Connect Metalet and place a free test order.
+- Connect Metalet and prepare a free test order. If the acceptance run uses Computer Use or Chrome automation, stop before any Metalet signing or on-chain broadcast unless the user confirms at action time.
 - Refresh after order creation and confirm pending Delivery restores.
 - Receive a provider text update.
 - Receive a `[DELIVERY]` message containing image/video/audio/attachment metafiles.

@@ -8,6 +8,7 @@
 
 - **[设计文档](./docs/architecture/bothub-design.md)** — Locked decisions §0, modules, data flow, reference projects
 - **[下一阶段产品化设计](./docs/architecture/buyer-productization-design.md)** — caller/buyer 侧上线产品规格、Delivery 数字成果管理、IndexedDB、meta-socket 契约
+- **[下一阶段实施计划](./docs/superpowers/plans/2026-05-28-buyer-productization.md)** — P0–P4 subagent-driven implementation plan
 - **[开发计划](./docs/architecture/bothub-dev-plan.md)** — M0–M8 历史 baseline；下一版 implementation plan 将基于 P0–P4 产品化设计重写
 - [轻量架构（caller 侧纯前端版）](./docs/architecture/bothub-thin-architecture.md)
 - [聚合接口契约（历史草稿；权威 spec 在 meta-socket）](./docs/architecture/aggregator-contract.md)
