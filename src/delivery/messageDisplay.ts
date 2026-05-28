@@ -1,7 +1,15 @@
 import type { DeliveryMessage } from '@/delivery/messageStore'
 import { isOrderMessage } from '@/delivery/orderParser'
+import { parseDeliveryProtocol } from '@/delivery/protocol'
 
-export type MessageBubbleVariant = 'text' | 'order' | 'system'
+export type MessageBubbleVariant =
+  | 'text'
+  | 'order'
+  | 'status'
+  | 'delivery'
+  | 'completion'
+  | 'rating_reserved'
+  | 'system'
 
 export function getMessageVariant(message: DeliveryMessage): MessageBubbleVariant {
   if (message.decryptError && !isOrderMessage(message.content)) {
@@ -9,6 +17,19 @@ export function getMessageVariant(message: DeliveryMessage): MessageBubbleVarian
   }
   if (isOrderMessage(message.content)) {
     return 'order'
+  }
+  const protocol = parseDeliveryProtocol(message.content)
+  if (protocol.kind === 'order_status') {
+    return 'status'
+  }
+  if (protocol.kind === 'delivery') {
+    return 'delivery'
+  }
+  if (protocol.kind === 'order_end') {
+    return 'completion'
+  }
+  if (protocol.kind === 'needs_rating') {
+    return 'rating_reserved'
   }
   return 'text'
 }

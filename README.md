@@ -69,6 +69,7 @@ pnpm lint        # ESLint
 - 聚合 API 未上线前：`VITE_USE_AGGREGATOR_MOCK=true`（默认）使用本地 fixtures
 - WebSocket mock：`VITE_USE_WS_MOCK=true` 时 Delivery 不连真实 Socket.IO
 - 生产 meta-socket：`VITE_META_SOCKET_BASE_URL=https://api.idchat.io`
+- Metafile 交付物读取：`VITE_METAFILE_ACCELERATE_CONTENT_BASE` 默认使用加速内容 API，`VITE_METAFILE_CONTENT_BASE` 作为普通内容 fallback。
 
 ## 当前基线（M8）
 
