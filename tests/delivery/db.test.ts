@@ -7,6 +7,7 @@ import {
   getMessagesForSession,
   getOrdersForWallet,
   getSessionsForWallet,
+  getSyncState,
   openDeliveryDb,
   persistOutgoingFollowUp,
   putAsset,
@@ -330,5 +331,18 @@ describe('delivery IndexedDB facade', () => {
       `${otherSessionId}:metafile://pin-b.png`,
     ])
     expect(await syncStateIdsForWallet('wallet-b')).toEqual(['wallet-b:provider-a'])
+  })
+
+  it('gets one sync state by id', async () => {
+    await putSyncState(syncState({ cursor: 'cursor-a', lastTimestamp: now }))
+
+    expect(await getSyncState('wallet-a:provider-a')).toEqual(
+      expect.objectContaining({
+        id: 'wallet-a:provider-a',
+        cursor: 'cursor-a',
+        lastTimestamp: now,
+      }),
+    )
+    expect(await getSyncState('missing')).toBeUndefined()
   })
 })

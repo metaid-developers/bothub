@@ -15,10 +15,10 @@ export function WsErrorBanner({ className }: { className?: string }) {
 
   const handleRetry = useCallback(() => {
     const gmid = identity?.globalMetaId?.trim()
-    if (!gmid || walletStatus !== 'connected') return
+    if (!identity || !gmid || walletStatus !== 'connected') return
     disconnect()
-    connect(gmid)
-  }, [connect, disconnect, identity?.globalMetaId, walletStatus])
+    connect(identity)
+  }, [connect, disconnect, identity, walletStatus])
 
   const handleDismiss = useCallback(() => {
     useSocket.setState({ lastError: null })

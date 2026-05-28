@@ -342,6 +342,16 @@ export async function putSyncState(state: DeliverySyncState): Promise<void> {
   await putRecord('syncState', state)
 }
 
+export async function getSyncState(
+  id: string,
+): Promise<DeliverySyncState | undefined> {
+  return withStoreRequest(
+    'syncState',
+    'readonly',
+    (store) => store.get(id) as IDBRequest<DeliverySyncState | undefined>,
+  )
+}
+
 async function deleteWalletRows(store: IDBObjectStore, walletGlobalMetaId: string) {
   const index = store.index('walletGlobalMetaId')
   await new Promise<void>((resolve, reject) => {

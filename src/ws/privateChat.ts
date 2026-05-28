@@ -64,12 +64,24 @@ export function isPrivateChatForRecipient(
   return item.toGlobalMetaId.trim() === mine
 }
 
+function privateChatSelfIds(
+  selfGlobalMetaId: string,
+  selfAliases: readonly string[] = [],
+): Set<string> {
+  return new Set(
+    [selfGlobalMetaId, ...selfAliases]
+      .map((value) => value.trim())
+      .filter(Boolean),
+  )
+}
+
 export function peerGlobalMetaIdFromPrivateChat(
   item: PrivateChatItem,
   selfGlobalMetaId: string,
+  selfAliases: readonly string[] = [],
 ): string {
-  const self = selfGlobalMetaId.trim()
-  if (item.fromGlobalMetaId.trim() === self) {
+  const selfIds = privateChatSelfIds(selfGlobalMetaId, selfAliases)
+  if (selfIds.has(item.fromGlobalMetaId.trim())) {
     return item.toGlobalMetaId.trim()
   }
   return item.fromGlobalMetaId.trim()
@@ -78,10 +90,11 @@ export function peerGlobalMetaIdFromPrivateChat(
 export function peerChatPublicKeyFromPrivateChat(
   item: PrivateChatItem,
   selfGlobalMetaId: string,
+  selfAliases: readonly string[] = [],
 ): string | undefined {
-  const self = selfGlobalMetaId.trim()
+  const selfIds = privateChatSelfIds(selfGlobalMetaId, selfAliases)
   const peerInfo =
-    item.fromGlobalMetaId.trim() === self ? item.toUserInfo : item.fromUserInfo
+    selfIds.has(item.fromGlobalMetaId.trim()) ? item.toUserInfo : item.fromUserInfo
   const key =
     peerInfo?.chatPublicKey?.trim() ||
     peerInfo?.chatpubkey?.trim() ||

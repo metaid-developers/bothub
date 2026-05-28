@@ -10,6 +10,7 @@ import { useMessageStore } from '@/delivery/messageStore'
 import { WS_SERVER_NOTIFY_PRIVATE_CHAT, type SocketEnvelope } from '@/ws/envelope'
 import type { PrivateChatItem } from '@/ws/privateChat'
 import { useSocket } from '@/ws/useSocket'
+import { decryptIncoming } from '@/delivery/decrypt'
 
 vi.mock('@/delivery/decrypt', () => ({
   decryptIncoming: vi.fn(async ({ content }: { content: string }) => ({
@@ -19,6 +20,7 @@ vi.mock('@/delivery/decrypt', () => ({
 
 const SELF = 'idqself'
 const PEER = 'idqpeer'
+const mockedDecryptIncoming = vi.mocked(decryptIncoming)
 
 function envelope(
   overrides: Partial<PrivateChatItem> = {},
@@ -55,9 +57,11 @@ describe('useSocket delivery persistence', () => {
     useSocket.setState({
       status: 'disconnected',
       connectedGlobalMetaId: null,
+      connectedIdentity: null,
       lastError: null,
       debugLog: [],
     })
+    mockedDecryptIncoming.mockResolvedValue({ plaintext: envelope().D.content })
     Object.defineProperty(globalThis, 'indexedDB', {
       value: new IDBFactory(),
       writable: true,
@@ -121,5 +125,23 @@ describe('useSocket delivery persistence', () => {
     expect(useSocket.getState().debugLog).toEqual([
       expect.stringContaining('[cache] delivery message was not saved'),
     ])
+  })
+
+  it('logs conversion failures separately from cache persistence failures', async () => {
+    mockedDecryptIncoming.mockRejectedValueOnce(new Error('decrypt exploded'))
+
+    await useSocket.getState().handleEnvelope(envelope(), SELF)
+
+    expect(useMessageStore.getState().messagesForSession('idqpeer:socket-order', SELF)).toEqual(
+      [],
+    )
+    expect(useSocket.getState().debugLog).toEqual([
+      expect.stringContaining('[delivery] private chat was not merged'),
+    ])
+    expect(useSocket.getState().debugLog).not.toEqual(
+      expect.arrayContaining([
+        expect.stringContaining('[cache] delivery message was not saved'),
+      ]),
+    )
   })
 })
