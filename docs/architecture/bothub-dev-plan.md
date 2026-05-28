@@ -2,16 +2,17 @@
 
 > **For agentic workers:** Steps use `- [ ]` checkboxes. Follow `AGENTS.md` (Commit and Merge Rules, Behavioral Guidelines). For each completed step that produces a working unit, commit per the rules. Don't fix pre-existing bugs not related to your task.
 
-**Goal:** Build a static React SPA that lets a Metalet-authenticated user browse the meta-socket skill-service aggregator, pay & request a service, and view caller-side delivery messages in real time.
+**Goal:** Build a static React SPA for ordinary caller-side users who do not want to install IDBots, run Codex, or configure LLM/runtime tools: they browse remote skill-service providers, submit a manual request with Metalet, and manage delivered digital assets.
 
 **Architecture:** Vite + React + TS SPA. Talks directly to `meta-socket` HTTP (`/api/bot-hub/skill-service/*`) and Socket.IO (`/socket/socket.io`). All wallet operations go through Metalet (`window.metaidwallet.*`). No BotHub backend in MVP.
 
 **Tech Stack:** Vite 5, React 18, TypeScript 5 (strict), Tailwind CSS 3, Headless UI, Heroicons, React Router v6, TanStack Query v5, zustand, socket.io-client 4.8, Vitest + Testing Library. Package manager: **pnpm**.
 
-**Subagent UI rule:** When implementing any user-visible UI (M3, M4, M6–M8), subagents **must** apply the `frontend-design` skill and follow the approved design mockup (dark dashboard, Bot Hub + Delivery two-column layout). Do **not** copy OAC `shared.css` aesthetics wholesale — invent a distinctive BotHub look informed by the mockup.
+**Subagent UI rule:** When implementing any user-visible UI (M3, M4, M6–M13), subagents **must** apply the `frontend-design` skill and follow the approved design mockup (dark dashboard, Bot Hub + Delivery two-column layout). Do **not** copy OAC `shared.css` aesthetics wholesale — invent a distinctive BotHub look informed by the mockup.
 
 **Reference repos (read before guessing):**
 - UI / GigSquare: `/Users/tusm/Documents/MetaID_Projects/IDBots/IDBots`
+- A2A delivery rendering: `/Users/tusm/Documents/MetaID_Projects/IDBots/IDBots/src/renderer/components/cowork/A2AMessageItem.tsx`
 - Wallet: `/Users/tusm/Documents/MetaID_Projects/metalet-extension-next`
 - API + WS: `/Users/tusm/Documents/MetaID_Projects/meta-socket`
 
@@ -265,17 +266,224 @@
 
 ---
 
+## Productization Phase: Caller Tool + A2A Delivery Viewer
+
+The first releasable product is **not** a provider runtime and not a generic A2A developer console. It is a caller-side ordering tool for ordinary users:
+
+1. connect Metalet,
+2. find a remote provider skill-service,
+3. type a plain-language request,
+4. pay/send the order,
+5. track execution in Delivery,
+6. preview/download delivered digital assets,
+7. return later and quickly find previous deliverables.
+
+Refunds and ratings remain out of the first release UI, but all order/session/asset records must preserve enough identifiers to add those flows next.
+
+---
+
+## M9: Release foundation + meta-socket boundary hardening
+
+**Goal:** Make the app buildable, deployable as a pure SPA, and explicit about every meta-socket boundary before touching larger UI work.
+
+**Files (create):**
+- `src/api/privateChat.ts` — HTTP client for `/group-chat/private-chat-list` and `/group-chat/private-chat-list-by-index`.
+- `src/api/userInfo.ts` — HTTP client for `/api/info/globalmetaid/:globalMetaId`.
+- `src/api/metafile.ts` — shared constants/helpers for `file.metaid.io` content URLs.
+- `tests/api/privateChat.test.ts`
+- `tests/api/userInfo.test.ts`
+
+**Files (modify):**
+- `src/wallet/useWallet.ts` — fix TypeScript rehydrate undefined-state build failure.
+- `src/api/config.ts` — centralize base URL, mock flags, and production/staging env validation.
+- `.env.example` — document production, staging, and mock modes.
+- `README.md` — document pure frontend deployment and meta-socket dependencies.
+
+- [ ] **Step 1:** Fix `useWallet` rehydrate guard so `pnpm build` passes.
+- [ ] **Step 2:** Add `privateChat.ts` types that mirror `meta-socket/docs/IDCHAT_API_CONTRACT.md` PrivateMessage shape.
+- [ ] **Step 3:** Add `userInfo.ts` for provider/user profile hydration.
+- [ ] **Step 4:** Add API tests for success envelope, error envelope, empty history, and cursor/index params.
+- [ ] **Step 5:** Add deployment notes: static hosting, required env vars, no BotHub backend, CORS expectation.
+
+**Verify:**
+- `pnpm test api wallet`
+- `pnpm build`
+- Manual: set `VITE_USE_AGGREGATOR_MOCK=false` and confirm list/detail requests target `VITE_META_SOCKET_BASE_URL`.
+
+**Commit:** `fix: harden meta-socket api boundary and build readiness`
+
+---
+
+## M10: Pay & Request product flow
+
+**Goal:** Turn Pay & Request into a clear user-facing order flow that always opens a trackable Delivery session, including before the provider replies.
+
+**Files (create):**
+- `src/order/pendingOrderStore.ts` — wallet-scoped pending order store backed by IndexedDB once M12 lands; temporary localStorage is acceptable only inside this milestone if M12 follows immediately.
+- `src/order/orderIdentity.ts` — derives stable `{ sessionKey, orderId, paymentTxid, orderReference }`.
+- `tests/order/pendingOrderStore.test.ts`
+- `tests/order/orderIdentity.test.ts`
+
+**Files (modify):**
+- `src/components/hub/RequestModal.tsx`
+- `src/order/flow.ts`
+- `src/routes/Delivery.tsx`
+- `src/delivery/sessionGrouping.ts`
+- `src/i18n/zh-CN.ts`
+
+- [ ] **Step 1:** Redesign `RequestModal` into three states: request input → payment/send confirmation → result.
+- [ ] **Step 2:** Keep the plain-language request textarea mandatory for first release; show examples as placeholder/help text, not as hard-coded service forms.
+- [ ] **Step 3:** Add preflight checks for provider globalMetaId, provider chat pubkey, payment address, settlement fields, wallet connection, and prompt length.
+- [ ] **Step 4:** Before broadcasting, create a pending order record with service/provider identity, prompt summary, createdAt, and status `sending`.
+- [ ] **Step 5:** On `createPin` success, mark pending order `waiting`, append an optimistic outgoing order message, and navigate to `/delivery?session=...`.
+- [ ] **Step 6:** If payment succeeds but simplemsg publishing fails, preserve the pending order with status `failed_to_send` and show a retry path.
+- [ ] **Step 7:** Delivery must render pending sessions even when no provider reply has arrived.
+
+**Verify:**
+- `pnpm test order delivery`
+- Manual: free order creates a Delivery session immediately.
+- Manual: simulated send failure leaves a recoverable pending order instead of an empty screen.
+
+**Commit:** `feat: make pay request create trackable delivery sessions`
+
+---
+
+## M11: Delivery workspace redesign
+
+**Goal:** Replace the current skeleton with the product surface from the design: sessions, order context, execution timeline, and bottom input for continuing the conversation.
+
+**Files (create):**
+- `src/components/delivery/DeliveryLayout.tsx`
+- `src/components/delivery/DeliveryHeader.tsx`
+- `src/components/delivery/SessionCard.tsx`
+- `src/components/delivery/Timeline.tsx`
+- `src/components/delivery/Composer.tsx`
+- `src/components/delivery/OrderSummaryPanel.tsx`
+- `src/delivery/sendMessage.ts` — encrypts and publishes follow-up simplemsg through Metalet.
+- `tests/components/delivery/SessionCard.test.tsx`
+- `tests/components/delivery/Composer.test.tsx`
+- `tests/delivery/sendMessage.test.ts`
+
+**Files (modify):**
+- `src/routes/Delivery.tsx`
+- `src/components/delivery/SessionsList.tsx`
+- `src/components/delivery/MessageList.tsx`
+- `src/components/delivery/MessageBubble.tsx`
+- `src/delivery/messageStore.ts`
+- `src/i18n/zh-CN.ts`
+
+- [ ] **Step 1:** Introduce `DeliveryLayout` with left Sessions and main workspace. Keep responsive single-column under 768px.
+- [ ] **Step 2:** Replace list rows with `SessionCard`: service name, provider avatar/name, last message, timestamp, status, unread/new marker.
+- [ ] **Step 3:** Add `DeliveryHeader`: selected service/order title, provider identity, status, and icon buttons for info/assets/more. Buttons can open lightweight panels or disabled placeholders if data is not ready.
+- [ ] **Step 4:** Upgrade `MessageBubble`: avatars, sender names, timestamps, txid/pinId copy affordance, markdown-safe rendering, order/system/status variants.
+- [ ] **Step 5:** Add `OrderSummaryPanel`: prompt summary, price/currency, paymentTxid/orderReference, service/provider, current status.
+- [ ] **Step 6:** Add `Composer`: user can type a follow-up message in Delivery; encrypt to provider chat pubkey and publish `/private/chat/simplemsg` via Metalet.
+- [ ] **Step 7:** Add local archive/unarchive state for sessions. Do not delete chain/history data.
+
+**Verify:**
+- `pnpm test components/delivery delivery`
+- Manual: pending order, text reply, and order bubble all render in the redesigned workspace.
+- Manual: follow-up message publishes an outgoing simplemsg and appears optimistically.
+
+**Commit:** `feat: redesign delivery workspace with follow-up messaging`
+
+---
+
+## M12: Digital asset parsing, preview, and IndexedDB cache
+
+**Goal:** Make digital deliverables the center of the product: parse provider delivery messages, preview/download media, and persist an asset index for fast return visits.
+
+**Files (create):**
+- `src/delivery/messageParser.ts` — parses `text`, `order`, `status`, `delivery`, `asset`, `system`.
+- `src/delivery/assetParser.ts` — parses `metafile://...`, extensions, media kind, preview/download URLs.
+- `src/delivery/deliveryDb.ts` — typed IndexedDB facade with migrations.
+- `src/components/delivery/DeliveredAssetsPanel.tsx`
+- `src/components/delivery/AssetCard.tsx`
+- `src/components/delivery/MediaPreview.tsx`
+- `tests/delivery/messageParser.test.ts`
+- `tests/delivery/assetParser.test.ts`
+- `tests/delivery/deliveryDb.test.ts`
+- `tests/components/delivery/AssetCard.test.tsx`
+
+**Files (modify):**
+- `src/delivery/messageStore.ts`
+- `src/components/delivery/MessageBubble.tsx`
+- `src/routes/Delivery.tsx`
+- `src/i18n/zh-CN.ts`
+- `package.json` — add a small IndexedDB helper only if native IndexedDB ergonomics become noisy; prefer no dependency if the facade stays simple.
+
+- [ ] **Step 1:** Port the relevant parsing concepts from IDBots `A2AMessageItem.tsx`: `[DELIVERY:<txid>]`, `[ORDER_STATUS:<txid>]`, `[ORDER_END:<txid>]`, `[NeedsRating:<txid>]`, and `metafile://...`.
+- [ ] **Step 2:** `assetParser` resolves kind: `image`, `video`, `audio`, `download`; derive `sourceUrl`, `fallbackUrl`, `fileName`, `pinId`.
+- [ ] **Step 3:** `messageParser` extracts delivery result text and all asset references from the renderable content.
+- [ ] **Step 4:** `deliveryDb` stores wallet-scoped sessions, messages, assets, pending orders, archive state, and schema version.
+- [ ] **Step 5:** On app start/login, hydrate Delivery from IndexedDB before network sync.
+- [ ] **Step 6:** Add `DeliveredAssetsPanel` under or beside the timeline. It aggregates assets by selected session, not only by latest message.
+- [ ] **Step 7:** Add previews: image `<img>`, video `<video controls>`, audio `<audio controls>`, generic file card with download/open button.
+- [ ] **Step 8:** Add fallback behavior for CORS/preview failures: show filename, pinId, copy URI, and download/open URL.
+
+**Verify:**
+- `pnpm test delivery components/delivery`
+- Manual: inject messages containing image/video/audio/plain metafile URIs and confirm previews/cards appear.
+- Manual: refresh after assets arrive; Delivery shows cached sessions/assets before live sync completes.
+
+**Commit:** `feat: render and persist digital delivery assets`
+
+---
+
+## M13: History sync, completion states, and release checklist
+
+**Goal:** Make Delivery reliable after refresh, reconnect, and time gaps by merging meta-socket history with IndexedDB and live Socket.IO pushes.
+
+**Files (create):**
+- `src/delivery/historySync.ts`
+- `src/delivery/sessionStatus.ts`
+- `src/delivery/messageDedupe.ts`
+- `tests/delivery/historySync.test.ts`
+- `tests/delivery/sessionStatus.test.ts`
+- `tests/delivery/messageDedupe.test.ts`
+- `docs/release/manual-checklist.md`
+
+**Files (modify):**
+- `src/routes/Delivery.tsx`
+- `src/ws/useSocket.ts`
+- `src/delivery/messageStore.ts`
+- `src/delivery/deliveryDb.ts`
+- `src/components/common/WsErrorBanner.tsx`
+- `README.md`
+
+- [ ] **Step 1:** Add `messageDedupe` using `pinId || txId || localClientId`.
+- [ ] **Step 2:** Add `historySync` that fetches private chat history for known peers/orders and merges with IndexedDB records.
+- [ ] **Step 3:** Add session status derivation:
+  - `sending` for local pending orders before order pin success,
+  - `waiting` after order sent but no provider reply,
+  - `in_progress` when status/progress/provider text arrives,
+  - `delivered` when delivery assets or `[ORDER_END]` arrive,
+  - `failed` for local send failures or explicit provider failure text.
+- [ ] **Step 4:** Sync live Socket.IO messages through the same parser/dedupe/persistence pipeline as HTTP history.
+- [ ] **Step 5:** Show sync state in Delivery: cached, syncing, synced, failed.
+- [ ] **Step 6:** Add manual release checklist covering wallet connect, list/detail, free order, paid order, follow-up message, provider reply, asset delivery, refresh recovery, offline/reconnect, archive/unarchive.
+- [ ] **Step 7:** Update README with production readiness notes and known limitations.
+
+**Verify:**
+- `pnpm test`
+- `pnpm build`
+- Manual checklist in `docs/release/manual-checklist.md` completed against staging meta-socket.
+
+**Commit:** `feat: sync delivery history and define release checklist`
+
+---
+
 ## Out-of-scope for first release (do NOT do)
 
 Per AGENTS.md #2 (Simplicity First) and #3 (Surgical Changes), the following are explicitly excluded:
 
 - Push notifications, service worker, PWA install.
 - Multi-wallet support beyond Metalet.
-- Refund initiation, rating submission UI, service publishing.
+- Refund initiation, rating submission UI, service publishing. Preserve data needed for refunds/ratings, but do not ship the flows yet.
 - Provider profile page beyond the side panel.
 - File upload from the user into a service request.
-- Sessions history backfill via HTTP (WS-only is enough for v1).
 - BotHub backend service (proxy, JWT, analytics) — add only if R1/R3 force it.
+- Provider-side runtime, provider dashboard, service publish/modify/revoke UI.
 
 ---
 

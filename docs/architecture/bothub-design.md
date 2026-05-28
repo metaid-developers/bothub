@@ -1,7 +1,7 @@
 # BotHub Design
 
-> **Status:** Approved v1 (2026-05-28). Decisions locked in §0.
-> **Scope:** Web product implementing the Bot Hub (skill-service marketplace) and Delivery (caller-side A2A viewer) sections as shown in the design mockup.
+> **Status:** Approved v1.1 (2026-05-28). Decisions locked in §0.
+> **Scope:** Pure frontend caller-side product for ordinary users: browse remote skill-service providers, submit a manual request with Metalet, and manage delivered digital assets in Delivery.
 > **Repo:** `github.com/metaid-developers/bothub`
 
 ---
@@ -27,12 +27,18 @@
 | D15 | Data in dev | **`VITE_USE_AGGREGATOR_MOCK=true`** + fixtures | Aggregator API still building; flip mock off when live |
 | D16 | meta-socket URL | **`https://api.idchat.io`** | `VITE_META_SOCKET_BASE_URL`; override in `.env.local` |
 | D17 | App chrome | **左上 Tab**（Bot Hub / Delivery）+ **右上连接钱包** | 设计稿未标清；实现以此为准 |
+| D18 | Product audience | **Caller / buyer only** | For users who do not want to install IDBots, run Codex, or configure LLM/runtime tools |
+| D19 | Request UX | **First release includes user input** | User writes a natural-language request in Bot Hub and can continue the conversation in Delivery |
+| D20 | Local persistence | **IndexedDB for sessions, messages, assets** | Fast return experience after reconnect/login; meta-socket remains source of truth |
+| D21 | Digital delivery | **First-class asset rendering and management** | Images, video, audio, and downloadable attachments are the main product value |
+| D22 | Refunds/ratings | **Architecture reserved, UI deferred** | Important next features; do not implement in first release cut, but keep order identity and asset metadata ready |
 
 ### Reference projects (source of truth when unsure)
 
 | Role | Repo / path | Use for |
 |------|-------------|---------|
 | **UI patterns & GigSquare** | `IDBots/IDBots` — `src/renderer/components/gigSquare/`, `src/main/shared/orderMessage.js` | Layout, order flow, card fields, i18n keys |
+| **A2A delivery rendering** | `IDBots/IDBots` — `src/renderer/components/cowork/A2AMessageItem.tsx` | Delivery tags, metafile parsing, media preview/download behavior |
 | **Wallet** | `metalet-extension-next` — `src/content-script/actions.ts` | `getGlobalMetaid`, `transfer`, `createPin`, `eciesEncrypt/Decrypt` |
 | **HTTP aggregator API** | `meta-socket` — `docs/specs/2026-05-28-bot-hub-skill-service-aggregation-api.md` | List/detail contract |
 | **Socket.IO** | `meta-socket` — `docs/IDCHAT_API_CONTRACT.md` §5 | Envelope `{M,C,D}`, private chat payload |
@@ -47,7 +53,9 @@
 ### Goals (MVP)
 
 - **Bot Hub**: browse online skill-services from `meta-socket` aggregator; filter/sort/search; service detail panel; "Pay & Request" via Metalet.
-- **Delivery**: receive caller-side private messages (provider replies, progress, delivered assets) over Socket.IO; render conversations grouped by session.
+- **Manual request input**: ordinary users can describe what they want in plain language before paying/sending the order. This is not a headless A2A-only flow.
+- **Delivery workspace**: receive caller-side private messages (provider replies, progress, delivered assets) over Socket.IO; render conversations grouped by order/session.
+- **Digital asset management**: parse delivered images, videos, audio, and attachments; preview/download them; persist an asset index locally so returning users can quickly find previous deliverables.
 - **Wallet**: Metalet login → identity (`globalMetaId`); show balance; sign transfers + simplemsg pins.
 
 ### Non-Goals (MVP)
@@ -57,9 +65,10 @@
 - ❌ Group chat, multi-user channels.
 - ❌ Listening to other Bots' messages — only the logged-in user's.
 - ❌ Custom backend service.
-- ❌ Refund management, rating submission UI.
+- ❌ Provider-side service management.
+- ❌ Refund management and rating submission UI in the first release cut.
 
-These can come in v2; the design must not paint itself into a corner that blocks them.
+Refunds and ratings are important near-term features. The first release must keep stable `orderId`/`paymentTxid`/`orderReference`, provider identity, service identity, delivered asset metadata, and message txids so those flows can be added without changing the core session model.
 
 ---
 
@@ -74,24 +83,29 @@ flowchart LR
   end
 
   subgraph ms [meta-socket]
-    HTTP[HTTP API<br/>/api/bot-hub/skill-service/list,detail]
+    HTTP[HTTP API<br/>skill-service, private chat history, user info]
     WS[Socket.IO<br/>/socket/socket.io?metaid=...&type=app]
   end
 
   Provider[Provider Bot<br/>IDBots / OAC]
   Chain[(MVC / BTC chain)]
+  IDB[(IndexedDB<br/>sessions, messages, assets)]
 
   UI -->|GET list/detail| HTTP
+  UI -->|GET private chat history| HTTP
   UI <-->|WS| WS
+  UI <-->|cache / hydrate| IDB
 
   M -->|transfer SPACE| Chain
   M -->|createPin simplemsg| Chain
   Chain -.->|provider listens| Provider
   Provider -->|reply simplemsg| Chain
   Chain -->|indexed| WS
+  Chain -->|indexed history| HTTP
 ```
 
 **Key point:** BotHub never talks to a provider Bot directly. All communication is via on-chain pins. Provider responses flow back through meta-socket's Socket.IO push.
+The local IndexedDB cache is only a client-side acceleration layer; meta-socket remains the source of truth for indexed private chat history.
 
 ---
 
@@ -130,7 +144,10 @@ bothub/
 │   │   ├── messageStore.ts            # zustand store keyed by peerGlobalMetaId
 │   │   ├── decrypt.ts                 # eciesDecrypt via Metalet
 │   │   ├── orderParser.ts             # detect [ORDER] messages, extract metadata
-│   │   └── sessionGrouping.ts         # group messages into sessions
+│   │   ├── sessionGrouping.ts         # group messages into sessions
+│   │   ├── messageParser.ts           # text/order/status/delivery/asset parsing
+│   │   ├── assetParser.ts             # metafile URI + media type detection
+│   │   └── deliveryDb.ts              # IndexedDB persistence facade
 │   ├── order/
 │   │   ├── buildOrderPayload.ts       # mirror of IDBots orderMessage.js
 │   │   ├── orderMessage.ts            # parse helpers (shared with delivery)
@@ -184,10 +201,12 @@ User confirms
   → ciphertext = metalet.eciesEncrypt({ message: orderPayload, recipientPubKey: provider.chatPubkey })
   → simplemsg = { from: gmid, to: providerGmid, content: ciphertext, contentType: 'text/plain', encryption: 'ecdh', replyPin: '' }
   → metalet.createPin({ path: '/private/chat/simplemsg', payload: JSON.stringify(simplemsg), encryption: '0' })
+  → persist pending order locally
   → on success: navigate to /delivery, open session with provider
 ```
 
 The exact payload structure mirrors `IDBots/src/main/shared/orderMessage.js`. Tests must include a fixture diffed against IDBots output for representative cases (free / native / mrc20).
+The user-entered prompt is required for first release. Services may later add structured request schemas, but v1 keeps one plain-text request box so ordinary users can describe the desired outcome without understanding A2A protocols.
 
 ### 4.3 Delivery: WS message → rendering
 
@@ -198,15 +217,36 @@ On login (Metalet connected):
   → socket.on('message', envelope => {
       if (envelope.M === 'WS_SERVER_NOTIFY_PRIVATE_CHAT' && envelope.D.toGlobalMetaId === gmid) {
         const decrypted = await metalet.eciesDecrypt({ encrypted: envelope.D.content })
-        const parsed = parsePrivateChatPayload(decrypted)  // text vs [ORDER] vs progress vs asset
+        const parsed = parsePrivateChatPayload(decrypted)  // text vs order/status/delivery/asset
         messageStore.append({ peerGmid: envelope.D.fromGlobalMetaId, ...parsed })
+        deliveryDb.upsertMessageAndAssets(parsed)
       }
     })
 ```
 
-**Sessions** = grouped by `peerGlobalMetaId` plus optional `serviceId` from order metadata. Initial session list is built lazily as messages arrive; can be backfilled later via meta-socket `/api/group-chat/private-chat-list-by-index`.
+**Sessions** = grouped by `peerGlobalMetaId` plus optional `serviceId`, `paymentTxid`, or `orderReference` from order metadata. Sessions are hydrated from IndexedDB first, then reconciled with meta-socket history and live Socket.IO pushes.
 
-### 4.4 Auth model
+### 4.4 Delivery history and local cache
+
+```
+On login:
+  → load cached sessions/messages/assets for wallet.globalMetaId from IndexedDB
+  → render immediately with "syncing" indicator
+  → fetch private chat history from meta-socket for known peers/orders
+  → merge by pinId || txId || localClientId
+  → decrypt new encrypted messages via Metalet
+  → parse delivery assets and update asset index
+```
+
+IndexedDB stores only the caller's local view:
+- `sessions`: order/session summary, provider/service identity, status, last activity.
+- `messages`: decrypted display text when available, raw encrypted content, tx/pin metadata, direction.
+- `assets`: extracted delivered files with source message id, metafile URI, resolved preview/download URLs, media kind, createdAt, and order/session id.
+- `pendingOrders`: locally created orders waiting for provider replies.
+
+Keep schema migrations explicit and small. If decryption fails, store raw content and a visible diagnostic rather than dropping the message.
+
+### 4.5 Auth model
 
 - No JWT, no server-side session.
 - Identity = Metalet's `globalMetaId`. Persisted in `zustand` + `localStorage` for UI continuity.
@@ -245,7 +285,30 @@ A Vitest fixture compares our `buildOrderPayload` output against snapshots deriv
 
 ---
 
-## 6. Metalet API surface used
+## 6. Delivery Message and Asset Contract
+
+Delivery must parse provider replies as a message stream, not as a single final response. The first release supports the protocol forms already used by IDBots A2A rendering:
+
+| Form | Meaning | First-release behavior |
+|------|---------|------------------------|
+| Plain text / markdown | Provider reply, clarification, progress note | Render in timeline; update session last message |
+| `[ORDER_STATUS:<txid>] ...` | Structured order/progress status | Render as status message; derive `in_progress` when possible |
+| `[DELIVERY:<txid>] { "result": "..." }` | Digital delivery payload | Render result text; parse all contained asset URIs |
+| `[ORDER_END:<txid>] ...` | Provider says order is complete | Mark session `delivered` if no stronger failure state exists |
+| `[NeedsRating:<txid>] ...` | Provider requests rating | Recognize for future rating flow; first release may show completion state without rating UI |
+| `metafile://...` in any renderable content | Delivered file reference | Extract into the asset index and Delivered Assets panel |
+
+Asset handling:
+- `image`: inline preview with download/open fallback.
+- `video`: `<video controls>` preview with download fallback.
+- `audio`: `<audio controls>` preview with download fallback.
+- `download`: generic file card with filename, pinId, copy URI, and open/download action.
+
+The parser must keep the raw message content, extracted display text, delivery tag metadata, and every asset reference. This preserves evidence for later refunds and makes ratings attachable to the correct order.
+
+---
+
+## 7. Metalet API surface used
 
 From `metalet-extension-next/src/content-script/actions.ts`:
 
@@ -266,7 +329,7 @@ A thin TS wrapper in `src/wallet/metalet.ts` exposes typed promises around `wind
 
 ---
 
-## 7. Aggregator API consumption
+## 8. Aggregator API consumption
 
 Consumes the two endpoints defined in `meta-socket/docs/specs/2026-05-28-bot-hub-skill-service-aggregation-api.md`:
 
@@ -279,7 +342,7 @@ Error handling: any non-zero `code` is an error. `40400` → show empty state; `
 
 ---
 
-## 8. State Stores
+## 9. State Stores
 
 | Store | Purpose | Library |
 |-------|---------|---------|
@@ -287,13 +350,14 @@ Error handling: any non-zero `code` is an error. `40400` → show empty state; `
 | Server data | services list, detail, paginated | TanStack Query |
 | WS | socket instance, connection state, last error | zustand |
 | Messages | per-peer message arrays + session groupings | zustand (with `subscribeWithSelector`) |
-| Pending orders | locally-tracked "I just sent an order, waiting for first reply" | zustand + localStorage |
+| Delivery cache | sessions, messages, delivered assets, pending orders | IndexedDB through a thin typed facade |
+| Pending orders | locally-tracked "I just sent an order, waiting for first reply" | zustand + IndexedDB |
 
 No global store object — each domain has its own. Stores never import UI; UI imports stores via hooks.
 
 ---
 
-## 9. Risks
+## 10. Risks
 
 | # | Risk | Mitigation |
 |---|------|------------|
@@ -303,13 +367,17 @@ No global store object — each domain has its own. Stores never import UI; UI i
 | R4 | Provider may take many minutes to reply; UX needs progress feedback | render "waiting for provider" state + push notification permission ask (later) |
 | R5 | MRC20 payments need 2 txids (commit + reveal); Metalet API ergonomics unknown for browser | spike Metalet `transfer({ tasks })` for MRC20 early in M5; fall back to native-only if MVP timeline is tight |
 | R6 | Decryption errors (wrong key, broken cipher) silently lose messages | log + show in a debug panel; never throw away the raw payload |
+| R7 | Browser storage can be cleared or quota-limited | treat IndexedDB as cache; always support meta-socket history re-sync |
+| R8 | Large media previews can be slow or fail CORS/range requests | prefer direct metafile URL previews, fall back to download cards with clear status |
+| R9 | Refund/rating flows need historical proof | preserve order/payment/service/provider/message ids in the first-release data model |
 
 ---
 
-## 10. Testing Strategy
+## 11. Testing Strategy
 
-- **Pure modules** (`buildOrderPayload`, `parseSimpleMsg`, `sessionGrouping`, format helpers): Vitest with fixtures. **Required for M5+.**
+- **Pure modules** (`buildOrderPayload`, `parseSimpleMsg`, `sessionGrouping`, `messageParser`, `assetParser`, format helpers): Vitest with fixtures. **Required for M5+.**
 - **API client / WS handlers**: Vitest with `msw` for HTTP and a `socket.io-mock` for WS.
+- **IndexedDB facade**: Vitest/fake-indexeddb-style coverage for migrations, dedupe, asset extraction, and wallet-scoped reads.
 - **Wallet wrapper**: mocked `window.metaidwallet` for unit tests; a real-wallet manual checklist for e2e.
 - **UI components**: light snapshot / behavior tests with Testing Library. Skip visual regression in MVP.
 - **End-to-end**: optional Playwright against staging meta-socket; not a blocker for MVP.
@@ -318,25 +386,25 @@ Per AGENTS.md #4 "Goal-Driven Execution", each milestone has explicit "verify" s
 
 ---
 
-## 11. What's Explicitly Deferred
+## 12. What's Explicitly Deferred
 
 | Feature | Why deferred |
 |---------|--------------|
-| Refund flow (initiate refund as buyer) | UI not in mockup; add after MVP |
-| Rating submission | UI not in mockup |
+| Refund flow (initiate refund as buyer) | Deferred from first release UI, but order/payment/message metadata must be preserved for it |
+| Rating submission | Deferred from first release UI, but delivered/completed session status must make it easy to add |
 | Provider profile page | redundant with detail panel for MVP |
 | Multi-wallet (non-Metalet) | scope creep |
 | Push notifications | browser permissions UX needs separate design |
 | File upload from user (multipart input to a service) | needs metafile UX; out of scope |
-| Sessions history backfill via HTTP | start with WS-only; add `/api/group-chat/private-chat-list-by-index` later |
 | Server-side analytics | no backend means no server analytics; can add later |
 
 ---
 
-## 12. References
+## 13. References
 
 - Aggregator API spec: `meta-socket/docs/specs/2026-05-28-bot-hub-skill-service-aggregation-api.md`
 - Socket.IO contract: `meta-socket/docs/IDCHAT_API_CONTRACT.md` §5
 - Order payload reference: `IDBots/src/main/shared/orderMessage.js`
+- Delivery rendering reference: `IDBots/src/renderer/components/cowork/A2AMessageItem.tsx`
 - Metalet actions: `metalet-extension-next/src/content-script/actions.ts`
 - Earlier architecture notes: [`bothub-thin-architecture.md`](./bothub-thin-architecture.md), [`aggregator-contract.md`](./aggregator-contract.md)

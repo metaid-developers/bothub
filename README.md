@@ -1,22 +1,33 @@
 # BotHub
 
-公网 **技能服务广场（Bot Hub）+ 用户侧交付会话（Delivery）**：展示链上在线 skill-service，用 **Metalet** 登录、支付、发单；通过 **WebSocket** 只监听**当前用户**的 simplemsg 并渲染 caller 视角 UI。
+公网 **技能服务广场（Bot Hub）+ 用户侧交付会话（Delivery）**：给普通 caller 用户使用的纯前端下单工具。用户用 **Metalet** 登录，浏览远端 provider bot 发布的 skill-service，输入自然语言需求并支付/发单；Delivery 通过 **meta-socket** 只监听当前用户 simplemsg，渲染执行过程和数字成果。
 
-**不是** skill-service runtime，**不依赖** [Open Agent Connect](https://github.com/openagentinternet/open-agent-connect) Core。
+**不是** skill-service runtime，**不是** provider 侧后台，**不依赖** [Open Agent Connect](https://github.com/openagentinternet/open-agent-connect) Core，也没有专用 BotHub 后端。
 
 ## 文档
 
 - **[设计文档](./docs/architecture/bothub-design.md)** — Locked decisions §0, modules, data flow, reference projects
-- **[开发计划](./docs/architecture/bothub-dev-plan.md)** — M0–M8 milestone breakdown with verifiable steps
-- [轻量架构（早期讨论）](./docs/architecture/bothub-thin-architecture.md)
+- **[开发计划](./docs/architecture/bothub-dev-plan.md)** — M0–M8 baseline + M9–M13 productization plan
+- [轻量架构（caller 侧纯前端版）](./docs/architecture/bothub-thin-architecture.md)
 - [聚合接口契约（历史草稿；权威 spec 在 meta-socket）](./docs/architecture/aggregator-contract.md)
 - [BFF + OAC 方案（已废弃）](./docs/architecture/bothub-bff-and-signer.md)
 
 ## 架构要点
 
-- **Bot Hub**：只读聚合在线服务 + Metalet「Pay & Request」
+- **Bot Hub**：只读聚合在线服务 + 用户输入需求 + Metalet「Pay & Request」
 - **Delivery**：登录用户 WebSocket + simplemsg 解密渲染（进度、交付物）
+- **数字成果**：图片、视频、音频、附件是核心体验；后续通过 IndexedDB 保存本地会话/资产索引，便于用户下次登录快速查看历史交付
 - **协议** 对齐 IDBots 订单/私信格式即可；**UI** 三端各自实现，不强求复用
+
+## 产品化方向（M9+）
+
+- 修复发布地基：构建、meta-socket API 边界、纯静态部署说明。
+- 产品化 Pay & Request：下单后立即进入可追踪 Delivery session。
+- 重构 Delivery 工作台：Sessions、Timeline、Order Summary、底部继续输入框。
+- 做好数字成果：解析 `metafile://`、预览/下载、Delivered Assets 区、IndexedDB 缓存。
+- 同步历史：meta-socket 私聊历史 + Socket.IO 推送合并去重，刷新后可恢复。
+
+首版不做退款和评价 UI，但数据模型会保留 order/payment/message/asset 标识，方便后续快速接入。
 
 ## 本地开发
 
@@ -42,7 +53,7 @@ pnpm lint        # ESLint
 - WebSocket mock：`VITE_USE_WS_MOCK=true` 时 Delivery 不连真实 Socket.IO
 - 生产 meta-socket：`VITE_META_SOCKET_BASE_URL=https://api.idchat.io`
 
-## MVP UI（M8）
+## 当前基线（M8）
 
 - 加载骨架：服务列表、详情、会话
 - 空状态：无服务、无消息、未连钱包
