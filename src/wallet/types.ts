@@ -3,6 +3,13 @@ export interface WalletIdentity {
   mvcAddress: string
   btcAddress: string
   dogeAddress: string
+  metaid?: string
+  name?: string
+  avatar?: string
+  avatarUrl?: string
+  chatPubkey?: string
+  chatPublicKey?: string
+  profileUpdatedAt?: string | number
 }
 
 export type WalletStatus = 'disconnected' | 'connecting' | 'connected' | 'error'
@@ -28,6 +35,9 @@ export interface EcdhResult {
 }
 
 export interface MetaletWalletApi {
+  common?: {
+    ecdh?: (params: { externalPubKey: string; path?: string }) => Promise<EcdhResult>
+  }
   connect: () => Promise<unknown>
   disconnect: () => Promise<unknown>
   getGlobalMetaid: () => Promise<GlobalMetaidResult>

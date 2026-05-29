@@ -17,14 +17,36 @@ export function WalletConnectButton() {
   }
 
   if (status === 'connected' && identity) {
+    const displayName = identity.name?.trim() || truncateGlobalMetaId(identity.globalMetaId)
+    const shortGlobalMetaId = truncateGlobalMetaId(identity.globalMetaId)
+    const avatarInitial = displayName.slice(0, 1).toUpperCase()
+
     return (
-      <div className="flex items-center gap-2">
-        <span
-          className="hidden font-mono text-xs text-hub-muted sm:inline"
-          title={identity.globalMetaId}
-        >
-          {truncateGlobalMetaId(identity.globalMetaId)}
-        </span>
+      <div className="flex items-center gap-3">
+        <div className="flex min-w-0 items-center gap-2">
+          {identity.avatarUrl ? (
+            <img
+              src={identity.avatarUrl}
+              alt={`${displayName} avatar`}
+              className="h-8 w-8 shrink-0 rounded-full border border-hub-border object-cover"
+            />
+          ) : (
+            <span
+              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-hub-border bg-hub-accent/20 text-xs font-semibold text-white"
+              aria-label={`${displayName} avatar`}
+            >
+              {avatarInitial}
+            </span>
+          )}
+          <span className="hidden min-w-0 flex-col sm:flex">
+            <span className="max-w-[140px] truncate text-sm font-medium text-white">
+              {displayName}
+            </span>
+            <span className="font-mono text-xs text-hub-muted" title={identity.globalMetaId}>
+              {shortGlobalMetaId}
+            </span>
+          </span>
+        </div>
         <button
           type="button"
           onClick={() => void disconnect()}

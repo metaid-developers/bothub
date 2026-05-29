@@ -50,7 +50,8 @@ export async function ecdh(params: {
   externalPubKey: string
   path?: string
 }): Promise<EcdhResult> {
-  return getWallet().ecdh(params)
+  const wallet = getWallet()
+  return wallet.common?.ecdh ? wallet.common.ecdh(params) : wallet.ecdh(params)
 }
 
 export async function eciesEncrypt(params: { message: string }): Promise<{ encrypted: string }> {
