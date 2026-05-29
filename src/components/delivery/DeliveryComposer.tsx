@@ -9,7 +9,10 @@ import type { WalletIdentity } from '@/wallet/types'
 export function DeliveryComposer(props: {
   wallet: WalletIdentity | null
   session: EnrichedDeliverySession | null
+  providerChatPubkey?: string | null
   disabledReason?: string | null
+  providerKeyLoading?: boolean
+  onFetchProviderKey?: () => void
   onSent?: () => void
 }) {
   const { wallet, session, onSent } = props
@@ -18,7 +21,8 @@ export function DeliveryComposer(props: {
   const [sending, setSending] = useState(false)
   const appendOutgoingFollowUp = useMessageStore((s) => s.appendOutgoingFollowUp)
 
-  const providerChatPubkey = session?.providerChatPubkey?.trim() ?? ''
+  const providerChatPubkey =
+    props.providerChatPubkey?.trim() || session?.providerChatPubkey?.trim() || ''
   const disabledReason =
     props.disabledReason ??
     (!wallet
@@ -28,8 +32,11 @@ export function DeliveryComposer(props: {
         : !providerChatPubkey
           ? t('delivery.composerNoProviderKey')
           : null)
-  const disabled = Boolean(disabledReason) || sending
+  const disabled = Boolean(disabledReason) || sending || Boolean(props.providerKeyLoading)
   const canSend = !disabled && Boolean(draft.trim())
+  const canFetchProviderKey =
+    Boolean(wallet && session && !providerChatPubkey && props.onFetchProviderKey) &&
+    !props.providerKeyLoading
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -49,7 +56,7 @@ export function DeliveryComposer(props: {
       })
       await appendOutgoingFollowUp({
         wallet,
-        session,
+        session: { ...session, providerChatPubkey },
         content,
         rawContent: result.encryptedContent,
         pinId: result.pinId,
@@ -91,9 +98,18 @@ export function DeliveryComposer(props: {
         </button>
       </div>
       {(disabledReason || error) && (
-        <p className="mt-2 text-xs text-hub-muted" role={error ? 'alert' : undefined}>
-          {error ?? disabledReason}
-        </p>
+        <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-hub-muted">
+          <p role={error ? 'alert' : undefined}>{error ?? disabledReason}</p>
+          {canFetchProviderKey ? (
+            <button
+              type="button"
+              onClick={props.onFetchProviderKey}
+              className="rounded-full border border-hub-border px-2 py-1 text-hub-accent hover:border-hub-muted"
+            >
+              Fetch provider key
+            </button>
+          ) : null}
+        </div>
       )}
     </form>
   )

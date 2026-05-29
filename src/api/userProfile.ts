@@ -64,7 +64,14 @@ function normalizeUserProfile(raw: unknown): UserProfile {
     name: readString(record, ['name', 'nameId']),
     avatar,
     avatarUrl,
-    chatPubkey: readString(record, ['chatpubkey', 'chatPubkey', 'chatPublicKey', 'pubkey']),
+    chatPubkey: readString(record, [
+      'chatpubkey',
+      'chatPubkey',
+      'chatPublicKey',
+      'chat_pubkey',
+      'chat_public_key',
+      'pubkey',
+    ]),
   }
 }
 

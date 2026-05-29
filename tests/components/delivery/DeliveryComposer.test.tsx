@@ -76,6 +76,49 @@ describe('DeliveryComposer', () => {
     expect(screen.getByText('Provider chat key unavailable')).toBeInTheDocument()
   })
 
+  it('enables sending when a resolved provider key is supplied outside the session', async () => {
+    render(
+      <DeliveryComposer
+        wallet={wallet}
+        session={{ ...session, providerChatPubkey: undefined }}
+        providerChatPubkey="resolved-provider-key"
+      />,
+    )
+
+    fireEvent.change(screen.getByRole('textbox', { name: 'Message provider' }), {
+      target: { value: 'Use the resolved key.' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Send' }))
+
+    await waitFor(() =>
+      expect(mocks.sendDeliveryFollowUp).toHaveBeenCalledWith(
+        expect.objectContaining({ providerChatPubkey: 'resolved-provider-key' }),
+      ),
+    )
+    expect(mocks.appendOutgoingFollowUp).toHaveBeenCalledWith(
+      expect.objectContaining({
+        session: expect.objectContaining({ providerChatPubkey: 'resolved-provider-key' }),
+      }),
+    )
+  })
+
+  it('offers a fetch key action when the provider key is missing and retry is feasible', () => {
+    const onFetchProviderKey = vi.fn()
+    render(
+      <DeliveryComposer
+        wallet={wallet}
+        session={{ ...session, providerChatPubkey: undefined }}
+        onFetchProviderKey={onFetchProviderKey}
+      />,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Fetch provider key' }))
+
+    expect(screen.getByRole('textbox', { name: 'Message provider' })).toBeDisabled()
+    expect(screen.getByText('Provider chat key unavailable')).toBeInTheDocument()
+    expect(onFetchProviderKey).toHaveBeenCalledOnce()
+  })
+
   it('is disabled with no connected wallet and shows the reason', () => {
     render(<DeliveryComposer wallet={null} session={session} />)
 

@@ -20,6 +20,8 @@ describe('user profile API client', () => {
     ['chatpubkey', 'chatpubkey-value'],
     ['chatPubkey', 'chatPubkey-value'],
     ['chatPublicKey', 'chatPublicKey-value'],
+    ['chat_pubkey', 'chat_pubkey-value'],
+    ['chat_public_key', 'chat_public_key-value'],
     ['pubkey', 'pubkey-value'],
   ])('normalizes %s as chatPubkey', async (fieldName, fieldValue) => {
     vi.stubGlobal(

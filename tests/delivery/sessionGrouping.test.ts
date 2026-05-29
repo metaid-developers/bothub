@@ -7,6 +7,7 @@ import {
   groupPeerMessagesBySession,
   messagesForSession,
   parseSessionKey,
+  resolveProviderChatPubkey,
 } from '@/delivery/sessionGrouping'
 
 const SELF = 'idqself'
@@ -184,6 +185,58 @@ describe('sessionGrouping', () => {
       sessionKey: buildSessionKey(PEER, orderRef),
       providerChatPubkey: 'stored-provider-key',
     })
+  })
+
+  it('resolves provider chat pubkey from session, order, newest message, then profile', () => {
+    const baseSession = {
+      sessionKey: buildSessionKey(PEER, 'order-key'),
+      peerGlobalMetaId: PEER,
+      orderCorrelationId: 'order-key',
+      serviceLabel: 'Key Skill',
+      lastMessage: msg({ id: 'last', content: 'last', timestamp: 4 }),
+      messageCount: 2,
+    }
+
+    const messages = [
+      msg({ id: 'old', content: 'old', timestamp: 1, peerChatPubkey: 'old-message-key' }),
+      msg({ id: 'new', content: 'new', timestamp: 2, peerChatPubkey: 'new-message-key' }),
+    ]
+
+    expect(
+      resolveProviderChatPubkey({
+        session: { ...baseSession, providerChatPubkey: 'session-key' },
+        orders: [{ providerGlobalMetaId: PEER, providerChatPubkey: 'order-key' }],
+        messages,
+        providerProfile: { chatPubkey: 'profile-key' },
+      }),
+    ).toBe('session-key')
+
+    expect(
+      resolveProviderChatPubkey({
+        session: baseSession,
+        orders: [{ providerGlobalMetaId: PEER, providerChatPubkey: 'order-key' }],
+        messages,
+        providerProfile: { chatPubkey: 'profile-key' },
+      }),
+    ).toBe('order-key')
+
+    expect(
+      resolveProviderChatPubkey({
+        session: baseSession,
+        orders: [{ providerGlobalMetaId: 'other-peer', providerChatPubkey: 'other-key' }],
+        messages,
+        providerProfile: { chatPubkey: 'profile-key' },
+      }),
+    ).toBe('new-message-key')
+
+    expect(
+      resolveProviderChatPubkey({
+        session: baseSession,
+        orders: [],
+        messages: [],
+        providerProfile: { chatPubkey: 'profile-key' },
+      }),
+    ).toBe('profile-key')
   })
 
   it('resolves messages for a session key', () => {

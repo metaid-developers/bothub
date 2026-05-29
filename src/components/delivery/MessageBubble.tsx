@@ -113,6 +113,62 @@ function SystemBubble({ message }: { message: DeliveryMessage }) {
   )
 }
 
+function DecryptFailedBubble({ message }: { message: DeliveryMessage }) {
+  const [detailsOpen, setDetailsOpen] = useState(false)
+  const copyValue = (value: string | undefined) => {
+    if (!value?.trim()) return
+    void navigator.clipboard?.writeText(value.trim()).catch(() => undefined)
+  }
+
+  return (
+    <div className="flex justify-start">
+      <article className="max-w-[min(100%,32rem)] rounded-card border border-amber-400/30 bg-hub-surface2 px-3 py-2 text-sm leading-relaxed text-white">
+        <p className="font-medium">Unable to decrypt this message</p>
+        <p className="mt-1 text-xs text-hub-muted">
+          The session is still usable. You can retry after the provider key is available.
+        </p>
+        <div className="mt-2 flex flex-wrap gap-2 text-xs text-hub-muted">
+          {message.pinId ? (
+            <button
+              type="button"
+              onClick={() => copyValue(message.pinId)}
+              className="rounded-full border border-hub-border px-2 py-1 hover:border-hub-muted"
+            >
+              Pin: {message.pinId}
+            </button>
+          ) : null}
+          {message.txId ? (
+            <button
+              type="button"
+              onClick={() => copyValue(message.txId)}
+              className="rounded-full border border-hub-border px-2 py-1 hover:border-hub-muted"
+            >
+              Tx: {message.txId}
+            </button>
+          ) : null}
+        </div>
+        <button
+          type="button"
+          onClick={() => setDetailsOpen((open) => !open)}
+          className="mt-2 text-xs text-hub-accent underline"
+        >
+          {detailsOpen ? 'Hide technical details' : 'Show technical details'}
+        </button>
+        {detailsOpen ? (
+          <div className="mt-2 space-y-2 text-xs text-hub-muted">
+            {message.decryptError ? (
+              <p className="whitespace-pre-wrap break-words">{message.decryptError}</p>
+            ) : null}
+            <pre className="max-h-48 overflow-auto whitespace-pre-wrap break-words rounded border border-hub-border bg-black/20 p-2">
+              {message.rawContent || message.content}
+            </pre>
+          </div>
+        ) : null}
+      </article>
+    </div>
+  )
+}
+
 function TimelineEvent({
   label,
   body,
@@ -175,6 +231,9 @@ export function MessageBubble({ message, selfGlobalMetaId }: MessageBubbleProps)
   const isSelf = message.fromGlobalMetaId.trim() === selfGlobalMetaId.trim()
   const variant = getMessageVariant(message)
 
+  if (message.decryptError) {
+    return <DecryptFailedBubble message={message} />
+  }
   if (variant === 'system') {
     return <SystemBubble message={message} />
   }

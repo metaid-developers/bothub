@@ -207,6 +207,63 @@ describe('messageStore', () => {
     ])
   })
 
+  it('hydrates provider chat pubkey from the persisted session when message rows do not carry it', async () => {
+    const sessionId = `${SELF}:idqpeer:session-key-only`
+    await putSession({
+      id: sessionId,
+      walletGlobalMetaId: SELF,
+      providerGlobalMetaId: 'idqpeer',
+      providerChatPubkey: 'session-only-provider-key',
+      orderCorrelationId: 'session-key-only',
+      serviceId: 'svc-session-key',
+      serviceLabel: 'Session Key Skill',
+      status: 'pending',
+      lastMessageId: 'pin-session-key',
+      lastActivityAt: 15,
+      assetCount: 0,
+      unreadCount: 0,
+    })
+    await putMessage({
+      id: 'pin-session-key',
+      walletGlobalMetaId: SELF,
+      sessionId,
+      peerGlobalMetaId: 'idqpeer',
+      direction: 'outgoing',
+      content: buildOrderPayload({
+        displayText: 'Session Key Skill',
+        rawRequest: 'Please start',
+        price: '0',
+        currency: 'SPACE',
+        orderReference: 'session-key-only',
+        serviceId: 'svc-session-key',
+        skillName: 'session-key-skill',
+        outputType: 'text',
+      }),
+      rawContent: 'raw session key',
+      contentType: 'text/plain',
+      encryption: 'plain',
+      orderCorrelationId: 'session-key-only',
+      pinId: 'pin-session-key',
+      timestamp: 15,
+      decryptStatus: 'plain',
+    })
+
+    await useMessageStore.getState().hydrateFromDb(SELF)
+
+    expect(useMessageStore.getState().listSessions(SELF)).toEqual([
+      expect.objectContaining({
+        sessionKey: 'idqpeer:session-key-only',
+        providerChatPubkey: 'session-only-provider-key',
+      }),
+    ])
+    expect(useMessageStore.getState().messagesForSession('idqpeer:session-key-only', SELF)).toEqual([
+      expect.objectContaining({
+        id: 'pin-session-key',
+        peerChatPubkey: 'session-only-provider-key',
+      }),
+    ])
+  })
+
   it('persists outgoing follow-ups with outgoing direction without dropping existing session fields', async () => {
     await putSession({
       id: `${SELF}:idqpeer:follow-up-order`,
@@ -384,6 +441,52 @@ describe('messageStore', () => {
       expect.objectContaining({
         id: `${SELF}:idqpeer:order-end`,
         status: 'completed',
+      }),
+    ])
+  })
+
+  it('does not mark a persisted session failed just because one message could not decrypt', async () => {
+    const orderRef = 'decrypt-warning'
+    await persistDeliveryMessage({
+      walletGlobalMetaId: SELF,
+      message: sampleMessage({
+        id: 'pin-order-decrypt-warning',
+        peerGlobalMetaId: 'idqpeer',
+        fromGlobalMetaId: SELF,
+        toGlobalMetaId: 'idqpeer',
+        content: buildOrderPayload({
+          displayText: 'Decrypt Warning Skill',
+          rawRequest: 'Try this',
+          price: '0',
+          currency: 'SPACE',
+          orderReference: orderRef,
+          serviceId: 'svc-decrypt-warning',
+          skillName: 'decrypt-warning-skill',
+          outputType: 'text',
+        }),
+        rawContent: 'raw order',
+        timestamp: 20,
+        pinId: 'pin-order-decrypt-warning',
+      }),
+    })
+    await persistDeliveryMessage({
+      walletGlobalMetaId: SELF,
+      message: sampleMessage({
+        id: 'pin-decrypt-warning',
+        peerGlobalMetaId: 'idqpeer',
+        content: 'encrypted-ciphertext',
+        rawContent: 'encrypted-ciphertext',
+        orderCorrelationId: orderRef,
+        timestamp: 21,
+        pinId: 'pin-decrypt-warning',
+        decryptError: 'missing peer chat key',
+      }),
+    })
+
+    expect(await getSessionsForWallet(SELF)).toEqual([
+      expect.objectContaining({
+        id: `${SELF}:idqpeer:${orderRef}`,
+        status: 'pending',
       }),
     ])
   })

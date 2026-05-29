@@ -88,10 +88,6 @@ export function deriveSessionStatus(
     const protocol = parseDeliveryProtocol(message.content)
     const isSelf = message.fromGlobalMetaId.trim() === self
 
-    if (message.decryptError) {
-      status = 'failed'
-      continue
-    }
     if (variant === 'order' && isSelf) {
       hasOutgoingOrder = true
       continue

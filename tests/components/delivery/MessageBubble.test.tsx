@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 import { MessageBubble } from '@/components/delivery/MessageBubble'
 import type { DeliveryMessage } from '@/delivery/messageStore'
@@ -105,5 +105,30 @@ describe('MessageBubble', () => {
     expect(
       screen.queryByText(/leave a review|write a review|rate this|submit rating|[★☆]/i),
     ).not.toBeInTheDocument()
+  })
+
+  it('keeps decrypt-failed raw ciphertext hidden behind explicit details', () => {
+    render(
+      <MessageBubble
+        message={message('encrypted-ciphertext', {
+          rawContent: 'encrypted-ciphertext',
+          decryptError: 'missing peer key',
+          pinId: 'pin-decrypt-failed',
+          txId: 'tx-decrypt-failed',
+        })}
+        selfGlobalMetaId="self"
+      />,
+    )
+
+    expect(screen.getByText('Unable to decrypt this message')).toBeInTheDocument()
+    expect(screen.getByText('Pin: pin-decrypt-failed')).toBeInTheDocument()
+    expect(screen.getByText('Tx: tx-decrypt-failed')).toBeInTheDocument()
+    expect(screen.queryByText('encrypted-ciphertext')).not.toBeInTheDocument()
+    expect(screen.queryByText(/connect wallet|pay/i)).not.toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Show technical details' }))
+
+    expect(screen.getByText('missing peer key')).toBeInTheDocument()
+    expect(screen.getByText('encrypted-ciphertext')).toBeInTheDocument()
   })
 })

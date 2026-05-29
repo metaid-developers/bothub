@@ -1,18 +1,22 @@
-import { useCallback, useEffect, useMemo } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
+import { fetchUserProfileByGlobalMetaId, type UserProfile } from '@/api/userProfile'
 import { WsErrorBanner } from '@/components/common/WsErrorBanner'
 import { DeliveredAssetsPanel } from '@/components/delivery/DeliveredAssetsPanel'
 import { DeliveryComposer } from '@/components/delivery/DeliveryComposer'
 import { MessageList } from '@/components/delivery/MessageList'
 import { SessionHeader } from '@/components/delivery/SessionHeader'
 import { SessionsList } from '@/components/delivery/SessionsList'
+import { getOrdersForWallet } from '@/delivery/db'
 import { buildSessionId } from '@/delivery/domain'
+import type { BuyerOrder } from '@/delivery/domain'
 import { useMessageStore } from '@/delivery/messageStore'
 import { enrichDeliverySessions } from '@/delivery/sessionDisplay'
 import {
   buildGroupedSessionList,
   messagesForSession as resolveMessagesForSession,
   parseSessionKey,
+  resolveProviderChatPubkey,
 } from '@/delivery/sessionGrouping'
 import { t } from '@/i18n'
 import { useWallet } from '@/wallet/useWallet'
@@ -27,6 +31,9 @@ export function DeliveryPage() {
   const walletConnected = walletStatus === 'connected' && identity != null
   const wsConnecting = useSocket((s) => s.status === 'connecting')
   const selfGlobalMetaId = identity?.globalMetaId ?? ''
+  const [orders, setOrders] = useState<BuyerOrder[]>([])
+  const [providerProfiles, setProviderProfiles] = useState<Record<string, UserProfile>>({})
+  const [providerProfileLoading, setProviderProfileLoading] = useState<Record<string, boolean>>({})
 
   const byPeer = useMessageStore((s) => s.byPeer)
   const assetsBySession = useMessageStore((s) => s.assetsBySession)
@@ -39,6 +46,13 @@ export function DeliveryPage() {
     void hydrateFromDb(selfGlobalMetaId).catch((error) => {
       console.warn('Could not load saved delivery sessions.', error)
     })
+    if (typeof indexedDB !== 'undefined') {
+      void getOrdersForWallet(selfGlobalMetaId)
+        .then(setOrders)
+        .catch((error) => {
+          console.warn('Could not load saved delivery orders.', error)
+        })
+    }
   }, [hydrateFromDb, selfGlobalMetaId])
 
   const sessions = useMemo(
@@ -75,6 +89,70 @@ export function DeliveryPage() {
     })
     return assetsBySession[sessionId] ?? []
   }, [assetsBySession, selectedSession, selfGlobalMetaId])
+
+  const selectedProviderProfile =
+    selectedSessionDetails?.peerGlobalMetaId
+      ? providerProfiles[selectedSessionDetails.peerGlobalMetaId]
+      : undefined
+  const selectedProviderChatPubkey = useMemo(
+    () =>
+      resolveProviderChatPubkey({
+        session: selectedSessionDetails,
+        orders,
+        messages,
+        providerProfile: selectedProviderProfile,
+      }),
+    [messages, orders, selectedProviderProfile, selectedSessionDetails],
+  )
+  const selectedSessionWithResolvedKey = useMemo(
+    () =>
+      selectedSessionDetails
+        ? {
+            ...selectedSessionDetails,
+            providerChatPubkey:
+              selectedProviderChatPubkey ||
+              selectedSessionDetails.providerChatPubkey,
+          }
+        : null,
+    [selectedProviderChatPubkey, selectedSessionDetails],
+  )
+
+  const fetchSelectedProviderProfile = useCallback(() => {
+    const providerGlobalMetaId = selectedSessionDetails?.peerGlobalMetaId.trim()
+    if (!providerGlobalMetaId || providerProfileLoading[providerGlobalMetaId]) return
+
+    setProviderProfileLoading((current) => ({
+      ...current,
+      [providerGlobalMetaId]: true,
+    }))
+    void fetchUserProfileByGlobalMetaId(providerGlobalMetaId)
+      .then((profile) => {
+        setProviderProfiles((current) => ({
+          ...current,
+          [providerGlobalMetaId]: profile,
+        }))
+      })
+      .catch((error) => {
+        console.warn('Could not fetch provider profile.', error)
+      })
+      .finally(() => {
+        setProviderProfileLoading((current) => ({
+          ...current,
+          [providerGlobalMetaId]: false,
+        }))
+      })
+  }, [providerProfileLoading, selectedSessionDetails])
+
+  useEffect(() => {
+    if (!selectedSessionDetails || selectedProviderChatPubkey) return
+    if (providerProfiles[selectedSessionDetails.peerGlobalMetaId]) return
+    fetchSelectedProviderProfile()
+  }, [
+    fetchSelectedProviderProfile,
+    providerProfiles,
+    selectedProviderChatPubkey,
+    selectedSessionDetails,
+  ])
 
   const selectSession = useCallback(
     (sessionKey: string) => {
@@ -117,7 +195,7 @@ export function DeliveryPage() {
         </aside>
 
         <div className="flex min-w-0 flex-col md:col-start-2 md:row-start-1">
-          <SessionHeader session={selectedSessionDetails} />
+          <SessionHeader session={selectedSessionWithResolvedKey} />
           <MessageList
             sessionKey={selectedSession}
             messages={messages}
@@ -132,7 +210,13 @@ export function DeliveryPage() {
         />
         <DeliveryComposer
           wallet={walletConnected ? identity : null}
-          session={selectedSessionDetails}
+          session={selectedSessionWithResolvedKey}
+          providerChatPubkey={selectedProviderChatPubkey}
+          providerKeyLoading={Boolean(
+            selectedSessionDetails?.peerGlobalMetaId &&
+              providerProfileLoading[selectedSessionDetails.peerGlobalMetaId],
+          )}
+          onFetchProviderKey={selectedSessionDetails ? fetchSelectedProviderProfile : undefined}
         />
       </div>
     </section>

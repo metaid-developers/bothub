@@ -1,4 +1,5 @@
 import type { DeliveryMessage, DeliverySession } from '@/delivery/messageStore'
+import type { UserProfile } from '@/api/userProfile'
 import {
   findCorrelationInText,
   getOrderCorrelationId,
@@ -70,6 +71,50 @@ function providerChatPubkeyForSession(
     .reverse()
     .find((message) => message.peerChatPubkey?.trim())
     ?.peerChatPubkey?.trim()
+}
+
+export function resolveProviderChatPubkey(input: {
+  session: (Pick<DeliverySession, 'peerGlobalMetaId' | 'providerChatPubkey'> & {
+    orderCorrelationId?: string | null
+  }) | null
+  orders?: Array<{
+    providerGlobalMetaId: string
+    providerChatPubkey?: string
+    orderCorrelationId?: string
+    paymentTxid?: string
+    orderReference?: string
+  }>
+  messages?: DeliveryMessage[]
+  providerProfile?: Pick<UserProfile, 'chatPubkey'> | null
+}): string {
+  const sessionKey = input.session?.providerChatPubkey?.trim()
+  if (sessionKey) return sessionKey
+
+  const peer = input.session?.peerGlobalMetaId.trim() ?? ''
+  const correlation = input.session?.orderCorrelationId?.trim() ?? ''
+  const peerOrders = input.orders?.filter(
+    (order) => order.providerGlobalMetaId.trim() === peer && order.providerChatPubkey?.trim(),
+  ) ?? []
+  const orderKey = (
+    peerOrders.find((order) => {
+      if (!correlation) return true
+      return [order.orderCorrelationId, order.paymentTxid, order.orderReference].some(
+        (value) => value?.trim() === correlation,
+      )
+    }) ?? peerOrders[0]
+  )?.providerChatPubkey?.trim()
+  if (orderKey) return orderKey
+
+  const newestMessageKey = [...(input.messages ?? [])]
+    .sort((a, b) => {
+      if (a.timestamp !== b.timestamp) return b.timestamp - a.timestamp
+      return b.id.localeCompare(a.id)
+    })
+    .find((message) => message.peerChatPubkey?.trim())
+    ?.peerChatPubkey?.trim()
+  if (newestMessageKey) return newestMessageKey
+
+  return input.providerProfile?.chatPubkey?.trim() ?? ''
 }
 
 export function groupPeerMessagesBySession(
