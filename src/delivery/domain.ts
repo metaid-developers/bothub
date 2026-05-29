@@ -1,12 +1,15 @@
 export type BuyerOrderStatus =
   | 'draft'
+  | 'sending'
   | 'paying'
   | 'broadcasting'
+  | 'waiting'
   | 'pending_provider'
   | 'in_progress'
   | 'delivered'
   | 'completed'
   | 'failed'
+  | 'failed_to_send'
   | 'needs_rating_reserved'
   | 'refund_reserved'
 
@@ -36,11 +39,14 @@ export interface BuyerOrder {
 
 export type DeliverySessionStatus =
   | 'pending'
+  | 'sending'
+  | 'waiting'
   | 'active'
   | 'delivering'
   | 'delivered'
   | 'completed'
   | 'failed'
+  | 'failed_to_send'
 
 export interface DeliverySessionRecord {
   id: string

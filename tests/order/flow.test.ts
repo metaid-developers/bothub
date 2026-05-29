@@ -131,6 +131,26 @@ describe('executePayAndRequest', () => {
     })
 
     expect(transfer).toHaveBeenCalledOnce()
+    expect(transfer).toHaveBeenCalledWith({
+      tasks: [
+        {
+          chain: paidService.paymentChain,
+          currency: paidService.currency,
+          receivers: [
+            {
+              address: paidService.paymentAddress,
+              amount: '100000000',
+            },
+          ],
+        },
+      ],
+    })
+    expect(transfer.mock.invocationCallOrder[0]).toBeLessThan(
+      ecdh.mock.invocationCallOrder[0],
+    )
+    expect(ecdh.mock.invocationCallOrder[0]).toBeLessThan(
+      createPin.mock.invocationCallOrder[0],
+    )
     expect(ecdh).toHaveBeenCalledWith({ externalPubKey: provider.chatPubkey })
     expect(createPin).toHaveBeenCalledOnce()
     const pinArgs = createPin.mock.calls[0][0] as {
@@ -200,6 +220,93 @@ describe('executePayAndRequest', () => {
         },
       }),
     ).rejects.toMatchObject({ code: 'payment_failed' } satisfies Partial<PayAndRequestError>)
+  })
+
+  it('fails native paid preflight before transfer when payment address is missing', async () => {
+    const transfer = vi.fn()
+    await expect(
+      executePayAndRequest({
+        service: { ...paidService, paymentAddress: '   ' },
+        provider,
+        prompt: 'Need this service.',
+        wallet,
+        metalet: {
+          transfer,
+          ecdh: vi.fn(),
+          createPin: vi.fn(),
+        },
+      }),
+    ).rejects.toMatchObject({ code: 'payment_failed' } satisfies Partial<PayAndRequestError>)
+
+    expect(transfer).not.toHaveBeenCalled()
+  })
+
+  it('fails preflight before transfer when wallet identity is missing', async () => {
+    const transfer = vi.fn()
+    await expect(
+      executePayAndRequest({
+        service: paidService,
+        provider,
+        prompt: 'Need this service.',
+        wallet: { ...wallet, globalMetaId: '   ' },
+        metalet: {
+          transfer,
+          ecdh: vi.fn(),
+          createPin: vi.fn(),
+        },
+      }),
+    ).rejects.toMatchObject({ code: 'missing_wallet' } satisfies Partial<PayAndRequestError>)
+
+    expect(transfer).not.toHaveBeenCalled()
+  })
+
+  it('fails preflight before transfer when provider global meta id is missing', async () => {
+    const transfer = vi.fn()
+    await expect(
+      executePayAndRequest({
+        service: paidService,
+        provider: { ...provider, globalMetaId: '   ' },
+        prompt: 'Need this service.',
+        wallet,
+        metalet: {
+          transfer,
+          ecdh: vi.fn(),
+          createPin: vi.fn(),
+        },
+      }),
+    ).rejects.toMatchObject({ code: 'missing_provider_key' } satisfies Partial<PayAndRequestError>)
+
+    expect(transfer).not.toHaveBeenCalled()
+  })
+
+  it('blocks paid MRC20 checkout with a clear unsupported-state error before transfer', async () => {
+    const transfer = vi.fn()
+    await expect(
+      executePayAndRequest({
+        service: {
+          ...paidService,
+          settlementKind: 'mrc20',
+          currency: 'MRC20',
+          paymentChain: 'btc',
+          mrc20Ticker: 'DEMO',
+          mrc20Id: 'mrc20-genesis-id-demo',
+          paymentAddress: 'bc1qmrc20recipient',
+        },
+        provider,
+        prompt: 'Need MRC20 service.',
+        wallet,
+        metalet: {
+          transfer,
+          ecdh: vi.fn(),
+          createPin: vi.fn(),
+        },
+      }),
+    ).rejects.toMatchObject({
+      code: 'payment_failed',
+      message: expect.stringMatching(/MRC20 paid checkout is not supported/i),
+    } satisfies Partial<PayAndRequestError>)
+
+    expect(transfer).not.toHaveBeenCalled()
   })
 
   it('throws a broadcast error with paid payment context when createPin fails', async () => {

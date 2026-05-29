@@ -1,5 +1,5 @@
-import { render, screen } from '@testing-library/react'
-import { describe, expect, it } from 'vitest'
+import { fireEvent, render, screen } from '@testing-library/react'
+import { describe, expect, it, vi } from 'vitest'
 import type { SkillServiceListItem } from '@/api/aggregator.types'
 import { ServiceCard } from '@/components/hub/ServiceCard'
 import listFixture from '@/mocks/aggregator/list.json'
@@ -31,5 +31,25 @@ describe('ServiceCard', () => {
     const anon = listFixture.data!.list[1] as SkillServiceListItem
     render(<ServiceCard service={anon} />)
     expect(screen.getByText('Unknown Bot')).toBeInTheDocument()
+  })
+
+  it('enables Pay & Request when an explicit request handler exists', () => {
+    const onRequest = vi.fn()
+    const onSelect = vi.fn()
+    render(
+      <ServiceCard
+        service={fortuneService}
+        onSelect={onSelect}
+        onRequest={onRequest}
+      />,
+    )
+
+    const button = screen.getByRole('button', { name: 'Pay & Request' })
+    expect(button).toBeEnabled()
+
+    fireEvent.click(button)
+
+    expect(onRequest).toHaveBeenCalledWith(fortuneService)
+    expect(onSelect).not.toHaveBeenCalled()
   })
 })

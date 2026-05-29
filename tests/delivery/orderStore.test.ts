@@ -7,8 +7,12 @@ import {
   getOrdersForWallet,
   getSessionsForWallet,
 } from '@/delivery/db'
-import { persistPendingOrder } from '@/delivery/orderStore'
+import {
+  persistFailedToSendOrder,
+  persistPendingOrder,
+} from '@/delivery/orderStore'
 import type { ExecutePayAndRequestResult } from '@/order/flow'
+import type { PreparedPayAndRequest } from '@/order/payAndRequestStages'
 import type { WalletIdentity } from '@/wallet/types'
 
 const wallet: WalletIdentity = {
@@ -105,7 +109,7 @@ describe('persistPendingOrder', () => {
       walletGlobalMetaId: wallet.globalMetaId,
       providerGlobalMetaId: provider.globalMetaId,
       providerChatPubkey: provider.chatPubkey,
-      status: 'pending_provider',
+      status: 'waiting',
       orderReference: 'order-ref-1',
       paymentTxid: '',
       orderPinId: 'pin-order-1',
@@ -133,7 +137,7 @@ describe('persistPendingOrder', () => {
       paymentTxid: 'paid-txid-1',
       paymentCommitTxid: 'commit-txid-1',
       orderPinId: 'pin-order-1',
-      status: 'pending_provider',
+      status: 'waiting',
     })
   })
 
@@ -154,7 +158,7 @@ describe('persistPendingOrder', () => {
       orderCorrelationId: 'order-ref-1',
       serviceId: service.id,
       serviceLabel: service.displayName,
-      status: 'pending',
+      status: 'waiting',
       lastMessageId: 'pin-order-1',
     })
     expect(persisted.message).toMatchObject({
@@ -234,5 +238,62 @@ describe('persistPendingOrder', () => {
     expect(await getOrdersForWallet(wallet.globalMetaId)).toEqual([])
     expect(await getSessionsForWallet(wallet.globalMetaId)).toEqual([])
     expect(await getMessagesForSession('idqbuyer:idqprovider:order-ref-1')).toEqual([])
+  })
+
+  it('stores a recoverable failed_to_send order when payment succeeded but broadcast failed', async () => {
+    const partial: PreparedPayAndRequest = {
+      service: { ...service, price: '1' },
+      provider,
+      prompt: 'Paid fortune',
+      payment: {
+        paymentTxid: 'paid-txid-1',
+        paymentCommitTxid: 'commit-txid-1',
+        orderReference: '',
+      },
+      orderPayload:
+        '[ORDER] Paid fortune\n<raw_request>\nPaid fortune\n</raw_request>\ntxid: paid-txid-1\nservice id: svc-1',
+      encryptedContent: 'ciphertext',
+      simplemsgBody: '{"content":"ciphertext"}',
+      sessionKey: 'idqprovider:paid-txid-1',
+      displaySummary: 'Paid fortune',
+    }
+
+    const persisted = await persistFailedToSendOrder({
+      wallet,
+      provider,
+      service: { ...service, price: '1' },
+      prompt: 'Paid fortune',
+      partial,
+    })
+
+    expect(persisted.order).toMatchObject({
+      id: 'idqbuyer:idqprovider:paid-txid-1',
+      paymentTxid: 'paid-txid-1',
+      paymentCommitTxid: 'commit-txid-1',
+      orderReference: '',
+      orderPinId: undefined,
+      rawRequest: 'Paid fortune',
+      displaySummary: 'Paid fortune',
+      providerChatPubkey: provider.chatPubkey,
+      status: 'failed_to_send',
+    })
+    expect(persisted.session).toMatchObject({
+      id: 'idqbuyer:idqprovider:paid-txid-1',
+      status: 'failed_to_send',
+      orderCorrelationId: 'paid-txid-1',
+      providerChatPubkey: provider.chatPubkey,
+    })
+    expect(persisted.message).toMatchObject({
+      id: 'idqbuyer:idqprovider:paid-txid-1:failed-to-send',
+      content: partial.orderPayload,
+      rawContent: partial.orderPayload,
+      orderCorrelationId: 'paid-txid-1',
+      decryptStatus: 'failed',
+      decryptError: 'payment succeeded but order message failed',
+    })
+
+    expect(await getOrdersForWallet(wallet.globalMetaId)).toHaveLength(1)
+    expect(await getSessionsForWallet(wallet.globalMetaId)).toHaveLength(1)
+    expect(await getMessagesForSession(persisted.session.id)).toHaveLength(1)
   })
 })

@@ -79,9 +79,16 @@ export interface ServiceCardProps {
   className?: string
   selected?: boolean
   onSelect?: (service: SkillServiceListItem) => void
+  onRequest?: (service: SkillServiceListItem) => void
 }
 
-export function ServiceCard({ service, className, selected, onSelect }: ServiceCardProps) {
+export function ServiceCard({
+  service,
+  className,
+  selected,
+  onSelect,
+  onRequest,
+}: ServiceCardProps) {
   const price = formatPrice(service.price, service.currency)
   const providerName = service.providerName?.trim() || PROVIDER_FALLBACK_NAME()
   const selectable = Boolean(onSelect)
@@ -158,10 +165,13 @@ export function ServiceCard({ service, className, selected, onSelect }: ServiceC
 
       <button
         type="button"
-        disabled
-        onClick={(event) => event.stopPropagation()}
-        className="mt-4 w-full rounded-xl bg-hub-accent py-2.5 text-sm font-semibold text-hub-bg opacity-90 transition enabled:hover:bg-hub-accent-hover disabled:cursor-not-allowed"
-        title="Open service details from the card; payment flow ships in a later milestone"
+        disabled={!onRequest}
+        onClick={(event) => {
+          event.stopPropagation()
+          onRequest?.(service)
+        }}
+        className="mt-4 w-full rounded-xl bg-hub-accent py-2.5 text-sm font-semibold text-hub-bg opacity-90 transition enabled:hover:bg-hub-accent-hover disabled:cursor-not-allowed disabled:opacity-60"
+        title={onRequest ? undefined : 'Open service details to connect your wallet and request this service'}
       >
         Pay &amp; Request
       </button>

@@ -10,7 +10,12 @@ const SIMPLEMSG_PATH = '/protocols/simplemsg'
 export class PayAndRequestError extends Error {
   constructor(
     message: string,
-    readonly code: 'invalid_prompt' | 'missing_provider_key' | 'payment_failed' | 'broadcast_failed',
+    readonly code:
+      | 'invalid_prompt'
+      | 'missing_wallet'
+      | 'missing_provider_key'
+      | 'payment_failed'
+      | 'broadcast_failed',
   ) {
     super(message)
     this.name = 'PayAndRequestError'
@@ -97,6 +102,13 @@ export function validatePayAndRequestInput(
         ? `Prompt must be at most ${validation.maxChars} characters`
         : 'Prompt is required'
     throw new PayAndRequestError(reason, 'invalid_prompt')
+  }
+
+  if (!input.wallet.globalMetaId.trim()) {
+    throw new PayAndRequestError(
+      'Connect your Metalet wallet before sending a request.',
+      'missing_wallet',
+    )
   }
 
   const providerChatPubkey = input.provider.chatPubkey?.trim() ?? ''
@@ -197,27 +209,17 @@ export async function executeServicePayment(
     if (!service.mrc20Id?.trim()) {
       throw new PayAndRequestError('MRC20 asset id is missing for this service', 'payment_failed')
     }
-    const transferResult = await metalet.transfer({
-      tasks: [
-        {
-          genesis: service.mrc20Id.trim(),
-          codehash: '',
-          receivers: [{ address: service.paymentAddress.trim(), amount: service.price.trim() }],
-        },
-      ],
-    })
-    const txids = extractTransferTxids(transferResult)
-    const paymentTxid = txids[txids.length - 1] ?? ''
-    const paymentCommitTxid = txids.length > 1 ? txids[0] : ''
-    if (!paymentTxid) {
-      throw new PayAndRequestError('MRC20 payment did not return a transaction id', 'payment_failed')
-    }
-    return { paymentTxid, paymentCommitTxid, orderReference: '' }
+    throw new PayAndRequestError(
+      'MRC20 paid checkout is not supported by the current Metalet transfer API.',
+      'payment_failed',
+    )
   }
 
   const transferResult = await metalet.transfer({
     tasks: [
       {
+        chain: service.paymentChain.trim(),
+        currency: service.currency.trim(),
         receivers: [
           {
             address: service.paymentAddress.trim(),

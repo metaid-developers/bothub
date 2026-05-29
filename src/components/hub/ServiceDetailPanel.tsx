@@ -125,8 +125,7 @@ export function ServiceDetailPanel({
   const walletConnected = walletStatus === 'connected' && Boolean(walletIdentity?.globalMetaId)
   const { data, isLoading, isError, error, refetch } = useServiceDetailQuery(serviceId)
 
-  const payDisabled = !walletConnected
-  const payTooltip = payDisabled ? t('wallet.requiredPay') : undefined
+  const payTooltip = !walletConnected ? t('wallet.requiredPay') : undefined
 
   return (
     <Dialog open onClose={onClose} className="relative z-50">
@@ -197,21 +196,20 @@ export function ServiceDetailPanel({
 
                 <button
                   type="button"
-                  disabled={payDisabled}
                   title={payTooltip}
                   onClick={() => setRequestOpen(true)}
-                  className="w-full rounded-xl bg-hub-accent py-2.5 text-sm font-semibold text-hub-bg transition enabled:hover:bg-hub-accent-hover disabled:cursor-not-allowed disabled:opacity-60"
+                  className="w-full rounded-xl bg-hub-accent py-2.5 text-sm font-semibold text-hub-bg transition hover:bg-hub-accent-hover"
                 >
                   {t('hub.payRequest')}
                 </button>
 
-                {walletIdentity && requestOpen ? (
+                {requestOpen ? (
                   <RequestModal
                     open={requestOpen}
                     onClose={() => setRequestOpen(false)}
                     service={data.service}
                     provider={data.provider}
-                    wallet={walletIdentity}
+                    wallet={walletIdentity ?? null}
                   />
                 ) : null}
               </div>

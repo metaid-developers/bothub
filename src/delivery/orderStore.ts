@@ -8,6 +8,7 @@ import {
   type DeliverySessionRecord,
 } from '@/delivery/domain'
 import type { ExecutePayAndRequestResult } from '@/order/flow'
+import type { PreparedPayAndRequest } from '@/order/payAndRequestStages'
 import type { WalletIdentity } from '@/wallet/types'
 
 export interface PersistPendingOrderInput {
@@ -16,6 +17,14 @@ export interface PersistPendingOrderInput {
   provider: ProviderInfo
   prompt: string
   result: ExecutePayAndRequestResult
+}
+
+export interface PersistFailedToSendOrderInput {
+  wallet: WalletIdentity
+  service: SkillServiceCore
+  provider: ProviderInfo
+  prompt: string
+  partial: PreparedPayAndRequest
 }
 
 function resolveOrderCorrelationId(result: ExecutePayAndRequestResult): string {
@@ -116,7 +125,7 @@ export async function persistPendingOrder(
     paymentCommitTxid: input.result.paymentCommitTxid,
     orderReference: input.result.orderReference,
     orderPinId: input.result.orderPinId,
-    status: 'pending_provider',
+    status: 'waiting',
     createdAt: now,
     updatedAt: now,
   }
@@ -129,7 +138,7 @@ export async function persistPendingOrder(
     orderCorrelationId,
     serviceId: input.service.id,
     serviceLabel: input.service.displayName || input.service.serviceName,
-    status: 'pending',
+    status: 'waiting',
     lastMessageId: messageId,
     lastActivityAt: now,
     assetCount: 0,
@@ -152,6 +161,100 @@ export async function persistPendingOrder(
     pinId: input.result.orderPinId,
     timestamp: now,
     decryptStatus: 'plain',
+  }
+
+  await persistRowsAtomically(order, session, message)
+
+  return { order, session, message }
+}
+
+export async function persistFailedToSendOrder(
+  input: PersistFailedToSendOrderInput,
+): Promise<{
+  order: BuyerOrder
+  session: DeliverySessionRecord
+  message: DeliveryMessageRecord
+}> {
+  const walletGlobalMetaId = input.wallet.globalMetaId.trim()
+  const providerGlobalMetaId = input.provider.globalMetaId.trim()
+  const providerChatPubkey = input.provider.chatPubkey?.trim() || undefined
+  const orderCorrelationId = (
+    input.partial.payment.paymentTxid || input.partial.payment.orderReference
+  ).trim()
+  if (!walletGlobalMetaId) {
+    throw new Error('Wallet globalMetaId is required to persist a failed order')
+  }
+  if (!providerGlobalMetaId) {
+    throw new Error('Provider globalMetaId is required to persist a failed order')
+  }
+  if (!orderCorrelationId) {
+    throw new Error('Order correlation id is required to persist a failed order')
+  }
+
+  const now = Date.now()
+  const sessionId = buildSessionId({
+    walletGlobalMetaId,
+    providerGlobalMetaId,
+    orderCorrelationId,
+  })
+  const orderId = buildOrderId(walletGlobalMetaId, providerGlobalMetaId, orderCorrelationId)
+  const messageId = `${sessionId}:failed-to-send`
+
+  const order: BuyerOrder = {
+    id: orderId,
+    walletGlobalMetaId,
+    providerGlobalMetaId,
+    providerChatPubkey,
+    serviceId: input.service.id,
+    serviceName: input.service.serviceName,
+    skillName: input.service.providerSkill || input.service.serviceName,
+    outputType: input.service.outputType,
+    rawRequest: input.prompt.trim(),
+    displaySummary: input.partial.displaySummary,
+    price: input.service.price,
+    currency: input.service.currency,
+    settlementKind: input.service.settlementKind,
+    paymentChain: normalizePaymentChain(input.service.paymentChain),
+    paymentTxid: input.partial.payment.paymentTxid,
+    paymentCommitTxid: input.partial.payment.paymentCommitTxid,
+    orderReference: input.partial.payment.orderReference,
+    orderPinId: undefined,
+    status: 'failed_to_send',
+    createdAt: now,
+    updatedAt: now,
+  }
+
+  const session: DeliverySessionRecord = {
+    id: sessionId,
+    walletGlobalMetaId,
+    providerGlobalMetaId,
+    providerChatPubkey,
+    orderCorrelationId,
+    serviceId: input.service.id,
+    serviceLabel: input.service.displayName || input.service.serviceName,
+    status: 'failed_to_send',
+    lastMessageId: messageId,
+    lastActivityAt: now,
+    assetCount: 0,
+    unreadCount: 0,
+  }
+
+  const message: DeliveryMessageRecord = {
+    id: messageId,
+    walletGlobalMetaId,
+    sessionId,
+    peerGlobalMetaId: providerGlobalMetaId,
+    peerChatPubkey: providerChatPubkey,
+    direction: 'outgoing',
+    content: input.partial.orderPayload,
+    rawContent: input.partial.orderPayload,
+    contentType: 'text/plain',
+    encryption: 'plain',
+    protocolTag: 'order',
+    orderCorrelationId,
+    timestamp: now,
+    decryptStatus: 'failed',
+    decryptError: 'payment succeeded but order message failed',
   }
 
   await persistRowsAtomically(order, session, message)

@@ -22,6 +22,8 @@ export interface GlobalMetaidResult {
 }
 
 export interface TransferTask {
+  chain?: string
+  currency?: string
   genesis?: string
   codehash?: string
   receivers: Array<{ address: string; amount: string }>
