@@ -31,7 +31,6 @@ function uniqueAssets(assets: ParsedDeliveryAsset[]): ParsedDeliveryAsset[] {
 
 export function deliveryAssetsFromMessage(message: DeliveryMessage): ParsedDeliveryAsset[] {
   const protocol = parseDeliveryProtocol(message.content)
-  if (protocol.kind !== 'delivery') return []
   return uniqueAssets(extractMetafileAssets(protocol.rawText))
 }
 

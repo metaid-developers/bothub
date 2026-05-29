@@ -329,6 +329,45 @@ describe('messageStore', () => {
     ])
   })
 
+  it('persists metafile assets from plain provider text and updates the session asset count', async () => {
+    const message = sampleMessage({
+      id: 'pin-plain-assets',
+      peerGlobalMetaId: 'idqpeer',
+      content: 'Here is metafile://plain.png and metafile://brief.pdf',
+      rawContent: 'Here is metafile://plain.png and metafile://brief.pdf',
+      timestamp: 25,
+      pinId: 'pin-plain-assets',
+    })
+
+    await persistDeliveryMessage({ walletGlobalMetaId: SELF, message })
+
+    const sessionId = `${SELF}:idqpeer:uncorrelated`
+    expect(await getAssetsForSession(sessionId)).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: `${sessionId}:metafile://plain.png`,
+          messageId: 'pin-plain-assets',
+          uri: 'metafile://plain.png',
+          kind: 'image',
+        }),
+        expect.objectContaining({
+          id: `${sessionId}:metafile://brief.pdf`,
+          messageId: 'pin-plain-assets',
+          uri: 'metafile://brief.pdf',
+          kind: 'document',
+        }),
+      ]),
+    )
+    expect(await getAssetsForSession(sessionId)).toHaveLength(2)
+    expect(await getSessionsForWallet(SELF)).toEqual([
+      expect.objectContaining({
+        id: sessionId,
+        assetCount: 2,
+        lastMessageId: 'pin-plain-assets',
+      }),
+    ])
+  })
+
   it('marks ORDER_END sessions completed in the persisted session record', async () => {
     const message = sampleMessage({
       id: 'pin-end-1',

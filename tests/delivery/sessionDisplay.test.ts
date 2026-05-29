@@ -70,6 +70,17 @@ describe('deriveSessionStatus', () => {
 })
 
 describe('deliveryAssetsFromMessage', () => {
+  it('extracts metafile assets from plain provider messages', () => {
+    const assets = deliveryAssetsFromMessage(message('Here is metafile://plain.png'))
+
+    expect(assets).toHaveLength(1)
+    expect(assets[0]).toMatchObject({
+      uri: 'metafile://plain.png',
+      filename: 'plain.png',
+      kind: 'image',
+    })
+  })
+
   it('extracts metafile assets from structured delivery assets fields', () => {
     const assets = deliveryAssetsFromMessage(
       message('[DELIVERY:order-1] {"result":"Done","assets":["metafile://pin.png"]}'),

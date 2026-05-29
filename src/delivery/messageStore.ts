@@ -12,14 +12,17 @@ import type {
   DeliveryMessageRecord,
 } from '@/delivery/domain'
 import { buildAssetId, buildSessionId } from '@/delivery/domain'
-import { extractMetafileAssets } from '@/delivery/assetParser'
+import type { ParsedDeliveryAsset } from '@/delivery/assetParser'
 import {
   findCorrelationInText,
   getOrderCorrelationId,
   parseOrderMessage,
 } from '@/delivery/orderParser'
 import { parseDeliveryProtocol } from '@/delivery/protocol'
-import { deriveSessionStatus } from '@/delivery/sessionDisplay'
+import {
+  deriveSessionStatus,
+  deliveryAssetsFromMessage,
+} from '@/delivery/sessionDisplay'
 import {
   buildGroupedSessionList,
   messagesForSession as resolveMessagesForSession,
@@ -189,7 +192,7 @@ function assetRecordFromParsedAsset(input: {
   walletGlobalMetaId: string
   sessionId: string
   message: DeliveryMessage
-  asset: ReturnType<typeof extractMetafileAssets>[number]
+  asset: ParsedDeliveryAsset
 }): DeliveryAssetRecord {
   return {
     id: buildAssetId(input.sessionId, input.asset.uri),
@@ -250,9 +253,7 @@ export async function persistDeliveryMessage(input: {
     providerGlobalMetaId: peerGlobalMetaId,
     orderCorrelationId,
   })
-  const protocol = parseDeliveryProtocol(message.content)
-  const parsedAssets =
-    protocol.kind === 'delivery' ? extractMetafileAssets(protocol.rawText) : []
+  const parsedAssets = deliveryAssetsFromMessage(message)
   const assetRecords = parsedAssets.map((asset) =>
     assetRecordFromParsedAsset({
       walletGlobalMetaId,
