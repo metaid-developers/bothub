@@ -2,6 +2,8 @@ import { ecdhEncryptWithSharedSecret } from '@/order/privateChatCrypto'
 import type { PayAndRequestMetalet } from '@/order/flow'
 import type { WalletIdentity } from '@/wallet/types'
 
+const SIMPLEMSG_PATH = '/protocols/simplemsg'
+
 export class DeliveryFollowUpError extends Error {
   constructor(
     message: string,
@@ -30,18 +32,33 @@ export interface SendDeliveryFollowUpResult {
   encryptedContent: string
 }
 
-function extractTransferTxids(result: unknown): string[] {
-  if (!result || typeof result !== 'object') return []
-  const txids = (result as { txids?: unknown }).txids
-  if (!Array.isArray(txids)) return []
-  return txids.map((id) => String(id).trim()).filter(Boolean)
+function collectTxidLikeStrings(value: unknown, out: string[] = []): string[] {
+  if (!value || typeof value !== 'object') return out
+  if (Array.isArray(value)) {
+    for (const item of value) {
+      if (typeof item === 'string' && item.trim()) out.push(item.trim())
+      else collectTxidLikeStrings(item, out)
+    }
+    return out
+  }
+
+  const record = value as Record<string, unknown>
+  for (const key of ['txids', 'txIds', 'txid', 'txId', 'transactionId', 'hash']) {
+    const candidate = record[key]
+    if (typeof candidate === 'string' && candidate.trim()) out.push(candidate.trim())
+    else if (Array.isArray(candidate)) collectTxidLikeStrings(candidate, out)
+  }
+  for (const key of ['data', 'result', 'raw', 'payload']) {
+    collectTxidLikeStrings(record[key], out)
+  }
+  return out
 }
 
 function resolvePrimaryPinId(result: unknown): string {
   if (!result || typeof result !== 'object') return ''
   const direct = (result as { pinId?: unknown }).pinId
   if (typeof direct === 'string' && direct.trim()) return direct.trim()
-  return extractTransferTxids(result)[0] ?? ''
+  return collectTxidLikeStrings(result)[0] ?? ''
 }
 
 function buildPrivateMessagePayload(input: {
@@ -51,7 +68,7 @@ function buildPrivateMessagePayload(input: {
 }): string {
   return JSON.stringify({
     to: input.toGlobalMetaId,
-    timestamp: Math.floor(Date.now() / 1000),
+    timestamp: Date.now(),
     content: input.encryptedContent,
     contentType: 'text/plain',
     encrypt: 'ecdh',
@@ -91,7 +108,7 @@ export async function sendDeliveryFollowUp(
       {
         metaidData: {
           operation: 'create',
-          path: '/private/chat/simplemsg',
+          path: SIMPLEMSG_PATH,
           body: buildPrivateMessagePayload({
             toGlobalMetaId: providerGlobalMetaId,
             encryptedContent,

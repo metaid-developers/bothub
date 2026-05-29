@@ -13,6 +13,49 @@ const wallet: WalletIdentity = {
 }
 
 describe('sendDeliveryFollowUp', () => {
+  it('posts follow-ups as standard simplemsg pins with millisecond timestamps', async () => {
+    const now = 1_764_322_123_456
+    vi.spyOn(Date, 'now').mockReturnValue(now)
+    const createPin = vi.fn().mockResolvedValue({ pinId: 'pin-follow-up-standard' })
+
+    await sendDeliveryFollowUp({
+      wallet,
+      providerGlobalMetaId: 'idqprovider',
+      providerChatPubkey: '04' + 'ab'.repeat(64),
+      content: 'Can you add a source file?',
+      metalet: {
+        ecdh: vi.fn().mockResolvedValue({ sharedSecret: 'aa'.repeat(32) }),
+        createPin,
+      },
+    })
+
+    const pinArgs = createPin.mock.calls[0][0] as {
+      dataList: Array<{
+        metaidData: {
+          path: string
+          body: string
+          contentType: string
+          encryption: string
+        }
+      }>
+    }
+    const metaidData = pinArgs.dataList[0].metaidData
+    expect(metaidData.path).toBe('/protocols/simplemsg')
+    expect(metaidData.contentType).toBe('application/json')
+    expect(metaidData.encryption).toBe('0')
+    const body = JSON.parse(metaidData.body) as {
+      to: string
+      encrypt: string
+      contentType: string
+      timestamp: number
+    }
+    expect(body.to).toBe('idqprovider')
+    expect(body.encrypt).toBe('ecdh')
+    expect(body.contentType).toBe('text/plain')
+    expect(body.timestamp).toBe(now)
+    expect(body.timestamp).toBeGreaterThan(10_000_000_000)
+  })
+
   it('blocks empty messages', async () => {
     await expect(
       sendDeliveryFollowUp({
@@ -84,7 +127,7 @@ describe('sendDeliveryFollowUp', () => {
       dataList: Array<{ metaidData: { path: string; body: string } }>
     }
     expect(pinArgs.chain).toBe('mvc')
-    expect(pinArgs.dataList[0].metaidData.path).toBe('/private/chat/simplemsg')
+    expect(pinArgs.dataList[0].metaidData.path).toBe('/protocols/simplemsg')
     const body = JSON.parse(pinArgs.dataList[0].metaidData.body) as {
       to: string
       content: string

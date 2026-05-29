@@ -55,6 +55,51 @@ const wallet = {
 }
 
 describe('executePayAndRequest', () => {
+  it('posts orders as standard simplemsg pins with millisecond timestamps', async () => {
+    const now = 1_764_321_987_654
+    vi.spyOn(Date, 'now').mockReturnValue(now)
+    const paymentTxid = 'e'.repeat(64)
+    const createPin = vi.fn().mockResolvedValue({ pinId: 'pin-order-standard' })
+
+    await executePayAndRequest({
+      service: paidService,
+      provider,
+      prompt: 'Please deliver my standard simplemsg order.',
+      wallet,
+      metalet: {
+        transfer: vi.fn().mockResolvedValue({ txids: [paymentTxid] }),
+        ecdh: vi.fn().mockResolvedValue({ sharedSecret: 'aa'.repeat(32) }),
+        createPin,
+      },
+    })
+
+    const pinArgs = createPin.mock.calls[0][0] as {
+      dataList: Array<{
+        metaidData: {
+          path: string
+          body: string
+          contentType: string
+          encryption: string
+        }
+      }>
+    }
+    const metaidData = pinArgs.dataList[0].metaidData
+    expect(metaidData.path).toBe('/protocols/simplemsg')
+    expect(metaidData.contentType).toBe('application/json')
+    expect(metaidData.encryption).toBe('0')
+    const body = JSON.parse(metaidData.body) as {
+      to: string
+      encrypt: string
+      contentType: string
+      timestamp: number
+    }
+    expect(body.to).toBe(provider.globalMetaId)
+    expect(body.encrypt).toBe('ecdh')
+    expect(body.contentType).toBe('text/plain')
+    expect(body.timestamp).toBe(now)
+    expect(body.timestamp).toBeGreaterThan(10_000_000_000)
+  })
+
   it('rejects empty prompt', async () => {
     await expect(
       executePayAndRequest({
@@ -93,7 +138,7 @@ describe('executePayAndRequest', () => {
       dataList: Array<{ metaidData: { path: string; body: string } }>
     }
     expect(pinArgs.chain).toBe('mvc')
-    expect(pinArgs.dataList[0].metaidData.path).toBe('/private/chat/simplemsg')
+    expect(pinArgs.dataList[0].metaidData.path).toBe('/protocols/simplemsg')
     const body = JSON.parse(pinArgs.dataList[0].metaidData.body) as {
       to: string
       encrypt: string
@@ -155,5 +200,67 @@ describe('executePayAndRequest', () => {
         },
       }),
     ).rejects.toMatchObject({ code: 'payment_failed' } satisfies Partial<PayAndRequestError>)
+  })
+
+  it('throws a broadcast error with paid payment context when createPin fails', async () => {
+    const paymentTxid = 'd'.repeat(64)
+
+    await expect(
+      executePayAndRequest({
+        service: paidService,
+        provider,
+        prompt: 'Paid request that should be recoverable.',
+        wallet,
+        metalet: {
+          transfer: vi.fn().mockResolvedValue({ txids: [paymentTxid] }),
+          ecdh: vi.fn().mockResolvedValue({ sharedSecret: 'aa'.repeat(32) }),
+          createPin: vi.fn().mockRejectedValue(new Error('network down')),
+        },
+      }),
+    ).rejects.toMatchObject({
+      code: 'broadcast_failed',
+      partial: {
+        payment: {
+          paymentTxid,
+          paymentCommitTxid: '',
+          orderReference: '',
+        },
+        sessionKey: `${provider.globalMetaId}:${paymentTxid}`,
+      },
+    })
+  })
+
+  it('throws a broadcast error with a free order reference when createPin fails', async () => {
+    vi.spyOn(crypto, 'getRandomValues').mockImplementation((array) => {
+      if (array instanceof Uint8Array) {
+        array.fill(0x0b)
+      }
+      return array
+    })
+    const expectedOrderReference = generateRandomHex(32)
+
+    await expect(
+      executePayAndRequest({
+        service: freeService,
+        provider,
+        prompt: 'Free request that should be recoverable.',
+        wallet,
+        metalet: {
+          transfer: vi.fn(),
+          ecdh: vi.fn().mockResolvedValue({ sharedSecret: 'bb'.repeat(32) }),
+          createPin: vi.fn().mockRejectedValue(new Error('network down')),
+        },
+      }),
+    ).rejects.toMatchObject({
+      code: 'broadcast_failed',
+      partial: {
+        payment: {
+          paymentTxid: '',
+          paymentCommitTxid: '',
+          orderReference: expectedOrderReference,
+        },
+        sessionKey: `${provider.globalMetaId}:${expectedOrderReference}`,
+      },
+    })
   })
 })
