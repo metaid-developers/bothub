@@ -3,7 +3,7 @@ import { mergePrivateChatItem } from '@/delivery/deliverySync'
 import { useWsMock as isWsMockEnabled } from '@/api/config'
 import {
   isPrivateChatForRecipient,
-  isPrivateChatItem,
+  normalizePrivateChatItem,
 } from './privateChat'
 import {
   connectSocket,
@@ -51,10 +51,11 @@ function isPrivateChatForIdentity(
   envelope: SocketEnvelope,
   identity: WalletIdentity,
 ): boolean {
-  if (!isPrivateChatItem(envelope.D)) return false
+  const item = normalizePrivateChatItem(envelope.D)
+  if (!item) return false
   return (
-    isPrivateChatForRecipient(envelope.D, identity.globalMetaId) ||
-    (!!identity.mvcAddress && isPrivateChatForRecipient(envelope.D, identity.mvcAddress))
+    isPrivateChatForRecipient(item, identity.globalMetaId) ||
+    (!!identity.mvcAddress && isPrivateChatForRecipient(item, identity.mvcAddress))
   )
 }
 
@@ -71,7 +72,8 @@ export const useSocket = create<SocketState>()((set, get) => ({
 
   handleEnvelope: async (envelope, identityInput) => {
     if (envelope.M !== WS_SERVER_NOTIFY_PRIVATE_CHAT) return
-    if (!isPrivateChatItem(envelope.D)) {
+    const item = normalizePrivateChatItem(envelope.D)
+    if (!item) {
       get().pushDebug('[ws] dropped private chat: invalid payload')
       return
     }
@@ -82,7 +84,7 @@ export const useSocket = create<SocketState>()((set, get) => ({
     let result: Awaited<ReturnType<typeof mergePrivateChatItem>>
     try {
       result = await mergePrivateChatItem({
-        item: envelope.D,
+        item,
         selfGlobalMetaId,
         walletIdentity: identity,
         pushDebug: get().pushDebug,

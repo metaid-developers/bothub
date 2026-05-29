@@ -69,8 +69,10 @@ async function privateChatToDeliveryMessage(input: {
   const rawContent = input.item.content
   const { plaintext, error } = await decryptIncoming({
     content: rawContent,
-    encryption: input.item.encryption,
+    protocol: input.item.protocol ?? input.item.path,
+    encryption: input.item.encryption ?? input.item.encrypt,
     peerChatPubKey,
+    messageId: messageIdFromPrivateChat(input.item),
   })
 
   if (error) {

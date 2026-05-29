@@ -20,6 +20,7 @@ import { WS_SERVER_NOTIFY_PRIVATE_CHAT, type SocketEnvelope } from '@/ws/envelop
 import type { PrivateChatItem } from '@/ws/privateChat'
 import { useSocket } from '@/ws/useSocket'
 import { listPrivateChatHistory, listPrivateChatHomes } from '@/api/privateChat'
+import { decryptIncoming } from '@/delivery/decrypt'
 
 vi.mock('@/delivery/decrypt', () => ({
   decryptIncoming: vi.fn(async ({ content }: { content: string }) => ({
@@ -75,6 +76,7 @@ function socketEnvelope(item: PrivateChatItem): SocketEnvelope<PrivateChatItem> 
 
 const mockedHomes = vi.mocked(listPrivateChatHomes)
 const mockedHistory = vi.mocked(listPrivateChatHistory)
+const mockedDecryptIncoming = vi.mocked(decryptIncoming)
 
 describe('deliverySync', () => {
   beforeEach(() => {
@@ -94,6 +96,10 @@ describe('deliverySync', () => {
     })
     mockedHomes.mockReset()
     mockedHistory.mockReset()
+    mockedDecryptIncoming.mockReset()
+    mockedDecryptIncoming.mockImplementation(async ({ content }: { content: string }) => ({
+      plaintext: content,
+    }))
     Object.defineProperty(globalThis, 'indexedDB', {
       value: new IDBFactory(),
       writable: true,
@@ -311,5 +317,27 @@ describe('deliverySync', () => {
       expect.objectContaining({ id: 'pin-unpersisted' }),
     ])
     expect(await getSyncState(`${SELF}:${PEER}`)).toBeUndefined()
+  })
+
+  it('passes stable message id and simplemsg encryption markers into decryptIncoming', async () => {
+    await mergePrivateChatItem({
+      item: privateChatItem({
+        protocol: '/protocols/simplemsg',
+        encryption: undefined,
+        encrypt: 'ecdh',
+        pinId: 'pin-stable-decrypt-id',
+        content: 'U2FsdGVkX1+encrypted',
+      }),
+      selfGlobalMetaId: SELF,
+      walletIdentity: wallet,
+    })
+
+    expect(mockedDecryptIncoming).toHaveBeenCalledWith({
+      content: 'U2FsdGVkX1+encrypted',
+      protocol: '/protocols/simplemsg',
+      encryption: 'ecdh',
+      peerChatPubKey: 'provider-chat-key',
+      messageId: 'pin-stable-decrypt-id',
+    })
   })
 })

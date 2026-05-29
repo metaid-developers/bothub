@@ -61,7 +61,9 @@ describe('useSocket delivery persistence', () => {
       lastError: null,
       debugLog: [],
     })
-    mockedDecryptIncoming.mockResolvedValue({ plaintext: envelope().D.content })
+    mockedDecryptIncoming.mockImplementation(async ({ content }: { content: string }) => ({
+      plaintext: content,
+    }))
     Object.defineProperty(globalThis, 'indexedDB', {
       value: new IDBFactory(),
       writable: true,
@@ -101,6 +103,49 @@ describe('useSocket delivery persistence', () => {
       expect.objectContaining({
         uri: 'metafile://socket.png',
         messageId: 'pin-socket-delivery',
+      }),
+    ])
+  })
+
+  it('normalizes live meta-socket private chat with from/to fields before delivery filtering', async () => {
+    const liveEnvelope: SocketEnvelope<unknown> = {
+      M: WS_SERVER_NOTIFY_PRIVATE_CHAT,
+      C: 0,
+      D: {
+        from: PEER,
+        to: SELF,
+        protocol: '/protocols/simplemsg',
+        encrypt: 'ecdh',
+        fromUserInfo: { chatPubkey: 'provider-chat-key' },
+        content:
+          '[DELIVERY:socket-live] {"result":"Ready","assets":["metafile://live.png"]}',
+        contentType: 'text/plain',
+        timestamp: 1_700_000_000_100,
+        pinId: 'pin-live-from-to',
+        txId: 'tx-live-from-to',
+      },
+    }
+
+    await useSocket.getState().handleEnvelope(liveEnvelope, {
+      globalMetaId: SELF,
+      mvcAddress: '1SelfMvcAddress',
+      btcAddress: 'bc1self',
+      dogeAddress: 'Dself',
+    })
+
+    expect(mockedDecryptIncoming).toHaveBeenCalledWith({
+      content:
+        '[DELIVERY:socket-live] {"result":"Ready","assets":["metafile://live.png"]}',
+      protocol: '/protocols/simplemsg',
+      encryption: 'ecdh',
+      peerChatPubKey: 'provider-chat-key',
+      messageId: 'pin-live-from-to',
+    })
+    expect(useMessageStore.getState().messagesForSession('idqpeer:socket-live', SELF)).toEqual([
+      expect.objectContaining({
+        id: 'pin-live-from-to',
+        fromGlobalMetaId: PEER,
+        toGlobalMetaId: SELF,
       }),
     ])
   })
