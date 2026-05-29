@@ -1,13 +1,9 @@
 import { useCallback, useMemo, useState } from 'react'
 import { ChevronDownIcon, ChevronUpIcon } from '@heroicons/react/24/outline'
-import { useSearchParams } from 'react-router-dom'
 import type { ServicesQueryParams } from '@/api/queries'
 import type { SkillServiceListItem } from '@/api/aggregator.types'
-import {
-  defaultHubFilters,
-  FiltersBar,
-  type HubFilters,
-} from '@/components/hub/FiltersBar'
+import { FiltersBar } from '@/components/hub/FiltersBar'
+import { defaultHubFilters, type HubFilters } from '@/components/hub/filters'
 import { OnlineBotsSidebar } from '@/components/hub/OnlineBotsSidebar'
 import {
   ServiceDetailPanel,
@@ -15,8 +11,8 @@ import {
 } from '@/components/hub/ServiceDetailPanel'
 import { ServicesPanel } from '@/components/hub/ServicesPanel'
 import { t } from '@/i18n'
+import { useSelectedServiceId } from '@/routes/useSelectedServiceId'
 
-const SERVICE_SEARCH_PARAM = 'service'
 const BOTS_SIDEBAR_ID = 'hub-online-bots'
 
 function toQueryParams(filters: HubFilters): ServicesQueryParams {
@@ -27,34 +23,6 @@ function toQueryParams(filters: HubFilters): ServicesQueryParams {
     sortBy: filters.sortBy,
     order: filters.order,
   }
-}
-
-export function useSelectedServiceId(): [
-  string | undefined,
-  (id: string | undefined) => void,
-] {
-  const [searchParams, setSearchParams] = useSearchParams()
-  const selectedServiceId = searchParams.get(SERVICE_SEARCH_PARAM) ?? undefined
-
-  const setSelectedServiceId = useCallback(
-    (id: string | undefined) => {
-      setSearchParams(
-        (prev) => {
-          const next = new URLSearchParams(prev)
-          if (id) {
-            next.set(SERVICE_SEARCH_PARAM, id)
-          } else {
-            next.delete(SERVICE_SEARCH_PARAM)
-          }
-          return next
-        },
-        { replace: true },
-      )
-    },
-    [setSearchParams],
-  )
-
-  return [selectedServiceId, setSelectedServiceId]
 }
 
 export function BotHubPage() {

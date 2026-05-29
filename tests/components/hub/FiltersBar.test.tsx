@@ -1,7 +1,8 @@
 import { fireEvent, render, screen } from '@testing-library/react'
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest'
 import { useState } from 'react'
-import { defaultHubFilters, FiltersBar, type HubFilters } from '@/components/hub/FiltersBar'
+import { FiltersBar } from '@/components/hub/FiltersBar'
+import { defaultHubFilters, type HubFilters } from '@/components/hub/filters'
 
 function ControlledFiltersHarness({
   onChange,

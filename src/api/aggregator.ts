@@ -1,4 +1,4 @@
-import { getNormalizedMetaSocketBaseUrl, useAggregatorMock } from '@/api/config'
+import { getNormalizedMetaSocketBaseUrl, isAggregatorMockEnabled } from '@/api/config'
 import type {
   ApiEnvelope,
   GetServiceDetailParams,
@@ -60,7 +60,7 @@ function buildDetailQuery(params: GetServiceDetailParams = {}): string {
 export async function listServices(
   params: ListServicesParams = {},
 ): Promise<SkillServiceListData> {
-  if (useAggregatorMock()) {
+  if (isAggregatorMockEnabled()) {
     return unwrapEnvelope(mockListEnvelope as ApiEnvelope<SkillServiceListData>)
   }
 
@@ -75,7 +75,7 @@ export async function getServiceDetail(
   serviceId: string,
   params: GetServiceDetailParams = {},
 ): Promise<SkillServiceDetailData> {
-  if (useAggregatorMock()) {
+  if (isAggregatorMockEnabled()) {
     return unwrapEnvelope(mockDetailEnvelope as ApiEnvelope<SkillServiceDetailData>)
   }
 

@@ -33,9 +33,11 @@ export function getMetafileContentBaseUrl(): string {
 }
 
 /** When true, aggregator client reads `src/mocks/aggregator/*.json` (no network). */
-export function useAggregatorMock(): boolean {
+export function isAggregatorMockEnabled(): boolean {
   return import.meta.env.VITE_USE_AGGREGATOR_MOCK === 'true'
 }
+
+export const useAggregatorMock = isAggregatorMockEnabled
 
 /** When true, skip real Socket.IO and accept injected mock envelopes only. */
 export function useWsMock(): boolean {
