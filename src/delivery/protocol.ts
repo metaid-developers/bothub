@@ -22,6 +22,8 @@ interface ProtocolTag {
 
 const PROTOCOL_TAG_RE =
   /^\[(ORDER_STATUS|DELIVERY|ORDER_END|NeedsRating)(?::([^\]\s]+))?(?:\s+[^\]]+)?\]\s*/i
+const ORDER_PIN_LINE_RE =
+  /^\s*order\s+pin\s+id\s*[:：=]\s*([A-Za-z0-9][A-Za-z0-9._:-]{5,127})\s*$/im
 
 function toKind(tag: string): Exclude<DeliveryProtocolKind, 'plain'> {
   const normalized = tag.toLowerCase()
@@ -38,8 +40,16 @@ function parseProtocolTag(content: string): ProtocolTag | null {
   return {
     kind: toKind(match[1] ?? ''),
     orderCorrelationId: (match[2] ?? '').trim(),
-    rest: content.trimStart().slice(match[0].length).trim(),
+    rest: stripOrderProtocolPinLine(content.trimStart().slice(match[0].length)),
   }
+}
+
+function stripOrderProtocolPinLine(content: string): string {
+  return String(content || '')
+    .split(/\r?\n/)
+    .filter((line) => !ORDER_PIN_LINE_RE.test(line))
+    .join('\n')
+    .trim()
 }
 
 function parseStructuredPayload(value: string): Record<string, unknown> | null {

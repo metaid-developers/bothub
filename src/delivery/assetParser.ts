@@ -16,6 +16,8 @@ export interface ParsedDeliveryAsset {
 }
 
 const METAFILE_URI_RE = /metafile:\/\/[^\s<>"'`]+/gi
+const METAID_CONTENT_URL_RE =
+  /https?:\/\/file\.metaid\.io\/metafile-indexer\/(?:api\/v1\/files\/(?:accelerate\/)?content|content)\/[^\s<>"'`]+/gi
 
 const IMAGE_EXTENSIONS = new Set(['.jpg', '.jpeg', '.gif', '.png', '.webp', '.bmp', '.svg'])
 const VIDEO_EXTENSIONS = new Set(['.mp4', '.webm', '.mov'])
@@ -76,6 +78,21 @@ function normalizeMetafileCandidate(value: string): string {
     .replace(/[\]}),.;:!?，。；：！？]+$/, '')
 }
 
+function metafileUriFromContentUrl(rawUrl: string): string {
+  const normalizedUrl = normalizeMetafileCandidate(rawUrl)
+  try {
+    const url = new URL(normalizedUrl)
+    if (url.hostname !== 'file.metaid.io') return ''
+    const match = url.pathname.match(
+      /^\/metafile-indexer\/(?:api\/v1\/files\/(?:accelerate\/)?content|content)\/([^/?#]+)$/i,
+    )
+    const pinId = match?.[1] ? decodeURIComponent(match[1]).trim() : ''
+    return pinId ? `metafile://${pinId}` : ''
+  } catch {
+    return ''
+  }
+}
+
 function getAssetKind(extension: string | null): ParsedDeliveryAsset['kind'] {
   if (!extension) return 'other'
   if (IMAGE_EXTENSIONS.has(extension)) return 'image'
@@ -121,14 +138,18 @@ export function parseMetafileUri(rawUri: string): ParsedDeliveryAsset | null {
 }
 
 export function extractMetafileAssets(content: string): ParsedDeliveryAsset[] {
-  const matches = String(content || '').match(METAFILE_URI_RE) ?? []
+  const text = String(content || '')
+  const matches = [
+    ...(text.match(METAFILE_URI_RE) ?? []),
+    ...(text.match(METAID_CONTENT_URL_RE) ?? []).map(metafileUriFromContentUrl).filter(Boolean),
+  ]
   const assets: ParsedDeliveryAsset[] = []
   const seen = new Set<string>()
 
   for (const match of matches) {
     const asset = parseMetafileUri(match)
-    if (!asset || seen.has(asset.uri)) continue
-    seen.add(asset.uri)
+    if (!asset || seen.has(asset.pinId)) continue
+    seen.add(asset.pinId)
     assets.push(asset)
   }
 

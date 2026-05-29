@@ -18,6 +18,8 @@ function deliveryMessage(content: string): DeliveryMessage {
 }
 
 describe('parseDeliveryProtocol', () => {
+  const orderTxid = 'a'.repeat(64)
+
   it('strips ORDER_STATUS tags and captures useful non-empty correlation ids', () => {
     expect(parseDeliveryProtocol('[ORDER_STATUS:abcd] generating video')).toEqual({
       kind: 'order_status',
@@ -26,6 +28,19 @@ describe('parseDeliveryProtocol', () => {
       rawText: '[ORDER_STATUS:abcd] generating video',
       deliveryResult: '',
       structuredPayload: null,
+    })
+  })
+
+  it.each([
+    [`[ORDER_STATUS:${orderTxid}] generating video\norder pin id: order-pin-1`, 'order_status', 'generating video'],
+    [`[DELIVERY:${orderTxid}] {"result":"done metafile://abc123i0.png"}`, 'delivery', 'done metafile://abc123i0.png'],
+    [`[NeedsRating:${orderTxid}] please rate\norder pin id: order-pin-1`, 'needs_rating', 'please rate'],
+    [`[ORDER_END:${orderTxid} completed] complete\norder pin id: order-pin-1`, 'order_end', 'complete'],
+  ] as const)('parses IDBots %s fixtures', (content, kind, displayText) => {
+    expect(parseDeliveryProtocol(content)).toMatchObject({
+      kind,
+      orderCorrelationId: orderTxid,
+      displayText,
     })
   })
 

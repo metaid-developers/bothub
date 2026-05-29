@@ -113,6 +113,50 @@ describe('sessionGrouping', () => {
     expect(grouped.get(PEER)?.map((m) => m.id)).toEqual(['r2'])
   })
 
+  it('joins provider protocol updates with an order txid to the order session', () => {
+    const txid = 'f'.repeat(64)
+    const orderPayload = buildOrderPayload({
+      displayText: 'Protocol scoped',
+      rawRequest: 'Go',
+      price: '1',
+      currency: 'SPACE',
+      paymentTxid: txid,
+      serviceId: 'pin-protocol',
+      skillName: 'protocol-skill',
+      outputType: 'image',
+    })
+
+    const grouped = groupPeerMessagesBySession(
+      [
+        msg({
+          id: 'order',
+          fromGlobalMetaId: SELF,
+          toGlobalMetaId: PEER,
+          content: orderPayload,
+          timestamp: 1,
+        }),
+        msg({
+          id: 'status',
+          content: `[ORDER_STATUS:${txid}] Generating`,
+          timestamp: 2,
+        }),
+        msg({
+          id: 'delivery',
+          content: `[DELIVERY:${txid}] {"result":"Ready metafile://resultpin001i0.png"}`,
+          timestamp: 3,
+        }),
+      ],
+      SELF,
+    )
+
+    expect(grouped.get(buildSessionKey(PEER, txid))?.map((m) => m.id)).toEqual([
+      'order',
+      'status',
+      'delivery',
+    ])
+    expect(grouped.get(PEER)).toBeUndefined()
+  })
+
   it('lists grouped sessions with service label for order threads', () => {
     const orderRef = 'c'.repeat(64)
     const orderPayload = buildOrderPayload({
