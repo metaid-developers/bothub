@@ -65,6 +65,93 @@ describe('private chat API client', () => {
       expect(page.list).toHaveLength(3)
     })
 
+    it('listPrivateChatHistory returns normalized rows for from/to-only payloads', async () => {
+      vi.stubGlobal(
+        'fetch',
+        vi.fn().mockResolvedValue({
+          json: async () => ({
+            code: 0,
+            data: {
+              total: 1,
+              nextCursor: '',
+              nextTimestamp: 1_700_000_000_000,
+              list: [
+                {
+                  from: 'idqpeer',
+                  to: 'idqself',
+                  protocol: '/protocols/simplemsg',
+                  encrypt: 'ecdh',
+                  fromUserInfo: { chatPubkey: 'peer-chat-key' },
+                  content: 'cipher',
+                  timestamp: 1_700_000_000_000,
+                  pinId: 'pin-from-to-history',
+                },
+              ],
+            },
+            message: '',
+          }),
+        }),
+      )
+
+      const { listPrivateChatHistory } = await loadPrivateChat()
+      const page = await listPrivateChatHistory({
+        metaId: 'me',
+        otherMetaId: 'peer',
+      })
+
+      expect(page.list).toEqual([
+        expect.objectContaining({
+          fromGlobalMetaId: 'idqpeer',
+          toGlobalMetaId: 'idqself',
+          encryption: 'ecdh',
+          fromUserInfo: expect.objectContaining({
+            chatPublicKey: 'peer-chat-key',
+          }),
+        }),
+      ])
+    })
+
+    it('listPrivateChatHomes returns normalized lastMessage for from/to-only payloads', async () => {
+      vi.stubGlobal(
+        'fetch',
+        vi.fn().mockResolvedValue({
+          json: async () => ({
+            code: 0,
+            data: {
+              list: [
+                {
+                  metaId: 'peer',
+                  globalMetaId: 'peer',
+                  lastMessage: {
+                    from: 'idqpeer',
+                    to: 'idqself',
+                    path: 'bc1xxx:/protocols/simplemsg',
+                    encrypt: 'ecdh',
+                    content: 'cipher',
+                    timestamp: 1_700_000_000_000,
+                    pinId: 'pin-home-from-to',
+                  },
+                },
+              ],
+            },
+            message: '',
+          }),
+        }),
+      )
+
+      const { listPrivateChatHomes } = await loadPrivateChat()
+      const homes = await listPrivateChatHomes('me')
+
+      expect(homes[0].lastMessage).toEqual(
+        expect.objectContaining({
+          fromGlobalMetaId: 'idqpeer',
+          toGlobalMetaId: 'idqself',
+          protocol: 'bc1xxx:/protocols/simplemsg',
+          encryption: 'ecdh',
+        }),
+      )
+    })
+
     it('throws PrivateChatApiError for non-zero envelopes', async () => {
       vi.stubGlobal(
         'fetch',

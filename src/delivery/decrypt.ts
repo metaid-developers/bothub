@@ -86,7 +86,7 @@ export async function decryptIncoming(
   const encryption = normalizeEncryption(input.encryption ?? input.encrypt)
   const protocol = normalizeProtocol(input.protocol)
   const peerKey = input.peerChatPubKey?.trim() ?? ''
-  const isSimplemsg = protocol === '/protocols/simplemsg' || protocol === ''
+  const isSimplemsg = protocol === '' || protocol.endsWith('/protocols/simplemsg')
 
   if (encryption !== 'ecdh' && isPlainPrivateChatContent(content)) {
     const result = { plaintext: content }

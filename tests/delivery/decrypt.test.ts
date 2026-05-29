@@ -113,4 +113,22 @@ describe('decryptIncoming', () => {
     expect(mockedEcdh).toHaveBeenCalledTimes(2)
     expect(mockedEciesDecrypt).not.toHaveBeenCalled()
   })
+
+  it('treats address-prefixed simplemsg protocol as ECDH simplemsg', async () => {
+    const content = ecdhEncryptWithSharedSecret('prefixed protocol', 'shared-secret')
+
+    const result = await decryptIncoming({
+      content,
+      protocol: 'bc1xxx:/protocols/simplemsg',
+      encrypt: 'ecdh',
+      peerChatPubKey: 'peer-chat-key-prefixed-protocol',
+      messageId: 'pin-prefixed-protocol',
+    })
+
+    expect(result).toEqual({ plaintext: 'prefixed protocol' })
+    expect(mockedEcdh).toHaveBeenCalledWith({
+      externalPubKey: 'peer-chat-key-prefixed-protocol',
+    })
+    expect(mockedEciesDecrypt).not.toHaveBeenCalled()
+  })
 })

@@ -1,6 +1,6 @@
 import { getNormalizedMetaSocketBaseUrl } from '@/api/config'
 import type { ApiEnvelope } from '@/api/aggregator.types'
-import { isPrivateChatItem, type PrivateChatItem } from '@/ws/privateChat'
+import { normalizePrivateChatItem, type PrivateChatItem } from '@/ws/privateChat'
 import type { WalletIdentity } from '@/wallet/types'
 
 export interface PrivateChatHistoryParams {
@@ -69,14 +69,16 @@ function parseHomes(data: unknown): PrivateChatHome[] {
     if (typeof metaId !== 'string' || typeof globalMetaId !== 'string') {
       throw new PrivateChatApiError(0, 'invalid private chat home')
     }
-    if (lastMessage !== undefined && !isPrivateChatItem(lastMessage)) {
+    const normalizedLastMessage =
+      lastMessage !== undefined ? normalizePrivateChatItem(lastMessage) : null
+    if (lastMessage !== undefined && !normalizedLastMessage) {
       throw new PrivateChatApiError(0, 'invalid private chat home')
     }
 
     return {
       metaId,
       globalMetaId,
-      ...(lastMessage !== undefined ? { lastMessage } : {}),
+      ...(normalizedLastMessage ? { lastMessage: normalizedLastMessage } : {}),
     }
   })
 }
@@ -87,10 +89,11 @@ function parseHistoryPage(data: unknown): PrivateChatHistoryPage {
   }
 
   const list = data.list.map((item) => {
-    if (!isPrivateChatItem(item)) {
+    const normalizedItem = normalizePrivateChatItem(item)
+    if (!normalizedItem) {
       throw new PrivateChatApiError(0, 'invalid private chat item')
     }
-    return item
+    return normalizedItem
   })
 
   if (data.total !== undefined && typeof data.total !== 'number') {
