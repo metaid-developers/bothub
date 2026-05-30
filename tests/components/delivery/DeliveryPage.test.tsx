@@ -2,6 +2,7 @@ import { render, screen } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { DeliveryPage } from '@/routes/Delivery'
+import { fetchUserProfileByGlobalMetaId } from '@/api/userProfile'
 import type { WalletIdentity } from '@/wallet/types'
 
 const mocks = vi.hoisted(() => ({
@@ -39,6 +40,10 @@ vi.mock('@/delivery/messageStore', () => ({
     selector(mocks.messageState),
 }))
 
+vi.mock('@/api/userProfile', () => ({
+  fetchUserProfileByGlobalMetaId: vi.fn(),
+}))
+
 function expectBefore(first: Element, second: Element) {
   expect(first.compareDocumentPosition(second) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
 }
@@ -51,6 +56,7 @@ describe('DeliveryPage layout', () => {
     mocks.messageState.byPeer = {}
     mocks.messageState.assetsBySession = {}
     mocks.messageState.selectedSessionKey = null
+    vi.mocked(fetchUserProfileByGlobalMetaId).mockResolvedValue({})
     vi.clearAllMocks()
   })
 
@@ -109,5 +115,52 @@ describe('DeliveryPage layout', () => {
     expect(screen.getByRole('textbox', { name: 'Message provider' })).toBeDisabled()
     expect(screen.getByRole('button', { name: 'Send' })).toBeDisabled()
     expect(screen.getByText('Connect wallet to reply')).toBeInTheDocument()
+  })
+
+  it('fetches and displays selected peer profile even when the session already has a chat key', async () => {
+    const peerGlobalMetaId = 'idq133unvv8x62807jsdg7mwwpyfc4pnv6zqzeuv2n'
+    vi.mocked(fetchUserProfileByGlobalMetaId).mockResolvedValue({
+      globalMetaId: peerGlobalMetaId,
+      name: '余生请多指教',
+      avatarUrl: '/meta-socket/api/v1/users/avatar/accelerate/37efeed000000000000000000000000000000000000000000000000000000000i0?process=thumbnail',
+      chatPubkey: '049759',
+    })
+    mocks.walletState.identity = {
+      globalMetaId: 'idqbuyer',
+      mvcAddress: '1BuyerMvc',
+      btcAddress: 'bc1buyer',
+      dogeAddress: 'Dbuyer',
+    }
+    mocks.walletState.status = 'connected'
+    mocks.messageState.byPeer = {
+      [peerGlobalMetaId]: [
+        {
+          id: 'pin-provider-message',
+          peerGlobalMetaId,
+          peerChatPubkey: '049759',
+          fromGlobalMetaId: peerGlobalMetaId,
+          toGlobalMetaId: 'idqbuyer',
+          content: 'hello from provider',
+          rawContent: 'hello from provider',
+          encryption: 'plain',
+          contentType: 'text/plain',
+          timestamp: 1,
+          pinId: 'pin-provider-message',
+        },
+      ],
+    }
+
+    render(
+      <MemoryRouter initialEntries={[`/delivery?session=${peerGlobalMetaId}`]}>
+        <DeliveryPage />
+      </MemoryRouter>,
+    )
+
+    expect(fetchUserProfileByGlobalMetaId).toHaveBeenCalledWith(peerGlobalMetaId)
+    expect(await screen.findAllByText('余生请多指教')).toHaveLength(3)
+    expect(
+      screen.getAllByRole('img', { name: '余生请多指教 avatar' }),
+    ).toHaveLength(3)
+    expect(screen.queryByLabelText('idq133…uv2n avatar')).not.toBeInTheDocument()
   })
 })

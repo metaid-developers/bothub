@@ -24,6 +24,33 @@ import { useSocket } from '@/ws/useSocket'
 
 const SESSION_PARAM = 'session'
 
+function hasDisplayProfile(input: {
+  peerName?: string | null
+  peerAvatarUrl?: string | null
+}): boolean {
+  return Boolean(input.peerName?.trim() && input.peerAvatarUrl?.trim())
+}
+
+function mergeSessionProfileFallback<T extends {
+  peerGlobalMetaId: string
+  peerName?: string
+  peerAvatarUrl?: string
+  providerChatPubkey?: string
+}>(
+  session: T,
+  profile: UserProfile | undefined,
+): T {
+  if (!profile) return session
+  return {
+    ...session,
+    providerChatPubkey:
+      session.providerChatPubkey?.trim() || profile.chatPubkey?.trim() || undefined,
+    peerName: session.peerName?.trim() || profile.name?.trim() || undefined,
+    peerAvatarUrl:
+      session.peerAvatarUrl?.trim() || profile.avatarUrl?.trim() || undefined,
+  }
+}
+
 export function DeliveryPage() {
   const [searchParams, setSearchParams] = useSearchParams()
   const walletStatus = useWallet((s) => s.status)
@@ -69,8 +96,16 @@ export function DeliveryPage() {
   const selectedSession =
     sessionFromUrl || selectedSessionFromStore || enrichedSessions[0]?.sessionKey || null
 
+  const displaySessions = useMemo(
+    () =>
+      enrichedSessions.map((session) =>
+        mergeSessionProfileFallback(session, providerProfiles[session.peerGlobalMetaId]),
+      ),
+    [enrichedSessions, providerProfiles],
+  )
+
   const selectedSessionDetails =
-    enrichedSessions.find((session) => session.sessionKey === selectedSession) ?? null
+    displaySessions.find((session) => session.sessionKey === selectedSession) ?? null
 
   const messages = useMemo(
     () =>
@@ -78,6 +113,22 @@ export function DeliveryPage() {
         ? resolveMessagesForSession(byPeer, selectedSession, selfGlobalMetaId)
         : [],
     [byPeer, selectedSession, selfGlobalMetaId],
+  )
+  const messagesWithProfileFallback = useMemo(
+    () =>
+      messages.map((message) => {
+        const profile = providerProfiles[message.peerGlobalMetaId]
+        if (!profile) return message
+        return {
+          ...message,
+          peerChatPubkey:
+            message.peerChatPubkey?.trim() || profile.chatPubkey?.trim() || undefined,
+          peerName: message.peerName?.trim() || profile.name?.trim() || undefined,
+          peerAvatarUrl:
+            message.peerAvatarUrl?.trim() || profile.avatarUrl?.trim() || undefined,
+        }
+      }),
+    [messages, providerProfiles],
   )
   const storedAssets = useMemo(() => {
     if (!selectedSession || !selfGlobalMetaId) return []
@@ -99,10 +150,10 @@ export function DeliveryPage() {
       resolveProviderChatPubkey({
         session: selectedSessionDetails,
         orders,
-        messages,
+        messages: messagesWithProfileFallback,
         providerProfile: selectedProviderProfile,
       }),
-    [messages, orders, selectedProviderProfile, selectedSessionDetails],
+    [messagesWithProfileFallback, orders, selectedProviderProfile, selectedSessionDetails],
   )
   const selectedSessionWithResolvedKey = useMemo(
     () =>
@@ -144,8 +195,12 @@ export function DeliveryPage() {
   }, [providerProfileLoading, selectedSessionDetails])
 
   useEffect(() => {
-    if (!selectedSessionDetails || selectedProviderChatPubkey) return
-    if (providerProfiles[selectedSessionDetails.peerGlobalMetaId]) return
+    if (!selectedSessionDetails) return
+    const providerGlobalMetaId = selectedSessionDetails.peerGlobalMetaId
+    if (providerProfiles[providerGlobalMetaId]) return
+    const needsChatKey = !selectedProviderChatPubkey
+    const needsDisplayProfile = !hasDisplayProfile(selectedSessionDetails)
+    if (!needsChatKey && !needsDisplayProfile) return
     fetchSelectedProviderProfile()
   }, [
     fetchSelectedProviderProfile,
@@ -186,7 +241,7 @@ export function DeliveryPage() {
             {t('delivery.sessions')}
           </h2>
           <SessionsList
-            sessions={enrichedSessions}
+            sessions={displaySessions}
             selectedSessionKey={selectedSession}
             onSelectSession={selectSession}
             walletConnected={walletConnected}
@@ -198,13 +253,13 @@ export function DeliveryPage() {
           <SessionHeader session={selectedSessionWithResolvedKey} />
           <MessageList
             sessionKey={selectedSession}
-            messages={messages}
+            messages={messagesWithProfileFallback}
             selfGlobalMetaId={selfGlobalMetaId}
           />
         </div>
 
         <DeliveredAssetsPanel
-          messages={messages}
+          messages={messagesWithProfileFallback}
           storedAssets={storedAssets}
           className="md:col-start-3 md:row-span-2 md:row-start-1"
         />
