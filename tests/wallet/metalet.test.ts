@@ -2,16 +2,20 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   METALET_COMMON_ECDH_WAIT_TIMEOUT_MS,
   METALET_ECDH_RESPONSE_TIMEOUT_MS,
+  METALET_QUERY_RESPONSE_TIMEOUT_MS,
   MetaletNotInstalledError,
   connect,
   ecdh,
+  ensureReady,
   getGlobalMetaid,
   isMetaletInstalled,
 } from '@/wallet/metalet'
 
 const mockWallet = {
+  ping: vi.fn().mockResolvedValue('pong'),
   connect: vi.fn().mockResolvedValue({}),
   disconnect: vi.fn(),
+  isConnected: vi.fn().mockResolvedValue({ connected: true }),
   getGlobalMetaid: vi.fn().mockResolvedValue({
     globalMetaId: 'idq1testglobalmetaid1234567890',
     mvcAddress: '1MvcAddressExample',
@@ -66,9 +70,48 @@ describe('metalet adapter', () => {
     expect(result.mvcAddress).toBe('1MvcNested')
   })
 
+  it('getGlobalMetaid rejects Metalet status responses', async () => {
+    mockWallet.getGlobalMetaid.mockResolvedValueOnce({ status: 'locked' })
+
+    await expect(getGlobalMetaid()).rejects.toThrow(/Metalet wallet is locked/)
+  })
+
   it('connect delegates to window.metaidwallet', async () => {
     await connect()
     expect(mockWallet.connect).toHaveBeenCalledOnce()
+  })
+
+  it('ensureReady verifies the live wallet bridge before checkout', async () => {
+    const result = await ensureReady('idq1testglobalmetaid1234567890')
+
+    expect(result.globalMetaId).toBe('idq1testglobalmetaid1234567890')
+    expect(mockWallet.ping).toHaveBeenCalledOnce()
+    expect(mockWallet.isConnected).toHaveBeenCalledOnce()
+    expect(mockWallet.getGlobalMetaid).toHaveBeenCalledOnce()
+  })
+
+  it('ensureReady times out when Metalet query bridge does not respond', async () => {
+    vi.useFakeTimers()
+    mockWallet.ping.mockReturnValueOnce(new Promise(() => {}))
+
+    const pending = ensureReady('idq1testglobalmetaid1234567890')
+    const rejection = expect(pending).rejects.toThrow(/Metalet wallet did not respond to ping/)
+    await vi.advanceTimersByTimeAsync(METALET_QUERY_RESPONSE_TIMEOUT_MS)
+
+    await rejection
+    expect(mockWallet.isConnected).not.toHaveBeenCalled()
+  })
+
+  it('ensureReady rejects disconnected wallet status before checkout', async () => {
+    mockWallet.isConnected.mockResolvedValueOnce({ status: 'not-connected' })
+
+    await expect(ensureReady('idq1testglobalmetaid1234567890')).rejects.toThrow(
+      /not connected to this site/,
+    )
+  })
+
+  it('ensureReady rejects when the active Metalet account differs from the persisted wallet', async () => {
+    await expect(ensureReady('idq1different')).rejects.toThrow(/Connected Metalet account changed/)
   })
 
   it('ecdh prefers the demo-chat compatible common.ecdh surface', async () => {
@@ -178,6 +221,43 @@ describe('metalet adapter', () => {
     expect(result.sharedSecret).toBe('top-level-secret')
     expect(commonEcdh).toHaveBeenCalledWith({ externalPubKey: 'provider-chat-key' })
     expect(topLevelEcdh).toHaveBeenCalledWith({ externalPubKey: 'provider-chat-key' })
+  })
+
+  it('ecdh rejects Metalet status responses without falling back', async () => {
+    const commonEcdh = vi.fn().mockResolvedValue({ status: 'locked' })
+    const topLevelEcdh = vi.fn().mockResolvedValue({ sharedSecret: 'top-level-secret' })
+    vi.stubGlobal('window', {
+      ...window,
+      metaidwallet: {
+        ...mockWallet,
+        ecdh: topLevelEcdh,
+        common: {
+          ecdh: commonEcdh,
+        },
+      },
+    })
+
+    await expect(ecdh({ externalPubKey: 'provider-chat-key' })).rejects.toThrow(
+      /Metalet wallet is locked/,
+    )
+    expect(topLevelEcdh).not.toHaveBeenCalled()
+  })
+
+  it('ecdh rejects malformed responses without a sharedSecret', async () => {
+    const commonEcdh = vi.fn().mockResolvedValue({})
+    vi.stubGlobal('window', {
+      ...window,
+      metaidwallet: {
+        ...mockWallet,
+        common: {
+          ecdh: commonEcdh,
+        },
+      },
+    })
+
+    await expect(ecdh({ externalPubKey: 'provider-chat-key' })).rejects.toThrow(
+      /Metalet ECDH response did not include a shared secret/,
+    )
   })
 
   it('ecdh fails clearly when common.ecdh times out and top-level wallet.ecdh is unavailable', async () => {

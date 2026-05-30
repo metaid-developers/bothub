@@ -19,7 +19,15 @@ import { ORDER_RAW_REQUEST_MAX_CHARS } from '@/order/orderMessage'
 import * as metalet from '@/wallet/metalet'
 import type { WalletIdentity } from '@/wallet/types'
 
-export type RequestModalStep = 'prompt' | 'confirm' | 'paying' | 'encrypting' | 'broadcasting' | 'done' | 'error'
+export type RequestModalStep =
+  | 'prompt'
+  | 'confirm'
+  | 'checking_wallet'
+  | 'paying'
+  | 'encrypting'
+  | 'broadcasting'
+  | 'done'
+  | 'error'
 
 export interface RequestModalProps {
   open: boolean
@@ -59,6 +67,8 @@ export function RequestModal({ open, onClose, service, provider, wallet }: Reque
     }
     const isFree = service.price === '0'
     try {
+      setStep('checking_wallet')
+      await metalet.ensureReady(wallet.globalMetaId)
       setStep(isFree ? 'encrypting' : 'paying')
 
       const result = await executePayAndRequest({
@@ -129,7 +139,11 @@ export function RequestModal({ open, onClose, service, provider, wallet }: Reque
     }
   }
 
-  const busy = step === 'paying' || step === 'encrypting' || step === 'broadcasting'
+  const busy =
+    step === 'checking_wallet' ||
+    step === 'paying' ||
+    step === 'encrypting' ||
+    step === 'broadcasting'
 
   return (
     <Dialog open={open} onClose={busy ? () => undefined : resetAndClose} className="relative z-50">
@@ -226,6 +240,11 @@ export function RequestModal({ open, onClose, service, provider, wallet }: Reque
 
           {busy ? (
             <div className="mt-6 space-y-2 text-sm" aria-live="polite">
+              <ProgressRow
+                label="Checking wallet"
+                active={step === 'checking_wallet'}
+                done={step === 'paying' || step === 'encrypting' || step === 'broadcasting'}
+              />
               {service.price !== '0' ? (
                 <ProgressRow
                   label="Payment"

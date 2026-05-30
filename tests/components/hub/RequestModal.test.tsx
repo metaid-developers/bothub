@@ -9,6 +9,7 @@ import {
   type ExecutePayAndRequestResult,
 } from '@/order/flow'
 import type { PreparedPayAndRequest } from '@/order/payAndRequestStages'
+import * as metalet from '@/wallet/metalet'
 import type { WalletIdentity } from '@/wallet/types'
 
 const navigate = vi.fn()
@@ -35,6 +36,13 @@ vi.mock('@/order/flow', async () => {
 vi.mock('@/delivery/orderStore', () => ({
   persistPendingOrder: (...args: unknown[]) => persistPendingOrder(...args),
   persistFailedToSendOrder: (...args: unknown[]) => persistFailedToSendOrder(...args),
+}))
+
+vi.mock('@/wallet/metalet', () => ({
+  ensureReady: vi.fn(),
+  transfer: vi.fn(),
+  ecdh: vi.fn(),
+  createPin: vi.fn(),
 }))
 
 const wallet: WalletIdentity = {
@@ -95,6 +103,12 @@ describe('RequestModal', () => {
     executePayAndRequest.mockResolvedValue(result)
     persistPendingOrder.mockResolvedValue({})
     persistFailedToSendOrder.mockResolvedValue({})
+    vi.mocked(metalet.ensureReady).mockResolvedValue({
+      globalMetaId: wallet.globalMetaId,
+      mvcAddress: wallet.mvcAddress,
+      btcAddress: wallet.btcAddress,
+      dogeAddress: wallet.dogeAddress,
+    })
     vi.spyOn(useMessageStore.getState(), 'hydrateFromDb').mockResolvedValue()
   })
 
@@ -143,6 +157,38 @@ describe('RequestModal', () => {
         }
       ).mock.invocationCallOrder[0],
     ).toBeLessThan(navigate.mock.invocationCallOrder[0])
+    expect(metalet.ensureReady).toHaveBeenCalledWith(wallet.globalMetaId)
+    expect(vi.mocked(metalet.ensureReady).mock.invocationCallOrder[0]).toBeLessThan(
+      executePayAndRequest.mock.invocationCallOrder[0],
+    )
+  })
+
+  it('blocks stale connected wallet state before creating an order', async () => {
+    vi.mocked(metalet.ensureReady).mockRejectedValue(
+      new Error('Metalet wallet did not respond to ping. Reload Metalet and try again.'),
+    )
+
+    render(
+      <MemoryRouter>
+        <RequestModal
+          open
+          onClose={vi.fn()}
+          service={service}
+          provider={provider}
+          wallet={wallet}
+        />
+      </MemoryRouter>,
+    )
+
+    fireEvent.change(screen.getByLabelText(/describe what you need/i), {
+      target: { value: 'Tell me my fortune' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Review' }))
+    fireEvent.click(screen.getByRole('button', { name: /confirm & pay/i }))
+
+    expect(await screen.findByText(/did not respond to ping/i)).toBeInTheDocument()
+    expect(executePayAndRequest).not.toHaveBeenCalled()
+    expect(persistPendingOrder).not.toHaveBeenCalled()
   })
 
   it('still navigates after order success when pending persistence fails', async () => {

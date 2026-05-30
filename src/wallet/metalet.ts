@@ -5,6 +5,7 @@ export { normalizeGlobalMetaidResponse } from './normalizeGlobalMetaid'
 
 export const METALET_COMMON_ECDH_WAIT_TIMEOUT_MS = 5_000
 export const METALET_ECDH_RESPONSE_TIMEOUT_MS = 10_000
+export const METALET_QUERY_RESPONSE_TIMEOUT_MS = 5_000
 
 const METALET_COMMON_ECDH_POLL_INTERVAL_MS = 50
 
@@ -29,11 +30,49 @@ export class MetaletEcdhTimeoutError extends Error {
   }
 }
 
+export class MetaletResponseTimeoutError extends Error {
+  constructor(action: string) {
+    super(
+      `Metalet wallet did not respond to ${action}. Reload or unlock Metalet, reconnect it to this site, and try again.`,
+    )
+    this.name = 'MetaletResponseTimeoutError'
+  }
+}
+
 function getWallet(): MetaletWalletApi {
   if (typeof window === 'undefined' || !window.metaidwallet) {
     throw new MetaletNotInstalledError()
   }
   return window.metaidwallet
+}
+
+function metaletStatusMessage(status: string): string {
+  switch (status) {
+    case 'locked':
+      return 'Metalet wallet is locked. Unlock Metalet and try again.'
+    case 'not-connected':
+      return 'Metalet wallet is not connected to this site. Connect Metalet and try again.'
+    case 'not-logged-in':
+      return 'Metalet wallet is not logged in. Open Metalet and sign in.'
+    case 'no-wallets':
+      return 'Metalet wallet has no wallet set up.'
+    case 'canceled':
+      return 'Metalet request was canceled.'
+    default:
+      return `Metalet wallet returned status: ${status}`
+  }
+}
+
+function assertNoMetaletStatus(value: unknown): void {
+  if (!value || typeof value !== 'object') return
+  const status = (value as { status?: unknown }).status
+  if (typeof status === 'string' && status.trim()) {
+    throw new Error(metaletStatusMessage(status.trim()))
+  }
+  const error = (value as { error?: unknown }).error
+  if (error) {
+    throw new Error(error instanceof Error ? error.message : String(error))
+  }
 }
 
 type MetaletEcdh = (params: { externalPubKey: string; path?: string }) => Promise<EcdhResult>
@@ -103,8 +142,37 @@ function withMetaletEcdhTimeout<T>(
   })
 }
 
+function withMetaletResponseTimeout<T>(
+  promise: Promise<T>,
+  action: string,
+  timeoutMs = METALET_QUERY_RESPONSE_TIMEOUT_MS,
+): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => {
+      reject(new MetaletResponseTimeoutError(action))
+    }, timeoutMs)
+
+    promise.then(
+      (value) => {
+        clearTimeout(timer)
+        resolve(value)
+      },
+      (err: unknown) => {
+        clearTimeout(timer)
+        reject(err)
+      },
+    )
+  })
+}
+
 function invokeMetaletEcdh(ecdh: MetaletEcdh, params: Parameters<MetaletEcdh>[0]): Promise<EcdhResult> {
-  return withMetaletEcdhTimeout(Promise.resolve().then(() => ecdh(params)))
+  return withMetaletEcdhTimeout(Promise.resolve().then(() => ecdh(params))).then((result) => {
+    assertNoMetaletStatus(result)
+    if (!result.sharedSecret?.trim()) {
+      throw new Error('Metalet ECDH response did not include a shared secret')
+    }
+    return result
+  })
 }
 
 export function isMetaletInstalled(): boolean {
@@ -120,8 +188,35 @@ export async function disconnect(): Promise<unknown> {
 }
 
 export async function getGlobalMetaid(): Promise<GlobalMetaidResult> {
-  const res = await getWallet().getGlobalMetaid()
+  const res = await withMetaletResponseTimeout(getWallet().getGlobalMetaid(), 'getGlobalMetaid')
+  assertNoMetaletStatus(res)
   return normalizeGlobalMetaidResponse(res)
+}
+
+export async function ensureReady(expectedGlobalMetaId?: string): Promise<GlobalMetaidResult> {
+  const wallet = getWallet()
+  if (typeof wallet.ping === 'function') {
+    const pingResult = await withMetaletResponseTimeout(wallet.ping(), 'ping')
+    assertNoMetaletStatus(pingResult)
+  }
+  if (typeof wallet.isConnected === 'function') {
+    const connectedResult = await withMetaletResponseTimeout(wallet.isConnected(), 'isConnected')
+    assertNoMetaletStatus(connectedResult)
+    if (
+      connectedResult &&
+      typeof connectedResult === 'object' &&
+      (connectedResult as { connected?: unknown }).connected === false
+    ) {
+      throw new Error('Metalet wallet is not connected to this site. Connect Metalet and try again.')
+    }
+  }
+
+  const identity = await getGlobalMetaid()
+  const expected = expectedGlobalMetaId?.trim()
+  if (expected && identity.globalMetaId.trim() !== expected) {
+    throw new Error('Connected Metalet account changed. Reconnect your wallet before sending a request.')
+  }
+  return identity
 }
 
 export async function getBalance(params?: { path?: string }): Promise<unknown> {

@@ -37,6 +37,7 @@ export interface EcdhResult {
 }
 
 export interface MetaletWalletApi {
+  ping?: () => Promise<unknown>
   common?: {
     ecdh?: (params: { externalPubKey: string; path?: string }) => Promise<EcdhResult>
   }
@@ -51,7 +52,7 @@ export interface MetaletWalletApi {
   eciesDecrypt: (params: { encrypted: string }) => Promise<{ message: string }>
   on: (eventName: string, handler: (...args: unknown[]) => void) => void
   removeListener: (eventName: string) => void
-  isConnected?: () => Promise<{ connected?: boolean }>
+  isConnected?: () => Promise<{ connected?: boolean } | unknown>
 }
 
 declare global {
