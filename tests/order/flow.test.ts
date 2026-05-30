@@ -289,6 +289,75 @@ describe('executePayAndRequest', () => {
     expect(result.orderPayload).toContain(`order id: ${expectedOrderReference}`)
   })
 
+  it('treats a resolved free order explorer open-url envelope as broadcast success', async () => {
+    const orderTxid = 'b'.repeat(64)
+    const transfer = vi.fn()
+    const ecdh = vi.fn().mockResolvedValue({ sharedSecret: 'bb'.repeat(32) })
+    const createPin = vi.fn().mockResolvedValue({
+      error: {
+        code: 'open-url',
+        openUrl: `https://www.mvcscan.com/tx/${orderTxid}`,
+      },
+    })
+
+    vi.spyOn(crypto, 'getRandomValues').mockImplementation((array) => {
+      if (array instanceof Uint8Array) {
+        array.fill(0x12)
+      }
+      return array
+    })
+    const expectedOrderReference = generateRandomHex(32)
+
+    const result = await executePayAndRequest({
+      service: freeService,
+      provider,
+      prompt: 'Short free order test.',
+      wallet,
+      metalet: { transfer, ecdh, createPin },
+    })
+
+    expect(transfer).not.toHaveBeenCalled()
+    expect(result.orderPinId).toBe(`${orderTxid}i0`)
+    expect(result.paymentTxid).toBe('')
+    expect(result.paymentCommitTxid).toBe('')
+    expect(result.orderReference).toBe(expectedOrderReference)
+    expect(result.sessionKey).toBe(`${provider.globalMetaId}:${expectedOrderReference}`)
+  })
+
+  it('treats a free order Chrome extension response-loss reject as pending broadcast success', async () => {
+    const transfer = vi.fn()
+    const ecdh = vi.fn().mockResolvedValue({ sharedSecret: 'bb'.repeat(32) })
+    const createPin = vi.fn().mockRejectedValue(
+      new Error(
+        'A listener indicated an asynchronous response by returning true, but the message channel closed before a response was received',
+      ),
+    )
+
+    vi.spyOn(crypto, 'getRandomValues').mockImplementation((array) => {
+      if (array instanceof Uint8Array) {
+        array.fill(0x13)
+      }
+      return array
+    })
+    const expectedOrderReference = generateRandomHex(32)
+
+    const result = await executePayAndRequest({
+      service: freeService,
+      provider,
+      prompt: 'Short free order test.',
+      wallet,
+      metalet: { transfer, ecdh, createPin },
+    })
+
+    expect(transfer).not.toHaveBeenCalled()
+    expect(createPin).toHaveBeenCalledOnce()
+    expect(result.orderPinId).toBe('')
+    expect(result.paymentTxid).toBe('')
+    expect(result.paymentCommitTxid).toBe('')
+    expect(result.orderReference).toBe(expectedOrderReference)
+    expect(result.sessionKey).toBe(`${provider.globalMetaId}:${expectedOrderReference}`)
+  })
+
   it('surfaces payment failure when transfer returns no txid', async () => {
     await expect(
       executePayAndRequest({

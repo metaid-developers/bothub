@@ -7,6 +7,9 @@ const CREATE_PIN_NESTED_KEYS = ['data', 'result', 'raw', 'payload', 'res', 'resp
 const CREATE_PIN_FAILURE_RE =
   /\b(cancell?ed|fail(?:ed|ure)?|error|reject(?:ed)?|den(?:ied|y)|locked|not[-_\s]?connected|not[-_\s]?logged[-_\s]?in|no[-_\s]?wallets?|insufficient)\b/i
 const CREATE_PIN_SUCCESS_RE = /\b(task\s*finished|finished|success|ok|done)\b/i
+const CREATE_PIN_RESPONSE_LOST_RE =
+  /\b(message\s+(?:channel|port)\s+closed|asynchronous\s+response\b.*\bresponse\s+was\s+received)\b/i
+const CREATE_PIN_TIMEOUT_RE = /\b(time(?:d)?\s*out|timeout)\b/i
 const TXID_KEYS = [
   'txid',
   'txId',
@@ -21,8 +24,30 @@ const TXID_KEYS = [
   'revealTxIds',
   'res',
   'transactions',
+  'url',
+  'URL',
+  'openUrl',
+  'openURL',
+  'open-url',
+  'explorer',
+  'explorerUrl',
+  'explorerURL',
+  'txUrl',
+  'txURL',
 ]
-const NESTED_KEYS = ['data', 'result', 'raw', 'payload']
+const URL_TXID_KEYS = new Set([
+  'url',
+  'URL',
+  'openUrl',
+  'openURL',
+  'open-url',
+  'explorer',
+  'explorerUrl',
+  'explorerURL',
+  'txUrl',
+  'txURL',
+])
+const NESTED_KEYS = ['data', 'result', 'raw', 'payload', 'error']
 
 function collectStringCandidate(value: string, out: string[], allowFallback: boolean): void {
   const trimmed = value.trim()
@@ -64,7 +89,7 @@ function collectCandidates(
   const record = value as Record<string, unknown>
   for (const key of keys) {
     if (key in record) {
-      collectCandidates(record[key], keys, out, true)
+      collectCandidates(record[key], keys, out, !URL_TXID_KEYS.has(key))
     }
   }
   for (const key of NESTED_KEYS) {
@@ -100,6 +125,9 @@ function formatFailureValue(value: unknown): string {
     const nested = formatFailureValue(record[key])
     if (nested) return nested
   }
+  for (const key of URL_TXID_KEYS) {
+    if (typeof record[key] === 'string' && record[key].trim()) return ''
+  }
   return Object.keys(record).length ? 'Wallet createPin returned an error.' : ''
 }
 
@@ -128,7 +156,7 @@ function findResolvedCreatePinFailureMessage(
   const record = result as Record<string, unknown>
   if ('error' in record) {
     const failure = formatFailureValue(record.error)
-    if (failure) return failure
+    if (isFailureText(failure)) return failure
   }
 
   const message = formatFailureValue(record.message)
@@ -163,4 +191,15 @@ export function resolvePrimaryPinId(result: unknown): string {
 export function getResolvedCreatePinFailureMessage(result: unknown): string {
   if (resolvePrimaryPinId(result)) return ''
   return findResolvedCreatePinFailureMessage(result, new WeakSet())
+}
+
+export function isCreatePinTransportResponseLostError(err: unknown): boolean {
+  const message = formatFailureValue(err)
+  if (!message || CREATE_PIN_TIMEOUT_RE.test(message)) return false
+  if (!CREATE_PIN_RESPONSE_LOST_RE.test(message)) return false
+
+  const explicitFailureText = message
+    .replace(/runtime\.lastError/gi, '')
+    .replace(CREATE_PIN_RESPONSE_LOST_RE, '')
+  return !isFailureText(explicitFailureText)
 }

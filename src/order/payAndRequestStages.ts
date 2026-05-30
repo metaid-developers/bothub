@@ -5,6 +5,7 @@ import { ORDER_RAW_REQUEST_MAX_CHARS, validateOrderRawRequest } from './orderMes
 import {
   collectTxidLikeStrings,
   getResolvedCreatePinFailureMessage,
+  isCreatePinTransportResponseLostError,
   resolvePrimaryPinId,
 } from './pinResult'
 import { ecdhEncryptWithSharedSecret } from './privateChatCrypto'
@@ -326,6 +327,9 @@ export async function broadcastPreparedOrder(
       'Order pin broadcast timed out waiting for wallet response',
     )
   } catch (err) {
+    if (isCreatePinTransportResponseLostError(err)) {
+      return ''
+    }
     const message =
       err instanceof WalletResponseTimeoutError ? err.message : 'Order pin broadcast failed'
     throw new PayAndRequestBroadcastError(message, prepared, err)
