@@ -31,7 +31,11 @@ function envelope(
     D: {
       fromGlobalMetaId: PEER,
       toGlobalMetaId: SELF,
-      fromUserInfo: { chatPublicKey: 'provider-chat-key' },
+      fromUserInfo: {
+        chatPublicKey: 'provider-chat-key',
+        name: 'Provider Bot',
+        avatarUrl: 'https://cdn.example/provider.png',
+      },
       content:
         '[DELIVERY:socket-order] {"result":"Ready","assets":["metafile://socket.png"]}',
       contentType: 'text/plain',
