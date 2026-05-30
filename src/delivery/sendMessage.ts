@@ -1,6 +1,9 @@
 import { ecdhEncryptWithSharedSecret } from '@/order/privateChatCrypto'
 import type { PayAndRequestMetalet } from '@/order/flow'
-import { resolvePrimaryPinId } from '@/order/pinResult'
+import {
+  getResolvedCreatePinFailureMessage,
+  resolvePrimaryPinId,
+} from '@/order/pinResult'
 import { WalletResponseTimeoutError, withWalletResponseTimeout } from '@/order/walletTimeout'
 import type { WalletIdentity } from '@/wallet/types'
 
@@ -114,7 +117,18 @@ export async function sendDeliveryFollowUp(
     throw err
   }
 
-  const pinId = resolvePrimaryPinId(pinResult) || createLocalFollowUpId()
+  const resolvedPinId = resolvePrimaryPinId(pinResult)
+  if (resolvedPinId) {
+    return { pinId: resolvedPinId, encryptedContent }
+  }
 
-  return { pinId, encryptedContent }
+  const failure = getResolvedCreatePinFailureMessage(pinResult)
+  if (failure) {
+    throw new DeliveryFollowUpError(
+      `Follow-up broadcast failed: ${failure}`,
+      'broadcast_failed',
+    )
+  }
+
+  return { pinId: createLocalFollowUpId(), encryptedContent }
 }

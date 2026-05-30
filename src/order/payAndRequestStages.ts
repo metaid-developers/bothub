@@ -2,7 +2,11 @@ import type { ProviderInfo, SkillServiceCore } from '@/api/aggregator.types'
 import type { TransferTask, WalletIdentity } from '@/wallet/types'
 import { buildOrderPayload } from './buildOrderPayload'
 import { ORDER_RAW_REQUEST_MAX_CHARS, validateOrderRawRequest } from './orderMessage'
-import { collectTxidLikeStrings, resolvePrimaryPinId } from './pinResult'
+import {
+  collectTxidLikeStrings,
+  getResolvedCreatePinFailureMessage,
+  resolvePrimaryPinId,
+} from './pinResult'
 import { ecdhEncryptWithSharedSecret } from './privateChatCrypto'
 import {
   ECDH_WALLET_RESPONSE_TIMEOUT_MS,
@@ -327,7 +331,14 @@ export async function broadcastPreparedOrder(
     throw new PayAndRequestBroadcastError(message, prepared, err)
   }
 
-  return resolvePrimaryPinId(pinResult)
+  const orderPinId = resolvePrimaryPinId(pinResult)
+  if (orderPinId) return orderPinId
+
+  const failure = getResolvedCreatePinFailureMessage(pinResult)
+  if (failure) {
+    throw new PayAndRequestBroadcastError(`Order pin broadcast failed: ${failure}`, prepared)
+  }
+  return ''
 }
 
 export async function executePayAndRequest(

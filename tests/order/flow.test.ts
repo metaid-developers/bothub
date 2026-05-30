@@ -454,6 +454,76 @@ describe('executePayAndRequest', () => {
     })
   })
 
+  it('throws a broadcast error with a free order reference when createPin resolves a canceled status', async () => {
+    vi.spyOn(crypto, 'getRandomValues').mockImplementation((array) => {
+      if (array instanceof Uint8Array) {
+        array.fill(0x10)
+      }
+      return array
+    })
+    const expectedOrderReference = generateRandomHex(32)
+
+    await expect(
+      executePayAndRequest({
+        service: freeService,
+        provider,
+        prompt: 'Free request that the wallet cancels.',
+        wallet,
+        metalet: {
+          transfer: vi.fn(),
+          ecdh: vi.fn().mockResolvedValue({ sharedSecret: 'bb'.repeat(32) }),
+          createPin: vi.fn().mockResolvedValue({ status: 'canceled' }),
+        },
+      }),
+    ).rejects.toMatchObject({
+      code: 'broadcast_failed',
+      message: expect.stringMatching(/canceled/i),
+      partial: {
+        payment: {
+          paymentTxid: '',
+          paymentCommitTxid: '',
+          orderReference: expectedOrderReference,
+        },
+        sessionKey: `${provider.globalMetaId}:${expectedOrderReference}`,
+      },
+    })
+  })
+
+  it('throws a broadcast error when createPin resolves an error envelope without a pin id', async () => {
+    vi.spyOn(crypto, 'getRandomValues').mockImplementation((array) => {
+      if (array instanceof Uint8Array) {
+        array.fill(0x11)
+      }
+      return array
+    })
+    const expectedOrderReference = generateRandomHex(32)
+
+    await expect(
+      executePayAndRequest({
+        service: freeService,
+        provider,
+        prompt: 'Free request that the wallet rejects.',
+        wallet,
+        metalet: {
+          transfer: vi.fn(),
+          ecdh: vi.fn().mockResolvedValue({ sharedSecret: 'bb'.repeat(32) }),
+          createPin: vi.fn().mockResolvedValue({ error: 'user canceled' }),
+        },
+      }),
+    ).rejects.toMatchObject({
+      code: 'broadcast_failed',
+      message: expect.stringMatching(/user canceled/i),
+      partial: {
+        payment: {
+          paymentTxid: '',
+          paymentCommitTxid: '',
+          orderReference: expectedOrderReference,
+        },
+        sessionKey: `${provider.globalMetaId}:${expectedOrderReference}`,
+      },
+    })
+  })
+
   it('times out order encryption before broadcasting when ecdh never receives a wallet response', async () => {
     vi.useFakeTimers()
     vi.spyOn(crypto, 'getRandomValues').mockImplementation((array) => {

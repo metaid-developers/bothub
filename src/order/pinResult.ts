@@ -2,6 +2,11 @@ const PIN_ID_PATTERN = /([0-9a-fA-F]{64})i(\d+)/i
 const TXID_PATTERN = /[0-9a-fA-F]{64}/
 
 const PIN_ID_KEYS = ['pinId', 'pinid']
+const CREATE_PIN_FAILURE_KEYS = ['status', 'code', 'message', 'reason']
+const CREATE_PIN_NESTED_KEYS = ['data', 'result', 'raw', 'payload', 'res', 'response']
+const CREATE_PIN_FAILURE_RE =
+  /\b(cancell?ed|fail(?:ed|ure)?|error|reject(?:ed)?|den(?:ied|y)|locked|not[-_\s]?connected|not[-_\s]?logged[-_\s]?in|no[-_\s]?wallets?|insufficient)\b/i
+const CREATE_PIN_SUCCESS_RE = /\b(task\s*finished|finished|success|ok|done)\b/i
 const TXID_KEYS = [
   'txid',
   'txId',
@@ -83,6 +88,66 @@ function normalizeSimplemsgPinId(candidate: string): string {
   return trimmed
 }
 
+function formatFailureValue(value: unknown): string {
+  if (value instanceof Error) return value.message || value.name
+  if (typeof value === 'string') return value.trim()
+  if (typeof value === 'number' || typeof value === 'bigint') return String(value)
+  if (typeof value === 'boolean') return value ? 'true' : ''
+  if (!value || typeof value !== 'object') return ''
+
+  const record = value as Record<string, unknown>
+  for (const key of ['message', 'reason', 'code', 'status']) {
+    const nested = formatFailureValue(record[key])
+    if (nested) return nested
+  }
+  return Object.keys(record).length ? 'Wallet createPin returned an error.' : ''
+}
+
+function isFailureText(value: string): boolean {
+  if (!value) return false
+  if (CREATE_PIN_SUCCESS_RE.test(value) && !CREATE_PIN_FAILURE_RE.test(value)) return false
+  return CREATE_PIN_FAILURE_RE.test(value)
+}
+
+function findResolvedCreatePinFailureMessage(
+  result: unknown,
+  seen: WeakSet<object>,
+): string {
+  if (!result || typeof result !== 'object') return ''
+  if (seen.has(result)) return ''
+  seen.add(result)
+
+  if (Array.isArray(result)) {
+    for (const item of result) {
+      const failure = findResolvedCreatePinFailureMessage(item, seen)
+      if (failure) return failure
+    }
+    return ''
+  }
+
+  const record = result as Record<string, unknown>
+  if ('error' in record) {
+    const failure = formatFailureValue(record.error)
+    if (failure) return failure
+  }
+
+  const message = formatFailureValue(record.message)
+  for (const key of CREATE_PIN_FAILURE_KEYS) {
+    const value = formatFailureValue(record[key])
+    if (!isFailureText(value)) continue
+    if (key !== 'message' && isFailureText(message)) return message
+    return value
+  }
+
+  for (const key of CREATE_PIN_NESTED_KEYS) {
+    if (key in record) {
+      const failure = findResolvedCreatePinFailureMessage(record[key], seen)
+      if (failure) return failure
+    }
+  }
+  return ''
+}
+
 export function collectTxidLikeStrings(result: unknown): string[] {
   return collectCandidates(result, TXID_KEYS)
 }
@@ -93,4 +158,9 @@ export function resolvePrimaryPinId(result: unknown): string {
 
   const txid = collectTxidLikeStrings(result)[0]
   return txid ? normalizeSimplemsgPinId(txid) : ''
+}
+
+export function getResolvedCreatePinFailureMessage(result: unknown): string {
+  if (resolvePrimaryPinId(result)) return ''
+  return findResolvedCreatePinFailureMessage(result, new WeakSet())
 }

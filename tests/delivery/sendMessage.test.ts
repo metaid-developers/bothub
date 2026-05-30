@@ -240,6 +240,27 @@ describe('sendDeliveryFollowUp', () => {
     expect(result.encryptedContent).toBeTruthy()
   })
 
+  it('fails follow-up broadcast when createPin resolves a failure envelope without a pin id', async () => {
+    await expect(
+      sendDeliveryFollowUp({
+        wallet,
+        providerGlobalMetaId: 'idqprovider',
+        providerChatPubkey: '04' + 'ab'.repeat(64),
+        content: 'Thanks, one more thing.',
+        metalet: {
+          ecdh: vi.fn().mockResolvedValue({ sharedSecret: 'bb'.repeat(32) }),
+          createPin: vi.fn().mockResolvedValue({
+            status: 'failed',
+            message: 'insufficient balance',
+          }),
+        },
+      }),
+    ).rejects.toMatchObject({
+      code: 'broadcast_failed',
+      message: expect.stringMatching(/insufficient balance/i),
+    } satisfies Partial<DeliveryFollowUpError>)
+  })
+
   it('waits past the old 90s limit before timing out a follow-up broadcast', async () => {
     vi.useFakeTimers()
     let caught: unknown
