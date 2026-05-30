@@ -87,6 +87,32 @@ describe('decryptIncoming', () => {
     expect(mockedEciesDecrypt).not.toHaveBeenCalled()
   })
 
+  it('retries the same message id after a ciphertext fallback receives a peer key', async () => {
+    const content = ecdhEncryptWithSharedSecret('late peer key plain', 'shared-secret')
+
+    await expect(
+      decryptIncoming({
+        content,
+        protocol: '/protocols/simplemsg',
+        encrypt: 'ecdh',
+        messageId: 'pin-late-peer-key',
+      }),
+    ).resolves.toEqual({ plaintext: content })
+
+    await expect(
+      decryptIncoming({
+        content,
+        protocol: '/protocols/simplemsg',
+        encrypt: 'ecdh',
+        peerChatPubKey: 'peer-chat-key-late',
+        messageId: 'pin-late-peer-key',
+      }),
+    ).resolves.toEqual({ plaintext: 'late peer key plain' })
+
+    expect(mockedEcdh).toHaveBeenCalledTimes(1)
+    expect(mockedEciesDecrypt).not.toHaveBeenCalled()
+  })
+
   it('routes both encrypt and encryption ECDH markers to ECDH', async () => {
     const first = ecdhEncryptWithSharedSecret('via encrypt', 'shared-secret')
     const second = ecdhEncryptWithSharedSecret('via encryption', 'shared-secret')

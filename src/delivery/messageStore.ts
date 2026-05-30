@@ -86,6 +86,65 @@ function sortMessagesAsc(messages: DeliveryMessage[]): DeliveryMessage[] {
   })
 }
 
+function hasText(value: string | undefined): boolean {
+  return Boolean(value?.trim())
+}
+
+function isCiphertextLikeContent(content: string): boolean {
+  const trimmed = content.trim()
+  return trimmed.startsWith('U2FsdGVkX1') || (trimmed.length >= 32 && !/\s/.test(trimmed))
+}
+
+function hasMoreCompleteContent(
+  existing: DeliveryMessage,
+  incoming: DeliveryMessage,
+): boolean {
+  if (existing.content === incoming.content) return false
+  const existingIsCiphertextFallback =
+    existing.content === existing.rawContent &&
+    (hasText(existing.decryptError) || isCiphertextLikeContent(existing.rawContent))
+  return (
+    existingIsCiphertextFallback &&
+    incoming.content !== incoming.rawContent &&
+    !incoming.decryptError
+  )
+}
+
+function shouldReplaceMessage(
+  existing: DeliveryMessage,
+  incoming: DeliveryMessage,
+): boolean {
+  if (existing.id !== incoming.id) return false
+  if (hasMoreCompleteContent(existing, incoming)) return true
+  if (!hasText(existing.peerChatPubkey) && hasText(incoming.peerChatPubkey)) return true
+  if (existing.decryptError && !incoming.decryptError && hasText(incoming.peerChatPubkey)) {
+    return true
+  }
+  if (!hasText(existing.orderCorrelationId) && hasText(incoming.orderCorrelationId)) {
+    return true
+  }
+  return false
+}
+
+function mergeReplacementMessage(
+  existing: DeliveryMessage,
+  incoming: DeliveryMessage,
+): DeliveryMessage {
+  return {
+    ...existing,
+    ...incoming,
+    peerChatPubkey:
+      incoming.peerChatPubkey?.trim() || existing.peerChatPubkey?.trim() || undefined,
+    orderCorrelationId:
+      incoming.orderCorrelationId?.trim() ||
+      existing.orderCorrelationId?.trim() ||
+      undefined,
+    decryptError: incoming.decryptError,
+    pinId: incoming.pinId ?? existing.pinId,
+    txId: incoming.txId ?? existing.txId,
+  }
+}
+
 function upsertMessage(
   byPeer: Record<string, DeliveryMessage[]>,
   message: DeliveryMessage,
@@ -93,7 +152,17 @@ function upsertMessage(
   const normalizedMessage = messageWithDerivedCorrelation(message)
   const peer = normalizedMessage.peerGlobalMetaId.trim()
   const existing = byPeer[peer] ?? []
-  if (existing.some((row) => row.id === normalizedMessage.id)) {
+  const existingIndex = existing.findIndex((row) => row.id === normalizedMessage.id)
+  if (existingIndex >= 0) {
+    const existingMessage = existing[existingIndex]
+    if (existingMessage && shouldReplaceMessage(existingMessage, normalizedMessage)) {
+      const next = [...existing]
+      next[existingIndex] = mergeReplacementMessage(existingMessage, normalizedMessage)
+      return {
+        ...byPeer,
+        [peer]: sortMessagesAsc(next),
+      }
+    }
     return byPeer
   }
   return {

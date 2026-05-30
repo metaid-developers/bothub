@@ -24,13 +24,17 @@ function normalizeProtocol(value: string | undefined): string {
 }
 
 function cacheKeyForInput(input: DecryptIncomingInput, content: string): string {
+  const peerKey = input.peerChatPubKey?.trim() ?? ''
+  const encryption = normalizeEncryption(input.encryption ?? input.encrypt)
+  const protocol = normalizeProtocol(input.protocol)
+  const decryptContext = `peer:${peerKey}|enc:${encryption}|proto:${protocol}`
   const id = input.messageId?.trim()
-  if (id) return `id:${id}`
+  if (id) return `id:${id}|${decryptContext}`
   let hash = 0
   for (let index = 0; index < content.length; index += 1) {
     hash = (hash * 31 + content.charCodeAt(index)) | 0
   }
-  return `raw:${content.length}:${hash}`
+  return `raw:${content.length}:${hash}|${decryptContext}`
 }
 
 function isPlainPrivateChatContent(content: string): boolean {

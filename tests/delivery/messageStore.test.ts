@@ -95,6 +95,78 @@ describe('messageStore', () => {
     expect(messagesForSession('idqpeer', SELF)[0]?.content).toBe('hello')
   })
 
+  it('replaces a same-id ciphertext fallback with later decrypted content', () => {
+    const { append, messagesForSession } = useMessageStore.getState()
+    const rawContent = 'U2FsdGVkX1+encrypted-delivery'
+
+    append(
+      sampleMessage({
+        id: 'upgrade-plaintext',
+        peerGlobalMetaId: 'idqpeer',
+        content: rawContent,
+        rawContent,
+        decryptError: 'missing peer chat key',
+      }),
+    )
+    append(
+      sampleMessage({
+        id: 'upgrade-plaintext',
+        peerGlobalMetaId: 'idqpeer',
+        content: '[DELIVERY:order-upgrade] Ready',
+        rawContent,
+        peerChatPubkey: 'provider-chat-key',
+      }),
+    )
+
+    const messages = messagesForSession('idqpeer:order-upgrade', SELF)
+    expect(messages).toHaveLength(1)
+    expect(messages[0]).toMatchObject({
+      id: 'upgrade-plaintext',
+      content: '[DELIVERY:order-upgrade] Ready',
+      rawContent,
+      peerChatPubkey: 'provider-chat-key',
+    })
+    expect(messages[0]?.decryptError).toBeUndefined()
+  })
+
+  it('fills a missing peer chat key on the same message id so the session can resolve it', () => {
+    const { append, listSessions, messagesForSession } = useMessageStore.getState()
+
+    append(
+      sampleMessage({
+        id: 'upgrade-peer-key',
+        peerGlobalMetaId: 'idqpeer',
+        content: '[ORDER_STATUS:order-key-upgrade] Working',
+        rawContent: 'U2FsdGVkX1+status',
+        orderCorrelationId: 'order-key-upgrade',
+      }),
+    )
+    append(
+      sampleMessage({
+        id: 'upgrade-peer-key',
+        peerGlobalMetaId: 'idqpeer',
+        content: '[ORDER_STATUS:order-key-upgrade] Working',
+        rawContent: 'U2FsdGVkX1+status',
+        orderCorrelationId: 'order-key-upgrade',
+        peerChatPubkey: 'provider-chat-key-later',
+      }),
+    )
+
+    expect(messagesForSession('idqpeer:order-key-upgrade', SELF)).toEqual([
+      expect.objectContaining({
+        id: 'upgrade-peer-key',
+        peerChatPubkey: 'provider-chat-key-later',
+      }),
+    ])
+    expect(listSessions(SELF)).toEqual([
+      expect.objectContaining({
+        sessionKey: 'idqpeer:order-key-upgrade',
+        providerChatPubkey: 'provider-chat-key-later',
+        messageCount: 1,
+      }),
+    ])
+  })
+
   it('lists sessions by latest message timestamp', () => {
     const { append, listSessions } = useMessageStore.getState()
     append(
