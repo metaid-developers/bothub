@@ -1,6 +1,7 @@
 import { ecdhEncryptWithSharedSecret } from '@/order/privateChatCrypto'
 import type { PayAndRequestMetalet } from '@/order/flow'
 import { resolvePrimaryPinId } from '@/order/pinResult'
+import { WalletResponseTimeoutError, withWalletResponseTimeout } from '@/order/walletTimeout'
 import type { WalletIdentity } from '@/wallet/types'
 
 const SIMPLEMSG_PATH = '/protocols/simplemsg'
@@ -74,25 +75,36 @@ export async function sendDeliveryFollowUp(
     externalPubKey: providerChatPubkey,
   })
   const encryptedContent = ecdhEncryptWithSharedSecret(content, sharedSecret)
-  const pinResult = await input.metalet.createPin({
-    chain: 'mvc',
-    dataList: [
-      {
-        metaidData: {
-          operation: 'create',
-          path: SIMPLEMSG_PATH,
-          body: buildPrivateMessagePayload({
-            toGlobalMetaId: providerGlobalMetaId,
-            encryptedContent,
-            replyPin: input.replyPin?.trim() ?? '',
-          }),
-          contentType: 'application/json',
-          encryption: '0',
-          version: '1.0.0',
-        },
-      },
-    ],
-  })
+  let pinResult: unknown
+  try {
+    pinResult = await withWalletResponseTimeout(
+      input.metalet.createPin({
+        chain: 'mvc',
+        dataList: [
+          {
+            metaidData: {
+              operation: 'create',
+              path: SIMPLEMSG_PATH,
+              body: buildPrivateMessagePayload({
+                toGlobalMetaId: providerGlobalMetaId,
+                encryptedContent,
+                replyPin: input.replyPin?.trim() ?? '',
+              }),
+              contentType: 'application/json',
+              encryption: '0',
+              version: '1.0.0',
+            },
+          },
+        ],
+      }),
+      'Follow-up broadcast timed out waiting for wallet response',
+    )
+  } catch (err) {
+    if (err instanceof WalletResponseTimeoutError) {
+      throw new DeliveryFollowUpError(err.message, 'broadcast_failed')
+    }
+    throw err
+  }
 
   const pinId = resolvePrimaryPinId(pinResult)
   if (!pinId) {

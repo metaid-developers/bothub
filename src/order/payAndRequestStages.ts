@@ -4,6 +4,7 @@ import { buildOrderPayload } from './buildOrderPayload'
 import { ORDER_RAW_REQUEST_MAX_CHARS, validateOrderRawRequest } from './orderMessage'
 import { collectTxidLikeStrings, resolvePrimaryPinId } from './pinResult'
 import { ecdhEncryptWithSharedSecret } from './privateChatCrypto'
+import { WalletResponseTimeoutError, withWalletResponseTimeout } from './walletTimeout'
 
 const SATOSHI_PER_UNIT = 100_000_000
 const SIMPLEMSG_PATH = '/protocols/simplemsg'
@@ -280,23 +281,28 @@ export async function broadcastPreparedOrder(
 ): Promise<string> {
   let pinResult: unknown
   try {
-    pinResult = await metalet.createPin({
-      chain: resolveCreatePinChain(prepared.service),
-      dataList: [
-        {
-          metaidData: {
-            operation: 'create',
-            path: SIMPLEMSG_PATH,
-            body: prepared.simplemsgBody,
-            contentType: 'application/json',
-            encryption: '0',
-            version: '1.0.0',
+    pinResult = await withWalletResponseTimeout(
+      metalet.createPin({
+        chain: resolveCreatePinChain(prepared.service),
+        dataList: [
+          {
+            metaidData: {
+              operation: 'create',
+              path: SIMPLEMSG_PATH,
+              body: prepared.simplemsgBody,
+              contentType: 'application/json',
+              encryption: '0',
+              version: '1.0.0',
+            },
           },
-        },
-      ],
-    })
+        ],
+      }),
+      'Order pin broadcast timed out waiting for wallet response',
+    )
   } catch (err) {
-    throw new PayAndRequestBroadcastError('Order pin broadcast failed', prepared, err)
+    const message =
+      err instanceof WalletResponseTimeoutError ? err.message : 'Order pin broadcast failed'
+    throw new PayAndRequestBroadcastError(message, prepared, err)
   }
 
   const orderPinId = resolvePrimaryPinId(pinResult)

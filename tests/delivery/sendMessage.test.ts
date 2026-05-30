@@ -3,6 +3,7 @@ import {
   DeliveryFollowUpError,
   sendDeliveryFollowUp,
 } from '@/delivery/sendMessage'
+import { CREATE_PIN_WALLET_RESPONSE_TIMEOUT_MS } from '@/order/walletTimeout'
 import type { WalletIdentity } from '@/wallet/types'
 
 const wallet: WalletIdentity = {
@@ -215,5 +216,35 @@ describe('sendDeliveryFollowUp', () => {
         },
       }),
     ).resolves.toMatchObject({ pinId: `${followUpTxid}i0` })
+  })
+
+  it('times out a follow-up broadcast that never receives a wallet response', async () => {
+    vi.useFakeTimers()
+    let caught: unknown
+
+    try {
+      void sendDeliveryFollowUp({
+        wallet,
+        providerGlobalMetaId: 'idqprovider',
+        providerChatPubkey: '04' + 'ab'.repeat(64),
+        content: 'Can you add one more note?',
+        metalet: {
+          ecdh: vi.fn().mockResolvedValue({ sharedSecret: 'bb'.repeat(32) }),
+          createPin: vi.fn().mockReturnValue(new Promise(() => {})),
+        },
+      }).catch((err: unknown) => {
+        caught = err
+      })
+
+      await vi.advanceTimersByTimeAsync(CREATE_PIN_WALLET_RESPONSE_TIMEOUT_MS)
+    } finally {
+      vi.useRealTimers()
+    }
+
+    expect(caught).toBeInstanceOf(DeliveryFollowUpError)
+    expect(caught).toMatchObject({
+      code: 'broadcast_failed',
+      message: 'Follow-up broadcast timed out waiting for wallet response',
+    })
   })
 })

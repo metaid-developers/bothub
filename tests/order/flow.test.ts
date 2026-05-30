@@ -3,8 +3,10 @@ import type { ProviderInfo, SkillServiceCore } from '@/api/aggregator.types'
 import {
   executePayAndRequest,
   generateRandomHex,
+  PayAndRequestBroadcastError,
   PayAndRequestError,
 } from '@/order/flow'
+import { CREATE_PIN_WALLET_RESPONSE_TIMEOUT_MS } from '@/order/walletTimeout'
 
 const provider: ProviderInfo = {
   metaid: 'provider-metaid',
@@ -412,6 +414,53 @@ describe('executePayAndRequest', () => {
           orderReference: expectedOrderReference,
         },
         sessionKey: `${provider.globalMetaId}:${expectedOrderReference}`,
+      },
+    })
+  })
+
+  it('times out a free order broadcast that never receives a wallet response', async () => {
+    vi.useFakeTimers()
+    vi.spyOn(crypto, 'getRandomValues').mockImplementation((array) => {
+      if (array instanceof Uint8Array) {
+        array.fill(0x0d)
+      }
+      return array
+    })
+    const expectedOrderReference = generateRandomHex(32)
+    let caught: unknown
+
+    try {
+      void executePayAndRequest({
+        service: freeService,
+        provider,
+        prompt: 'Free request that never settles.',
+        wallet,
+        metalet: {
+          transfer: vi.fn(),
+          ecdh: vi.fn().mockResolvedValue({ sharedSecret: 'bb'.repeat(32) }),
+          createPin: vi.fn().mockReturnValue(new Promise(() => {})),
+        },
+      }).catch((err: unknown) => {
+        caught = err
+      })
+
+      await vi.advanceTimersByTimeAsync(CREATE_PIN_WALLET_RESPONSE_TIMEOUT_MS)
+    } finally {
+      vi.useRealTimers()
+    }
+
+    expect(caught).toBeInstanceOf(PayAndRequestBroadcastError)
+    expect(caught).toMatchObject({
+      code: 'broadcast_failed',
+      message: 'Order pin broadcast timed out waiting for wallet response',
+      partial: {
+        payment: {
+          paymentTxid: '',
+          paymentCommitTxid: '',
+          orderReference: expectedOrderReference,
+        },
+        sessionKey: `${provider.globalMetaId}:${expectedOrderReference}`,
+        orderPayload: expect.stringContaining(`order id: ${expectedOrderReference}`),
       },
     })
   })
