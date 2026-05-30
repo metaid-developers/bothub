@@ -33,6 +33,8 @@ export interface DeliveryMessage {
   id: string
   peerGlobalMetaId: string
   peerChatPubkey?: string
+  peerName?: string
+  peerAvatarUrl?: string
   fromGlobalMetaId: string
   toGlobalMetaId: string
   /** Display text (decrypted when possible). */
@@ -52,6 +54,8 @@ export interface DeliverySession {
   sessionKey: string
   peerGlobalMetaId: string
   providerChatPubkey?: string
+  peerName?: string
+  peerAvatarUrl?: string
   orderCorrelationId: string | null
   serviceLabel: string | null
   lastMessage: DeliveryMessage
@@ -117,6 +121,8 @@ function shouldReplaceMessage(
   if (existing.id !== incoming.id) return false
   if (hasMoreCompleteContent(existing, incoming)) return true
   if (!hasText(existing.peerChatPubkey) && hasText(incoming.peerChatPubkey)) return true
+  if (!hasText(existing.peerName) && hasText(incoming.peerName)) return true
+  if (!hasText(existing.peerAvatarUrl) && hasText(incoming.peerAvatarUrl)) return true
   if (existing.decryptError && !incoming.decryptError && hasText(incoming.peerChatPubkey)) {
     return true
   }
@@ -135,6 +141,9 @@ function mergeReplacementMessage(
     ...incoming,
     peerChatPubkey:
       incoming.peerChatPubkey?.trim() || existing.peerChatPubkey?.trim() || undefined,
+    peerName: incoming.peerName?.trim() || existing.peerName?.trim() || undefined,
+    peerAvatarUrl:
+      incoming.peerAvatarUrl?.trim() || existing.peerAvatarUrl?.trim() || undefined,
     orderCorrelationId:
       incoming.orderCorrelationId?.trim() ||
       existing.orderCorrelationId?.trim() ||
@@ -198,7 +207,11 @@ function messageWithDerivedCorrelation(
 function deliveryMessageFromRecord(
   record: DeliveryMessageRecord,
   selfGlobalMetaId: string,
-  fallbackPeerChatPubkey?: string,
+  fallbackPeerProfile?: {
+    chatPubkey?: string
+    name?: string
+    avatarUrl?: string
+  },
 ): DeliveryMessage {
   const peer = record.peerGlobalMetaId.trim()
   const self = selfGlobalMetaId.trim()
@@ -207,7 +220,10 @@ function deliveryMessageFromRecord(
   return {
     id: record.id,
     peerGlobalMetaId: peer,
-    peerChatPubkey: record.peerChatPubkey?.trim() || fallbackPeerChatPubkey,
+    peerChatPubkey:
+      record.peerChatPubkey?.trim() || fallbackPeerProfile?.chatPubkey,
+    peerName: record.peerName?.trim() || fallbackPeerProfile?.name,
+    peerAvatarUrl: record.peerAvatarUrl?.trim() || fallbackPeerProfile?.avatarUrl,
     fromGlobalMetaId: outgoing ? self : peer,
     toGlobalMetaId: outgoing ? peer : self,
     content: record.content,
@@ -242,6 +258,8 @@ function deliveryMessageRecordFromMessage(input: {
     sessionId: input.sessionId,
     peerGlobalMetaId: input.message.peerGlobalMetaId.trim(),
     peerChatPubkey: input.message.peerChatPubkey?.trim() || undefined,
+    peerName: input.message.peerName?.trim() || undefined,
+    peerAvatarUrl: input.message.peerAvatarUrl?.trim() || undefined,
     direction,
     content: input.message.content,
     rawContent: input.message.rawContent,
@@ -354,6 +372,14 @@ export async function persistDeliveryMessage(input: {
           message.peerChatPubkey?.trim() ||
           existingSession?.providerChatPubkey?.trim() ||
           undefined,
+        providerName:
+          message.peerName?.trim() ||
+          existingSession?.providerName?.trim() ||
+          undefined,
+        providerAvatarUrl:
+          message.peerAvatarUrl?.trim() ||
+          existingSession?.providerAvatarUrl?.trim() ||
+          undefined,
         orderCorrelationId,
         serviceId: existingSession?.serviceId,
         serviceLabel: existingSession?.serviceLabel,
@@ -398,6 +424,8 @@ export const useMessageStore = create<MessageStoreState>()(
           id: pinId.trim(),
           peerGlobalMetaId: providerGlobalMetaId,
           peerChatPubkey: session.providerChatPubkey,
+          peerName: session.peerName,
+          peerAvatarUrl: session.peerAvatarUrl,
           fromGlobalMetaId: walletGlobalMetaId,
           toGlobalMetaId: providerGlobalMetaId,
           content,
@@ -415,6 +443,8 @@ export const useMessageStore = create<MessageStoreState>()(
             walletGlobalMetaId,
             providerGlobalMetaId,
             providerChatPubkey: session.providerChatPubkey,
+            providerName: session.peerName,
+            providerAvatarUrl: session.peerAvatarUrl,
             orderCorrelationId: session.orderCorrelationId ?? undefined,
             serviceLabel: session.serviceLabel ?? undefined,
             status: 'active',
@@ -429,6 +459,8 @@ export const useMessageStore = create<MessageStoreState>()(
             sessionId,
             peerGlobalMetaId: providerGlobalMetaId,
             peerChatPubkey: session.providerChatPubkey,
+            peerName: session.peerName,
+            peerAvatarUrl: session.peerAvatarUrl,
             direction: 'outgoing',
             content,
             rawContent,
@@ -461,7 +493,11 @@ export const useMessageStore = create<MessageStoreState>()(
         const sessionProviderKeys = new Map(
           sessions.map((session) => [
             session.id,
-            session.providerChatPubkey?.trim() || undefined,
+            {
+              chatPubkey: session.providerChatPubkey?.trim() || undefined,
+              name: session.providerName?.trim() || undefined,
+              avatarUrl: session.providerAvatarUrl?.trim() || undefined,
+            },
           ]),
         )
         const messages = messageGroups.flat().map((record) =>

@@ -37,6 +37,44 @@ describe('SessionsList', () => {
     expect(screen.getByText('2 assets')).toBeInTheDocument()
   })
 
+  it('displays peer name and avatar when profile media is available', () => {
+    render(
+      <SessionsList
+        sessions={[
+          {
+            ...baseSession,
+            status: 'active',
+            assetCount: 0,
+            peerName: 'Provider Bot',
+            peerAvatarUrl: 'https://cdn.example/provider.png',
+          },
+        ]}
+        selectedSessionKey={null}
+        onSelectSession={vi.fn()}
+        walletConnected
+      />,
+    )
+
+    expect(screen.getByText('Provider Bot')).toBeInTheDocument()
+    expect(screen.getByRole('img', { name: 'Provider Bot avatar' })).toHaveAttribute(
+      'src',
+      'https://cdn.example/provider.png',
+    )
+  })
+
+  it('uses a stable avatar fallback when peer avatar is missing', () => {
+    render(
+      <SessionsList
+        sessions={[{ ...baseSession, status: 'active', assetCount: 0 }]}
+        selectedSessionKey={null}
+        onSelectSession={vi.fn()}
+        walletConnected
+      />,
+    )
+
+    expect(screen.getByLabelText('idq1ab…mnop avatar')).toHaveTextContent('I')
+  })
+
   it('keeps selection behavior intact', () => {
     const onSelectSession = vi.fn()
     render(

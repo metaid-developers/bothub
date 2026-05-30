@@ -1,14 +1,21 @@
 export interface PrivateChatUserInfo {
   globalMetaId?: string
+  globalmetaid?: string
   metaid?: string
+  metaId?: string
   address?: string
   name?: string
   avatar?: string
+  avatarUrl?: string
+  avatarImage?: string
+  avatarId?: string
+  avatarPinId?: string
   chatPublicKey?: string
   chatPubkey?: string
   chatpubkey?: string
   chatPublicKeyId?: string
   chatpubkeyId?: string
+  chatPublicKeyPinId?: string
 }
 
 export interface PrivateChatItem {
@@ -53,29 +60,53 @@ function numberFromTimestamp(value: unknown): number | null {
 function normalizeUserInfo(value: unknown): PrivateChatUserInfo | undefined {
   if (typeof value !== 'object' || value === null || Array.isArray(value)) return undefined
   const row = value as Record<string, unknown>
+  const globalMetaId =
+    nonEmptyString(row.globalMetaId) ??
+    nonEmptyString(row.globalmetaid) ??
+    undefined
+  const metaid =
+    nonEmptyString(row.metaid) ??
+    nonEmptyString(row.metaId) ??
+    undefined
+  const chatKey =
+    nonEmptyString(row.chatPublicKey) ??
+    nonEmptyString(row.chatPubkey) ??
+    nonEmptyString(row.chatpubkey) ??
+    nonEmptyString(row.chat_pubkey) ??
+    nonEmptyString(row.chat_public_key) ??
+    nonEmptyString(row.pubkey) ??
+    undefined
+  const chatKeyId =
+    nonEmptyString(row.chatPublicKeyId) ??
+    nonEmptyString(row.chatpubkeyId) ??
+    nonEmptyString(row.chatPublicKeyPinId) ??
+    nonEmptyString(row.chat_pubkey_id) ??
+    nonEmptyString(row.chat_public_key_pin_id) ??
+    undefined
   const info: PrivateChatUserInfo = {
-    globalMetaId: nonEmptyString(row.globalMetaId) ?? undefined,
-    metaid: nonEmptyString(row.metaid) ?? undefined,
+    globalMetaId,
+    globalmetaid: globalMetaId,
+    metaid,
+    metaId: metaid,
     address: nonEmptyString(row.address) ?? undefined,
     name: nonEmptyString(row.name) ?? undefined,
     avatar: nonEmptyString(row.avatar) ?? undefined,
-    chatPublicKey:
-      nonEmptyString(row.chatPublicKey) ??
-      nonEmptyString(row.chatpubkey) ??
-      nonEmptyString(row.chatPubkey) ??
+    avatarUrl:
+      nonEmptyString(row.avatarUrl) ??
+      nonEmptyString(row.avatarURL) ??
       undefined,
-    chatpubkey:
-      nonEmptyString(row.chatpubkey) ??
-      nonEmptyString(row.chatPubkey) ??
-      nonEmptyString(row.chatPublicKey) ??
+    avatarImage:
+      nonEmptyString(row.avatarImage) ??
+      nonEmptyString(row.avatarImg) ??
       undefined,
-    chatPubkey:
-      nonEmptyString(row.chatPubkey) ??
-      nonEmptyString(row.chatPublicKey) ??
-      nonEmptyString(row.chatpubkey) ??
-      undefined,
-    chatPublicKeyId: nonEmptyString(row.chatPublicKeyId) ?? undefined,
-    chatpubkeyId: nonEmptyString(row.chatpubkeyId) ?? undefined,
+    avatarId: nonEmptyString(row.avatarId) ?? undefined,
+    avatarPinId: nonEmptyString(row.avatarPinId) ?? undefined,
+    chatPublicKey: chatKey,
+    chatpubkey: chatKey,
+    chatPubkey: chatKey,
+    chatPublicKeyId: chatKeyId,
+    chatpubkeyId: chatKeyId,
+    chatPublicKeyPinId: chatKeyId,
   }
   return info
 }
@@ -83,16 +114,20 @@ function normalizeUserInfo(value: unknown): PrivateChatUserInfo | undefined {
 export function normalizePrivateChatItem(value: unknown): PrivateChatItem | null {
   if (typeof value !== 'object' || value === null || Array.isArray(value)) return null
   const row = value as Record<string, unknown>
+  const fromUserInfo = normalizeUserInfo(row.fromUserInfo ?? row.userInfo ?? row.user_info)
+  const toUserInfo = normalizeUserInfo(row.toUserInfo)
   const fromGlobalMetaId =
     nonEmptyString(row.fromGlobalMetaId) ??
     nonEmptyString(row.from) ??
     nonEmptyString(row.createGlobalMetaId) ??
-    nonEmptyString(row.globalMetaId)
+    nonEmptyString(row.globalMetaId) ??
+    fromUserInfo?.globalMetaId
   const toGlobalMetaId =
     nonEmptyString(row.toGlobalMetaId) ??
     nonEmptyString(row.to) ??
     nonEmptyString(row.receiveGlobalMetaId) ??
-    nonEmptyString(row.targetGlobalMetaId)
+    nonEmptyString(row.targetGlobalMetaId) ??
+    toUserInfo?.globalMetaId
   const content = typeof row.content === 'string' ? row.content : null
   const timestamp = numberFromTimestamp(row.timestamp)
   if (!fromGlobalMetaId || !toGlobalMetaId || content === null || timestamp === null) {
@@ -106,10 +141,10 @@ export function normalizePrivateChatItem(value: unknown): PrivateChatItem | null
   return {
     fromGlobalMetaId,
     from: nonEmptyString(row.from) ?? undefined,
-    fromUserInfo: normalizeUserInfo(row.fromUserInfo),
+    fromUserInfo,
     toGlobalMetaId,
     to: nonEmptyString(row.to) ?? undefined,
-    toUserInfo: normalizeUserInfo(row.toUserInfo),
+    toUserInfo,
     txId: nonEmptyString(row.txId) ?? undefined,
     pinId: nonEmptyString(row.pinId) ?? undefined,
     globalMetaId: nonEmptyString(row.globalMetaId) ?? undefined,

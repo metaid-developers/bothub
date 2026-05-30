@@ -6,6 +6,8 @@ import { parseOrderMessage } from '@/delivery/orderParser'
 import { parseDeliveryProtocol } from '@/delivery/protocol'
 import { deliveryAssetsFromMessage } from '@/delivery/sessionDisplay'
 import { AssetPreviewCard } from '@/components/delivery/AssetPreviewCard'
+import { PeerAvatar } from '@/components/delivery/PeerAvatar'
+import { peerDisplayName } from '@/components/delivery/peerDisplay'
 
 export interface MessageBubbleProps {
   message: DeliveryMessage
@@ -82,8 +84,19 @@ function TextBubble({
   isSelf: boolean
   body: string
 }) {
+  const displayName = peerDisplayName({
+    name: message.peerName,
+    globalMetaId: message.peerGlobalMetaId,
+  })
   return (
-    <div className={clsx('flex', isSelf ? 'justify-end' : 'justify-start')}>
+    <div className={clsx('flex gap-2', isSelf ? 'justify-end' : 'justify-start')}>
+      {!isSelf ? (
+        <PeerAvatar
+          name={message.peerName}
+          avatarUrl={message.peerAvatarUrl}
+          globalMetaId={message.peerGlobalMetaId}
+        />
+      ) : null}
       <div
         className={clsx(
           'max-w-[min(100%,28rem)] rounded-card px-3 py-2 text-sm leading-relaxed',
@@ -92,6 +105,11 @@ function TextBubble({
             : 'border border-hub-border bg-hub-surface2 text-white',
         )}
       >
+        {!isSelf ? (
+          <p className="mb-1 truncate text-xs font-medium text-hub-muted">
+            {displayName}
+          </p>
+        ) : null}
         <p className="whitespace-pre-wrap break-words">{body}</p>
         {message.decryptError ? (
           <p className="mt-1 text-xs opacity-70">Could not decrypt — showing ciphertext</p>

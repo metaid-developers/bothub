@@ -245,6 +245,14 @@ export async function persistOutgoingFollowUp(input: {
         input.session.providerChatPubkey?.trim() ||
         existing?.providerChatPubkey?.trim() ||
         undefined,
+      providerName:
+        input.session.providerName?.trim() ||
+        existing?.providerName?.trim() ||
+        undefined,
+      providerAvatarUrl:
+        input.session.providerAvatarUrl?.trim() ||
+        existing?.providerAvatarUrl?.trim() ||
+        undefined,
       lastMessageId: input.message.id,
       lastActivityAt: input.session.lastActivityAt,
     }

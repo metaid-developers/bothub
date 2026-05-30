@@ -1,11 +1,15 @@
-import { getMetafileAccelerateContentBaseUrl, getNormalizedMetaSocketBaseUrl } from '@/api/config'
+import { getNormalizedMetaSocketBaseUrl } from '@/api/config'
 
 export interface UserProfile {
   metaid?: string
   globalMetaId?: string
+  address?: string
   name?: string
   avatar?: string
+  avatarImage?: string
   avatarUrl?: string
+  avatarId?: string
+  avatarPinId?: string
   chatPubkey?: string
 }
 
@@ -30,22 +34,51 @@ function readString(record: Record<string, unknown>, keys: string[]): string | u
   return undefined
 }
 
-function normalizeMetafileAvatarUrl(avatar: string): string {
+function extractAvatarPinId(value: string | undefined): string | undefined {
+  const raw = value?.trim()
+  if (!raw) return undefined
+  const match = raw.match(/([a-fA-F0-9]{64}i\d+)/)
+  if (match?.[1]) return match[1]
+  return undefined
+}
+
+function pinIdFromMetafileAvatar(avatar: string): string | undefined {
   const pathPart = avatar.slice('metafile://'.length).split(/[?#]/)[0]?.trim() ?? ''
   const lastDotIndex = pathPart.lastIndexOf('.')
-  const pinId =
+  const candidate =
     lastDotIndex > 0 && lastDotIndex < pathPart.length - 1
       ? pathPart.slice(0, lastDotIndex)
       : pathPart
-  return `${getMetafileAccelerateContentBaseUrl()}/${encodeURIComponent(pinId)}`
+  return extractAvatarPinId(candidate) ?? (candidate.trim() || undefined)
 }
 
-export function normalizeAvatarUrl(value: string | undefined): string | undefined {
+function avatarThumbnailUrl(pinId: string): string {
+  return `${getNormalizedMetaSocketBaseUrl()}/api/v1/users/avatar/accelerate/${encodeURIComponent(pinId)}?process=thumbnail`
+}
+
+export function normalizeAvatarUrl(
+  value: string | undefined,
+  avatarIdValue?: string | undefined,
+): string | undefined {
   const avatar = value?.trim()
-  if (!avatar || avatar === '/content/') return undefined
-  if (/^https?:\/\//i.test(avatar)) return avatar
-  if (avatar.toLowerCase().startsWith('metafile://')) return normalizeMetafileAvatarUrl(avatar)
+  const avatarId = avatarIdValue?.trim()
+  const pinId =
+    (avatar?.toLowerCase().startsWith('metafile://')
+      ? pinIdFromMetafileAvatar(avatar)
+      : extractAvatarPinId(avatar)) ??
+    extractAvatarPinId(avatarId) ??
+    avatarId
+
+  if (pinId) return avatarThumbnailUrl(pinId)
+  if (!avatar || /^\/(?:files\/)?content\/?$/i.test(avatar)) return undefined
+  if (/^https?:\/\//i.test(avatar)) {
+    if (/\/content\/?$/i.test(avatar)) return undefined
+    return avatar
+  }
   if (avatar.startsWith('/content/')) {
+    return `${getNormalizedMetaSocketBaseUrl()}${avatar}`
+  }
+  if (avatar.startsWith('/files/content/')) {
     return `${getNormalizedMetaSocketBaseUrl()}${avatar}`
   }
   return avatar
@@ -56,14 +89,24 @@ function normalizeUserProfile(raw: unknown): UserProfile {
   if (!record) return {}
 
   const avatar = readString(record, ['avatar'])
-  const avatarUrl = normalizeAvatarUrl(readString(record, ['avatarUrl', 'avatarURL']) ?? avatar)
+  const avatarImage = readString(record, ['avatarImage', 'avatarImg'])
+  const avatarId = readString(record, ['avatarId'])
+  const avatarPinId = readString(record, ['avatarPinId'])
+  const avatarUrl = normalizeAvatarUrl(
+    readString(record, ['avatarUrl', 'avatarURL']) ?? avatarImage ?? avatar,
+    avatarId ?? avatarPinId,
+  )
 
   return {
     metaid: readString(record, ['metaid', 'metaId']),
     globalMetaId: readString(record, ['globalMetaId', 'globalmetaid']),
+    address: readString(record, ['address']),
     name: readString(record, ['name', 'nameId']),
     avatar,
+    avatarImage,
     avatarUrl,
+    avatarId,
+    avatarPinId,
     chatPubkey: readString(record, [
       'chatpubkey',
       'chatPubkey',
@@ -85,6 +128,23 @@ function unwrapLegacyInfoEnvelope(raw: unknown): unknown {
   return envelope.data
 }
 
+function avatarNeedsAddressFallback(profile: UserProfile): boolean {
+  if (!profile.address?.trim()) return false
+  if (!profile.avatarUrl?.trim()) return true
+  return /\/content\/?$/i.test(profile.avatarUrl.trim())
+}
+
+async function fetchUserProfileByAddress(address: string): Promise<UserProfile> {
+  const trimmed = address.trim()
+  if (!trimmed) return {}
+
+  const baseUrl = getNormalizedMetaSocketBaseUrl()
+  const response = await fetch(`${baseUrl}/api/users/address/${encodeURIComponent(trimmed)}`)
+  if (!response.ok) return {}
+  const payload: unknown = await response.json()
+  return normalizeUserProfile(unwrapLegacyInfoEnvelope(payload))
+}
+
 export async function fetchUserProfileByGlobalMetaId(globalMetaId: string): Promise<UserProfile> {
   const trimmed = globalMetaId.trim()
   if (!trimmed) return {}
@@ -92,5 +152,18 @@ export async function fetchUserProfileByGlobalMetaId(globalMetaId: string): Prom
   const baseUrl = getNormalizedMetaSocketBaseUrl()
   const response = await fetch(`${baseUrl}/api/info/globalmetaid/${encodeURIComponent(trimmed)}`)
   const payload: unknown = await response.json()
-  return normalizeUserProfile(unwrapLegacyInfoEnvelope(payload))
+  const profile = normalizeUserProfile(unwrapLegacyInfoEnvelope(payload))
+  if (!avatarNeedsAddressFallback(profile)) return profile
+
+  const addressProfile = await fetchUserProfileByAddress(profile.address ?? '')
+  return {
+    ...profile,
+    ...addressProfile,
+    avatar: addressProfile.avatar ?? profile.avatar,
+    avatarImage: addressProfile.avatarImage ?? profile.avatarImage,
+    avatarUrl: addressProfile.avatarUrl ?? profile.avatarUrl,
+    avatarId: addressProfile.avatarId ?? profile.avatarId,
+    avatarPinId: addressProfile.avatarPinId ?? profile.avatarPinId,
+    chatPubkey: addressProfile.chatPubkey ?? profile.chatPubkey,
+  }
 }

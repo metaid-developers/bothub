@@ -45,6 +45,37 @@ describe('MessageBubble', () => {
     expect(screen.getByText('2 assets attached')).toBeInTheDocument()
   })
 
+  it('shows incoming peer name and avatar beside regular private chat text', () => {
+    render(
+      <MessageBubble
+        message={message('hello from provider', {
+          peerName: 'Provider Bot',
+          peerAvatarUrl: 'https://cdn.example/provider.png',
+        } as Partial<DeliveryMessage>)}
+        selfGlobalMetaId="self"
+      />,
+    )
+
+    expect(screen.getByText('Provider Bot')).toBeInTheDocument()
+    expect(screen.getByRole('img', { name: 'Provider Bot avatar' })).toHaveAttribute(
+      'src',
+      'https://cdn.example/provider.png',
+    )
+  })
+
+  it('shows a stable incoming peer avatar fallback when profile media is missing', () => {
+    render(
+      <MessageBubble
+        message={message('hello from provider', {
+          peerGlobalMetaId: 'idqproviderabcdef',
+        })}
+        selfGlobalMetaId="self"
+      />,
+    )
+
+    expect(screen.getByLabelText('idqpro…cdef avatar')).toHaveTextContent('I')
+  })
+
   it('counts structured delivery assets without rendering raw payload as body text', () => {
     render(
       <MessageBubble

@@ -18,6 +18,8 @@ export interface BuyerOrder {
   walletGlobalMetaId: string
   providerGlobalMetaId: string
   providerChatPubkey?: string
+  providerName?: string
+  providerAvatarUrl?: string
   serviceId: string
   serviceName: string
   skillName: string
@@ -53,6 +55,8 @@ export interface DeliverySessionRecord {
   walletGlobalMetaId: string
   providerGlobalMetaId: string
   providerChatPubkey?: string
+  providerName?: string
+  providerAvatarUrl?: string
   orderCorrelationId?: string
   serviceId?: string
   serviceLabel?: string
@@ -69,6 +73,8 @@ export interface DeliveryMessageRecord {
   sessionId: string
   peerGlobalMetaId: string
   peerChatPubkey?: string
+  peerName?: string
+  peerAvatarUrl?: string
   direction: 'incoming' | 'outgoing'
   content: string
   rawContent: string

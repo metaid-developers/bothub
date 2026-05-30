@@ -5,6 +5,9 @@ async function loadUserProfile() {
 }
 
 describe('user profile API client', () => {
+  const avatarPin = `${'a'.repeat(64)}i0`
+  const expectedAvatarThumbnail = `/meta-socket/api/v1/users/avatar/accelerate/${avatarPin}?process=thumbnail`
+
   beforeEach(() => {
     vi.stubEnv('VITE_META_SOCKET_BASE_URL', '/meta-socket/')
     vi.stubEnv('VITE_METAFILE_ACCELERATE_CONTENT_BASE', 'https://files.example/accelerate')
@@ -79,8 +82,9 @@ describe('user profile API client', () => {
   })
 
   it.each([
-    ['metafile://avatar-pin.png', 'https://files.example/accelerate/avatar-pin'],
-    ['/content/avatar-pin', '/meta-socket/content/avatar-pin'],
+    [`metafile://${avatarPin}.png`, expectedAvatarThumbnail],
+    [`/content/${avatarPin}`, expectedAvatarThumbnail],
+    [`/files/content/${avatarPin}`, expectedAvatarThumbnail],
     ['https://cdn.example/avatar.png', 'https://cdn.example/avatar.png'],
   ])('normalizes avatar URL %s', async (avatar, expectedAvatarUrl) => {
     vi.stubGlobal(
@@ -102,5 +106,91 @@ describe('user profile API client', () => {
 
     expect(profile.avatar).toBe(avatar)
     expect(profile.avatarUrl).toBe(expectedAvatarUrl)
+  })
+
+  it.each(['avatarId', 'avatarPinId'] as const)(
+    'normalizes %s through the avatar thumbnail endpoint',
+    async (fieldName) => {
+      vi.stubGlobal(
+        'fetch',
+        vi.fn().mockResolvedValue({
+          ok: true,
+          json: async () => ({
+            code: 1,
+            data: {
+              globalMetaId: 'global-avatar-id',
+              [fieldName]: avatarPin,
+            },
+          }),
+        }),
+      )
+
+      const { fetchUserProfileByGlobalMetaId } = await loadUserProfile()
+      const profile = await fetchUserProfileByGlobalMetaId('global-avatar-id')
+
+      expect(profile.avatarUrl).toBe(expectedAvatarThumbnail)
+    },
+  )
+
+  it('does not treat bare /content/ as a usable avatar image', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          code: 1,
+          data: {
+            globalMetaId: 'global-bare-content',
+            avatar: '/content/',
+          },
+        }),
+      }),
+    )
+
+    const { fetchUserProfileByGlobalMetaId } = await loadUserProfile()
+    const profile = await fetchUserProfileByGlobalMetaId('global-bare-content')
+
+    expect(profile.avatarUrl).toBeUndefined()
+  })
+
+  it('falls back to the address profile when the globalMetaId profile has only an unusable avatar', async () => {
+    const fetchMock = vi.fn(async (url: string) => {
+      if (url === '/meta-socket/api/users/address/1ProviderAddress') {
+        return {
+          ok: true,
+          json: async () => ({
+            code: 1,
+            data: {
+              globalMetaId: 'global-address-fallback',
+              address: '1ProviderAddress',
+              name: 'Address Bot',
+              avatarPinId: avatarPin,
+            },
+          }),
+        }
+      }
+      return {
+        ok: true,
+        json: async () => ({
+          code: 1,
+          data: {
+            globalMetaId: 'global-address-fallback',
+            address: '1ProviderAddress',
+            avatar: '/content/',
+          },
+        }),
+      }
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    const { fetchUserProfileByGlobalMetaId } = await loadUserProfile()
+    const profile = await fetchUserProfileByGlobalMetaId('global-address-fallback')
+
+    expect(fetchMock).toHaveBeenCalledWith('/meta-socket/api/info/globalmetaid/global-address-fallback')
+    expect(fetchMock).toHaveBeenCalledWith('/meta-socket/api/users/address/1ProviderAddress')
+    expect(profile).toMatchObject({
+      name: 'Address Bot',
+      avatarUrl: expectedAvatarThumbnail,
+    })
   })
 })

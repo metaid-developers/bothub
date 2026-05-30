@@ -41,9 +41,15 @@ vi.mock('@/api/privateChat', async () => {
   }
 })
 
-vi.mock('@/api/userProfile', () => ({
-  fetchUserProfileByGlobalMetaId: vi.fn(),
-}))
+vi.mock('@/api/userProfile', async () => {
+  const actual = await vi.importActual<typeof import('@/api/userProfile')>(
+    '@/api/userProfile',
+  )
+  return {
+    ...actual,
+    fetchUserProfileByGlobalMetaId: vi.fn(),
+  }
+})
 
 const SELF = 'idqself'
 const MVC_SELF = '1SelfMvcAddress'
@@ -402,6 +408,76 @@ describe('deliverySync', () => {
       expect.objectContaining({
         id: `${SELF}:${PEER}:order-profile`,
         providerChatPubkey: 'profile-session-key',
+      }),
+    ])
+  })
+
+  it('stores peer display profile from private chat userInfo on messages and sessions', async () => {
+    await mergePrivateChatItem({
+      item: privateChatItem({
+        fromUserInfo: {
+          globalMetaId: PEER,
+          name: 'Provider Bot',
+          avatarUrl: 'https://cdn.example/provider.png',
+          chatPublicKey: 'provider-chat-key',
+        },
+        pinId: 'pin-userinfo-profile',
+        content: '[ORDER_STATUS:order-userinfo-profile] Working',
+      }),
+      selfGlobalMetaId: SELF,
+      walletIdentity: wallet,
+    })
+
+    expect(useMessageStore.getState().messagesForSession(`${PEER}:order-userinfo-profile`, SELF)).toEqual([
+      expect.objectContaining({
+        id: 'pin-userinfo-profile',
+        peerName: 'Provider Bot',
+        peerAvatarUrl: 'https://cdn.example/provider.png',
+        peerChatPubkey: 'provider-chat-key',
+      }),
+    ])
+    expect(await getMessagesForSession(`${SELF}:${PEER}:order-userinfo-profile`)).toEqual([
+      expect.objectContaining({
+        id: 'pin-userinfo-profile',
+        peerName: 'Provider Bot',
+        peerAvatarUrl: 'https://cdn.example/provider.png',
+        peerChatPubkey: 'provider-chat-key',
+      }),
+    ])
+    expect(await getSessionsForWallet(SELF)).toEqual([
+      expect.objectContaining({
+        id: `${SELF}:${PEER}:order-userinfo-profile`,
+        providerName: 'Provider Bot',
+        providerAvatarUrl: 'https://cdn.example/provider.png',
+        providerChatPubkey: 'provider-chat-key',
+      }),
+    ])
+  })
+
+  it('uses profile display fields as fallback when private chat userInfo omits them', async () => {
+    mockedFetchUserProfileByGlobalMetaId.mockResolvedValue({
+      globalMetaId: PEER,
+      name: 'Profile Bot',
+      avatarUrl: 'https://cdn.example/profile-bot.png',
+      chatPubkey: 'profile-display-key',
+    })
+
+    await mergePrivateChatItem({
+      item: privateChatItem({
+        fromUserInfo: undefined,
+        pinId: 'pin-profile-display',
+        content: '[ORDER_STATUS:order-profile-display] Working',
+      }),
+      selfGlobalMetaId: SELF,
+      walletIdentity: wallet,
+    })
+
+    expect(useMessageStore.getState().messagesForSession(`${PEER}:order-profile-display`, SELF)).toEqual([
+      expect.objectContaining({
+        id: 'pin-profile-display',
+        peerName: 'Profile Bot',
+        peerAvatarUrl: 'https://cdn.example/profile-bot.png',
+        peerChatPubkey: 'profile-display-key',
       }),
     ])
   })

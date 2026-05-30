@@ -73,6 +73,20 @@ function providerChatPubkeyForSession(
     ?.peerChatPubkey?.trim()
 }
 
+function peerNameForSession(messages: DeliveryMessage[]): string | undefined {
+  return [...messages]
+    .reverse()
+    .find((message) => message.peerName?.trim())
+    ?.peerName?.trim()
+}
+
+function peerAvatarUrlForSession(messages: DeliveryMessage[]): string | undefined {
+  return [...messages]
+    .reverse()
+    .find((message) => message.peerAvatarUrl?.trim())
+    ?.peerAvatarUrl?.trim()
+}
+
 export function resolveProviderChatPubkey(input: {
   session: (Pick<DeliverySession, 'peerGlobalMetaId' | 'providerChatPubkey'> & {
     orderCorrelationId?: string | null
@@ -208,6 +222,8 @@ export function buildGroupedSessionList(
         sessionKey,
         peerGlobalMetaId: peerGlobalMetaId.trim(),
         providerChatPubkey: providerChatPubkeyForSession(sorted, selfGlobalMetaId),
+        peerName: peerNameForSession(sorted),
+        peerAvatarUrl: peerAvatarUrlForSession(sorted),
         orderCorrelationId,
         serviceLabel,
         lastMessage,
@@ -236,6 +252,8 @@ export function buildSessionList(
       sessionKey: peerGlobalMetaId,
       peerGlobalMetaId,
       providerChatPubkey: providerChatPubkeyForSession(sorted, ''),
+      peerName: peerNameForSession(sorted),
+      peerAvatarUrl: peerAvatarUrlForSession(sorted),
       orderCorrelationId: null,
       serviceLabel: null,
       lastMessage,

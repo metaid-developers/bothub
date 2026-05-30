@@ -1,5 +1,7 @@
 import { clsx } from 'clsx'
 import { EmptyState } from '@/components/common/EmptyState'
+import { PeerAvatar } from '@/components/delivery/PeerAvatar'
+import { peerDisplayName } from '@/components/delivery/peerDisplay'
 import { sessionPreviewText } from '@/delivery/messageDisplay'
 import type { EnrichedDeliverySession } from '@/delivery/sessionDisplay'
 import { t } from '@/i18n'
@@ -48,6 +50,10 @@ export function SessionsList({
     <ul className="flex flex-col gap-1" aria-label={t('delivery.sessions')}>
       {sessions.map((session) => {
         const selected = session.sessionKey === selectedSessionKey
+        const displayName = peerDisplayName({
+          name: session.peerName,
+          globalMetaId: session.peerGlobalMetaId,
+        })
         return (
           <li key={session.sessionKey}>
             <button
@@ -60,13 +66,27 @@ export function SessionsList({
                   : 'border-hub-border bg-hub-surface/60 hover:border-hub-muted/50',
               )}
             >
-              <div className="flex min-w-0 items-center justify-between gap-2">
-                <span className="truncate font-semibold text-white">
-                  {truncateGlobalMetaId(session.peerGlobalMetaId)}
-                </span>
-                <span className="shrink-0 rounded-full border border-hub-border px-2 py-0.5 text-[10px] font-medium text-hub-muted">
-                  {t(`delivery.status.${session.status}`)}
-                </span>
+              <div className="flex min-w-0 items-start gap-3">
+                <PeerAvatar
+                  name={session.peerName}
+                  avatarUrl={session.peerAvatarUrl}
+                  globalMetaId={session.peerGlobalMetaId}
+                />
+                <div className="min-w-0 flex-1">
+                  <div className="flex min-w-0 items-center justify-between gap-2">
+                    <span className="truncate font-semibold text-white">
+                      {displayName}
+                    </span>
+                    <span className="shrink-0 rounded-full border border-hub-border px-2 py-0.5 text-[10px] font-medium text-hub-muted">
+                      {t(`delivery.status.${session.status}`)}
+                    </span>
+                  </div>
+                  {session.peerName ? (
+                    <p className="mt-0.5 truncate font-mono text-[11px] text-hub-muted">
+                      {truncateGlobalMetaId(session.peerGlobalMetaId)}
+                    </p>
+                  ) : null}
+                </div>
               </div>
               {session.serviceLabel ? (
                 <p className="mt-0.5 text-xs font-medium text-hub-accent">

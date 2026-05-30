@@ -8,15 +8,36 @@ describe('SessionHeader', () => {
       <SessionHeader
         session={{
           peerGlobalMetaId: 'idq1abcdefghijklmnop',
+          peerName: 'Provider Bot',
+          peerAvatarUrl: 'https://cdn.example/provider.png',
           serviceLabel: 'Image Render',
           status: 'delivered',
         }}
       />,
     )
 
+    expect(screen.getByText('Provider Bot')).toBeInTheDocument()
     expect(screen.getByText('idq1ab…mnop')).toBeInTheDocument()
+    expect(screen.getByRole('img', { name: 'Provider Bot avatar' })).toHaveAttribute(
+      'src',
+      'https://cdn.example/provider.png',
+    )
     expect(screen.getByText('Image Render')).toBeInTheDocument()
     expect(screen.getByText('Delivered')).toBeInTheDocument()
+  })
+
+  it('uses a stable fallback avatar when profile media is missing', () => {
+    render(
+      <SessionHeader
+        session={{
+          peerGlobalMetaId: 'idq1abcdefghijklmnop',
+          serviceLabel: 'Image Render',
+          status: 'active',
+        }}
+      />,
+    )
+
+    expect(screen.getByLabelText('idq1ab…mnop avatar')).toHaveTextContent('I')
   })
 
   it('keeps the empty selected state useful', () => {

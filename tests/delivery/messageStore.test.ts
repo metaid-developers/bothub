@@ -167,6 +167,45 @@ describe('messageStore', () => {
     ])
   })
 
+  it('upgrades same-id messages when later peer display profile fields arrive', () => {
+    const { append, listSessions, messagesForSession } = useMessageStore.getState()
+
+    append(
+      sampleMessage({
+        id: 'upgrade-peer-profile',
+        peerGlobalMetaId: 'idqpeer',
+        content: '[ORDER_STATUS:order-profile-upgrade] Working',
+        rawContent: '[ORDER_STATUS:order-profile-upgrade] Working',
+        orderCorrelationId: 'order-profile-upgrade',
+      }),
+    )
+    append(
+      sampleMessage({
+        id: 'upgrade-peer-profile',
+        peerGlobalMetaId: 'idqpeer',
+        content: '[ORDER_STATUS:order-profile-upgrade] Working',
+        rawContent: '[ORDER_STATUS:order-profile-upgrade] Working',
+        orderCorrelationId: 'order-profile-upgrade',
+        peerName: 'Provider Bot',
+        peerAvatarUrl: 'https://cdn.example/provider.png',
+      }),
+    )
+
+    expect(messagesForSession('idqpeer:order-profile-upgrade', SELF)).toEqual([
+      expect.objectContaining({
+        id: 'upgrade-peer-profile',
+        peerName: 'Provider Bot',
+        peerAvatarUrl: 'https://cdn.example/provider.png',
+      }),
+    ])
+    expect(listSessions(SELF)).toEqual([
+      expect.objectContaining({
+        peerName: 'Provider Bot',
+        peerAvatarUrl: 'https://cdn.example/provider.png',
+      }),
+    ])
+  })
+
   it('lists sessions by latest message timestamp', () => {
     const { append, listSessions } = useMessageStore.getState()
     append(
@@ -332,6 +371,67 @@ describe('messageStore', () => {
       expect.objectContaining({
         id: 'pin-session-key',
         peerChatPubkey: 'session-only-provider-key',
+      }),
+    ])
+  })
+
+  it('hydrates provider display profile from the persisted session when message rows do not carry it', async () => {
+    const sessionId = `${SELF}:idqpeer:session-profile-only`
+    await putSession({
+      id: sessionId,
+      walletGlobalMetaId: SELF,
+      providerGlobalMetaId: 'idqpeer',
+      providerChatPubkey: 'session-profile-key',
+      providerName: 'Stored Provider',
+      providerAvatarUrl: 'https://cdn.example/stored-provider.png',
+      orderCorrelationId: 'session-profile-only',
+      serviceId: 'svc-session-profile',
+      serviceLabel: 'Session Profile Skill',
+      status: 'pending',
+      lastMessageId: 'pin-session-profile',
+      lastActivityAt: 16,
+      assetCount: 0,
+      unreadCount: 0,
+    })
+    await putMessage({
+      id: 'pin-session-profile',
+      walletGlobalMetaId: SELF,
+      sessionId,
+      peerGlobalMetaId: 'idqpeer',
+      direction: 'outgoing',
+      content: buildOrderPayload({
+        displayText: 'Session Profile Skill',
+        rawRequest: 'Please start',
+        price: '0',
+        currency: 'SPACE',
+        orderReference: 'session-profile-only',
+        serviceId: 'svc-session-profile',
+        skillName: 'session-profile-skill',
+        outputType: 'text',
+      }),
+      rawContent: 'raw session profile',
+      contentType: 'text/plain',
+      encryption: 'plain',
+      orderCorrelationId: 'session-profile-only',
+      pinId: 'pin-session-profile',
+      timestamp: 16,
+      decryptStatus: 'plain',
+    })
+
+    await useMessageStore.getState().hydrateFromDb(SELF)
+
+    expect(useMessageStore.getState().listSessions(SELF)).toEqual([
+      expect.objectContaining({
+        sessionKey: 'idqpeer:session-profile-only',
+        peerName: 'Stored Provider',
+        peerAvatarUrl: 'https://cdn.example/stored-provider.png',
+      }),
+    ])
+    expect(useMessageStore.getState().messagesForSession('idqpeer:session-profile-only', SELF)).toEqual([
+      expect.objectContaining({
+        id: 'pin-session-profile',
+        peerName: 'Stored Provider',
+        peerAvatarUrl: 'https://cdn.example/stored-provider.png',
       }),
     ])
   })

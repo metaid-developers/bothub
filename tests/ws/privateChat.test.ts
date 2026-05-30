@@ -3,6 +3,7 @@ import {
   isPrivateChatForRecipient,
   isPrivateChatItem,
   messageIdFromPrivateChat,
+  normalizePrivateChatItem,
   peerChatPublicKeyFromPrivateChat,
   peerGlobalMetaIdFromPrivateChat,
   type PrivateChatItem,
@@ -47,6 +48,65 @@ describe('privateChat', () => {
     expect(
       peerChatPublicKeyFromPrivateChat(item, 'idqself', ['1SelfMvcAddress']),
     ).toBe('peer-key')
+  })
+
+  it('preserves userInfo display, avatar, address, and chat key aliases', () => {
+    const normalized = normalizePrivateChatItem({
+      fromGlobalMetaId: 'idqpeer',
+      toGlobalMetaId: 'idqself',
+      content: 'cipher',
+      timestamp: 1_700_000_000,
+      fromUserInfo: {
+        globalMetaId: 'idqpeer',
+        metaId: 'meta-peer',
+        address: '1PeerAddress',
+        name: 'Provider Bot',
+        avatar: 'metafile://avatar-pin.png',
+        avatarUrl: 'https://cdn.example/avatar.png',
+        avatarImage: '/content/avatar-pin',
+        avatarId: 'avatar-id',
+        avatarPinId: 'avatar-pin-id',
+        chat_pubkey: 'peer-key',
+        chatPublicKeyPinId: 'chat-key-pin',
+      },
+    })
+
+    expect(normalized?.fromUserInfo).toMatchObject({
+      globalMetaId: 'idqpeer',
+      metaid: 'meta-peer',
+      address: '1PeerAddress',
+      name: 'Provider Bot',
+      avatar: 'metafile://avatar-pin.png',
+      avatarUrl: 'https://cdn.example/avatar.png',
+      avatarImage: '/content/avatar-pin',
+      avatarId: 'avatar-id',
+      avatarPinId: 'avatar-pin-id',
+      chatPublicKey: 'peer-key',
+      chatPubkey: 'peer-key',
+      chatpubkey: 'peer-key',
+      chatPublicKeyId: 'chat-key-pin',
+      chatpubkeyId: 'chat-key-pin',
+    })
+  })
+
+  it('derives from/to globalMetaId from preserved userInfo when top-level fields are missing', () => {
+    const normalized = normalizePrivateChatItem({
+      content: 'cipher',
+      timestamp: 1_700_000_000,
+      fromUserInfo: {
+        globalMetaId: 'idqpeer',
+        name: 'Provider Bot',
+      },
+      toUserInfo: {
+        globalmetaid: 'idqself',
+      },
+    })
+
+    expect(normalized).toMatchObject({
+      fromGlobalMetaId: 'idqpeer',
+      toGlobalMetaId: 'idqself',
+      fromUserInfo: expect.objectContaining({ name: 'Provider Bot' }),
+    })
   })
 
   it('builds stable message id from pinId', () => {

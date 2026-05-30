@@ -3,7 +3,11 @@ import {
   listPrivateChatHomes,
   resolvePrivateChatMetaId,
 } from '@/api/privateChat'
-import { fetchUserProfileByGlobalMetaId } from '@/api/userProfile'
+import {
+  fetchUserProfileByGlobalMetaId,
+  normalizeAvatarUrl,
+  type UserProfile,
+} from '@/api/userProfile'
 import { getOrdersForWallet, getSessionsForWallet, putSyncState } from '@/delivery/db'
 import { decryptIncoming } from '@/delivery/decrypt'
 import {
@@ -17,6 +21,7 @@ import {
   peerChatPublicKeyFromPrivateChat,
   peerGlobalMetaIdFromPrivateChat,
   type PrivateChatItem,
+  type PrivateChatUserInfo,
 } from '@/ws/privateChat'
 
 export interface MergePrivateChatResult {
@@ -30,7 +35,13 @@ export interface PrivateChatHistorySyncSummary {
   failedPeers: Array<{ peerGlobalMetaId: string; error: unknown }>
 }
 
-type PeerChatPublicKeyCache = Map<string, Promise<string | undefined>>
+interface PeerProfile {
+  chatPubkey?: string
+  name?: string
+  avatarUrl?: string
+}
+
+type PeerProfileCache = Map<string, Promise<PeerProfile>>
 
 function selfAliasesForWallet(identity: WalletIdentity): string[] {
   return Array.from(
@@ -50,89 +61,165 @@ function isSelfAlias(value: string, aliases: ReadonlySet<string>): boolean {
   return aliases.has(value.trim())
 }
 
-function peerChatPublicKeyFromMemory(peerGlobalMetaId: string): string | undefined {
-  const messages = useMessageStore.getState().byPeer[peerGlobalMetaId.trim()] ?? []
-  return [...messages]
-    .reverse()
-    .find((message) => message.peerChatPubkey?.trim())
-    ?.peerChatPubkey?.trim()
+function mergePeerProfiles(...profiles: Array<PeerProfile | undefined>): PeerProfile {
+  const merged: PeerProfile = {}
+  for (const profile of profiles) {
+    if (!profile) continue
+    merged.chatPubkey ||= profile.chatPubkey?.trim() || undefined
+    merged.name ||= profile.name?.trim() || undefined
+    merged.avatarUrl ||= profile.avatarUrl?.trim() || undefined
+  }
+  return merged
 }
 
-async function peerChatPublicKeyFromLocalDb(input: {
+function peerProfileFromMemory(peerGlobalMetaId: string): PeerProfile {
+  const messages = useMessageStore.getState().byPeer[peerGlobalMetaId.trim()] ?? []
+  return [...messages].reverse().reduce<PeerProfile>((profile, message) => {
+    if (!profile.chatPubkey) profile.chatPubkey = message.peerChatPubkey?.trim() || undefined
+    if (!profile.name) profile.name = message.peerName?.trim() || undefined
+    if (!profile.avatarUrl) profile.avatarUrl = message.peerAvatarUrl?.trim() || undefined
+    return profile
+  }, {})
+}
+
+async function peerProfileFromLocalDb(input: {
   walletGlobalMetaId: string
   peerGlobalMetaId: string
-}): Promise<string | undefined> {
+}): Promise<PeerProfile> {
   const wallet = input.walletGlobalMetaId.trim()
   const peer = input.peerGlobalMetaId.trim()
-  if (!wallet || !peer) return undefined
+  if (!wallet || !peer) return {}
 
   const sessions = await getSessionsForWallet(wallet)
-  const sessionKey = sessions.find(
+  const sessionProfile = sessions.find(
     (session) =>
       session.providerGlobalMetaId.trim() === peer &&
-      session.providerChatPubkey?.trim(),
-  )?.providerChatPubkey?.trim()
-  if (sessionKey) return sessionKey
+      (session.providerChatPubkey?.trim() ||
+        session.providerName?.trim() ||
+        session.providerAvatarUrl?.trim()),
+  )
+  if (sessionProfile) {
+    return {
+      chatPubkey: sessionProfile.providerChatPubkey?.trim() || undefined,
+      name: sessionProfile.providerName?.trim() || undefined,
+      avatarUrl: sessionProfile.providerAvatarUrl?.trim() || undefined,
+    }
+  }
 
   const orders = await getOrdersForWallet(wallet)
-  return orders.find(
+  const orderProfile = orders.find(
     (order) =>
       order.providerGlobalMetaId.trim() === peer &&
-      order.providerChatPubkey?.trim(),
-  )?.providerChatPubkey?.trim()
+      (order.providerChatPubkey?.trim() ||
+        order.providerName?.trim() ||
+        order.providerAvatarUrl?.trim()),
+  )
+  return {
+    chatPubkey: orderProfile?.providerChatPubkey?.trim() || undefined,
+    name: orderProfile?.providerName?.trim() || undefined,
+    avatarUrl: orderProfile?.providerAvatarUrl?.trim() || undefined,
+  }
 }
 
-async function resolvePeerChatPublicKey(input: {
+function peerUserInfoFromPrivateChat(
+  item: PrivateChatItem,
+  selfGlobalMetaId: string,
+  selfAliases: readonly string[],
+): PrivateChatUserInfo | undefined {
+  const selfIds = new Set([selfGlobalMetaId, ...selfAliases].map((value) => value.trim()))
+  return selfIds.has(item.fromGlobalMetaId.trim()) ? item.toUserInfo : item.fromUserInfo
+}
+
+function peerProfileFromUserInfo(info: PrivateChatUserInfo | undefined): PeerProfile {
+  if (!info) return {}
+  return {
+    chatPubkey:
+      info.chatPublicKey?.trim() ||
+      info.chatPubkey?.trim() ||
+      info.chatpubkey?.trim() ||
+      undefined,
+    name: info.name?.trim() || undefined,
+    avatarUrl: normalizeAvatarUrl(
+      info.avatarUrl?.trim() || info.avatarImage?.trim() || info.avatar?.trim() || undefined,
+      info.avatarId?.trim() || info.avatarPinId?.trim() || undefined,
+    ),
+  }
+}
+
+function peerProfileFromUserProfile(profile: UserProfile): PeerProfile {
+  return {
+    chatPubkey: profile.chatPubkey?.trim() || undefined,
+    name: profile.name?.trim() || undefined,
+    avatarUrl: profile.avatarUrl?.trim() || undefined,
+  }
+}
+
+async function resolvePeerProfile(input: {
   item: PrivateChatItem
   selfGlobalMetaId: string
   selfAliases: readonly string[]
   peerGlobalMetaId: string
-  cache: PeerChatPublicKeyCache
+  cache: PeerProfileCache
   pushDebug?: (line: string) => void
-}): Promise<string | undefined> {
-  const fromMessage = peerChatPublicKeyFromPrivateChat(
-    input.item,
-    input.selfGlobalMetaId,
-    input.selfAliases,
+}): Promise<PeerProfile> {
+  const fromMessage = mergePeerProfiles(
+    peerProfileFromUserInfo(
+      peerUserInfoFromPrivateChat(input.item, input.selfGlobalMetaId, input.selfAliases),
+    ),
+    {
+      chatPubkey: peerChatPublicKeyFromPrivateChat(
+        input.item,
+        input.selfGlobalMetaId,
+        input.selfAliases,
+      ),
+    },
   )
-  if (fromMessage) return fromMessage
+  if (fromMessage.chatPubkey && (fromMessage.name || fromMessage.avatarUrl)) {
+    return fromMessage
+  }
 
   const peerGlobalMetaId = input.peerGlobalMetaId.trim()
-  if (!peerGlobalMetaId) return undefined
+  if (!peerGlobalMetaId) return fromMessage
 
   let cached = input.cache.get(peerGlobalMetaId)
   if (!cached) {
     cached = (async () => {
-      const fromMemory = peerChatPublicKeyFromMemory(peerGlobalMetaId)
-      if (fromMemory) return fromMemory
+      const withMemory = mergePeerProfiles(fromMessage, peerProfileFromMemory(peerGlobalMetaId))
+      if (withMemory.chatPubkey && (withMemory.name || withMemory.avatarUrl)) {
+        return withMemory
+      }
 
+      let withFallback = withMemory
       try {
-        const fromDb = await peerChatPublicKeyFromLocalDb({
-          walletGlobalMetaId: input.selfGlobalMetaId,
-          peerGlobalMetaId,
-        })
-        if (fromDb) return fromDb
+        withFallback = mergePeerProfiles(
+          withMemory,
+          await peerProfileFromLocalDb({
+            walletGlobalMetaId: input.selfGlobalMetaId,
+            peerGlobalMetaId,
+          }),
+        )
+        if (withFallback.chatPubkey) return withFallback
       } catch (error) {
         const detail = error instanceof Error ? error.message : String(error)
         input.pushDebug?.(
-          `[cache] peer chat key was not loaded for ${peerGlobalMetaId.slice(0, 8)}…: ${detail}`,
+          `[cache] peer profile was not loaded for ${peerGlobalMetaId.slice(0, 8)}…: ${detail}`,
         )
       }
 
       try {
         const profile = await fetchUserProfileByGlobalMetaId(peerGlobalMetaId)
-        return profile.chatPubkey?.trim() || undefined
+        return mergePeerProfiles(withFallback, peerProfileFromUserProfile(profile))
       } catch (error) {
         const detail = error instanceof Error ? error.message : String(error)
         input.pushDebug?.(
           `[profile] peer chat key was not loaded for ${peerGlobalMetaId.slice(0, 8)}…: ${detail}`,
         )
-        return undefined
+        return withFallback
       }
     })()
     input.cache.set(peerGlobalMetaId, cached)
   }
-  return cached
+  return mergePeerProfiles(fromMessage, await cached)
 }
 
 async function privateChatToDeliveryMessage(input: {
@@ -140,7 +227,7 @@ async function privateChatToDeliveryMessage(input: {
   selfGlobalMetaId: string
   walletIdentity: WalletIdentity
   pushDebug?: (line: string) => void
-  peerChatPublicKeyCache?: PeerChatPublicKeyCache
+  peerChatPublicKeyCache?: PeerProfileCache
 }): Promise<DeliveryMessage> {
   const self = input.selfGlobalMetaId.trim()
   const selfAliases = selfAliasesForWallet(input.walletIdentity)
@@ -150,7 +237,7 @@ async function privateChatToDeliveryMessage(input: {
     self,
     selfAliases,
   )
-  const peerChatPubKey = await resolvePeerChatPublicKey({
+  const peerProfile = await resolvePeerProfile({
     item: input.item,
     selfGlobalMetaId: self,
     selfAliases,
@@ -158,6 +245,7 @@ async function privateChatToDeliveryMessage(input: {
     cache: input.peerChatPublicKeyCache ?? new Map(),
     pushDebug: input.pushDebug,
   })
+  const peerChatPubKey = peerProfile.chatPubkey
   const rawContent = input.item.content
   const { plaintext, error } = await decryptIncoming({
     content: rawContent,
@@ -182,6 +270,8 @@ async function privateChatToDeliveryMessage(input: {
     id: messageIdFromPrivateChat(input.item),
     peerGlobalMetaId,
     peerChatPubkey: peerChatPubKey,
+    peerName: peerProfile.name,
+    peerAvatarUrl: peerProfile.avatarUrl,
     fromGlobalMetaId,
     toGlobalMetaId,
     content: plaintext || rawContent,
@@ -206,7 +296,7 @@ export async function mergePrivateChatItem(input: {
   selfGlobalMetaId: string
   walletIdentity: WalletIdentity
   pushDebug?: (line: string) => void
-  peerChatPublicKeyCache?: PeerChatPublicKeyCache
+  peerChatPublicKeyCache?: PeerProfileCache
 }): Promise<MergePrivateChatResult> {
   const message = await privateChatToDeliveryMessage(input)
   useMessageStore.getState().append(message)
@@ -234,7 +324,7 @@ export async function syncKnownPrivateChatHistory(
 
   const aliases = new Set(selfAliasesForWallet(identity))
   const homes = await listPrivateChatHomes(metaId)
-  const peerChatPublicKeyCache: PeerChatPublicKeyCache = new Map()
+  const peerChatPublicKeyCache: PeerProfileCache = new Map()
 
   for (const home of homes) {
     const peerGlobalMetaId = home.globalMetaId.trim() || home.metaId.trim()

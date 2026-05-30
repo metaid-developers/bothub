@@ -1,4 +1,5 @@
 import type { ProviderInfo, SkillServiceCore } from '@/api/aggregator.types'
+import { normalizeAvatarUrl } from '@/api/userProfile'
 import { openDeliveryDb } from '@/delivery/db'
 import {
   buildOrderId,
@@ -86,6 +87,8 @@ export async function persistPendingOrder(
   const walletGlobalMetaId = input.wallet.globalMetaId.trim()
   const providerGlobalMetaId = input.provider.globalMetaId.trim()
   const providerChatPubkey = input.provider.chatPubkey?.trim() || undefined
+  const providerName = input.provider.name?.trim() || undefined
+  const providerAvatarUrl = normalizeAvatarUrl(input.provider.avatar?.trim() || undefined)
   const orderCorrelationId = resolveOrderCorrelationId(input.result)
   if (!walletGlobalMetaId) {
     throw new Error('Wallet globalMetaId is required to persist a pending order')
@@ -111,6 +114,8 @@ export async function persistPendingOrder(
     walletGlobalMetaId,
     providerGlobalMetaId,
     providerChatPubkey,
+    providerName,
+    providerAvatarUrl,
     serviceId: input.service.id,
     serviceName: input.service.serviceName,
     skillName: input.service.providerSkill || input.service.serviceName,
@@ -135,6 +140,8 @@ export async function persistPendingOrder(
     walletGlobalMetaId,
     providerGlobalMetaId,
     providerChatPubkey,
+    providerName,
+    providerAvatarUrl,
     orderCorrelationId,
     serviceId: input.service.id,
     serviceLabel: input.service.displayName || input.service.serviceName,
@@ -151,6 +158,8 @@ export async function persistPendingOrder(
     sessionId,
     peerGlobalMetaId: providerGlobalMetaId,
     peerChatPubkey: providerChatPubkey,
+    peerName: providerName,
+    peerAvatarUrl: providerAvatarUrl,
     direction: 'outgoing',
     content: input.result.orderPayload,
     rawContent: input.result.orderPayload,
@@ -178,6 +187,8 @@ export async function persistFailedToSendOrder(
   const walletGlobalMetaId = input.wallet.globalMetaId.trim()
   const providerGlobalMetaId = input.provider.globalMetaId.trim()
   const providerChatPubkey = input.provider.chatPubkey?.trim() || undefined
+  const providerName = input.provider.name?.trim() || undefined
+  const providerAvatarUrl = normalizeAvatarUrl(input.provider.avatar?.trim() || undefined)
   const orderCorrelationId = (
     input.partial.payment.paymentTxid || input.partial.payment.orderReference
   ).trim()
@@ -205,6 +216,8 @@ export async function persistFailedToSendOrder(
     walletGlobalMetaId,
     providerGlobalMetaId,
     providerChatPubkey,
+    providerName,
+    providerAvatarUrl,
     serviceId: input.service.id,
     serviceName: input.service.serviceName,
     skillName: input.service.providerSkill || input.service.serviceName,
@@ -229,6 +242,8 @@ export async function persistFailedToSendOrder(
     walletGlobalMetaId,
     providerGlobalMetaId,
     providerChatPubkey,
+    providerName,
+    providerAvatarUrl,
     orderCorrelationId,
     serviceId: input.service.id,
     serviceLabel: input.service.displayName || input.service.serviceName,
@@ -245,6 +260,8 @@ export async function persistFailedToSendOrder(
     sessionId,
     peerGlobalMetaId: providerGlobalMetaId,
     peerChatPubkey: providerChatPubkey,
+    peerName: providerName,
+    peerAvatarUrl: providerAvatarUrl,
     direction: 'outgoing',
     content: input.partial.orderPayload,
     rawContent: input.partial.orderPayload,
