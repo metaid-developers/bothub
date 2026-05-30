@@ -13,6 +13,8 @@ const wallet: WalletIdentity = {
   dogeAddress: 'Dbuyer',
 }
 
+const OLD_CREATE_PIN_WALLET_RESPONSE_TIMEOUT_MS = 90_000
+
 describe('sendDeliveryFollowUp', () => {
   it('posts follow-ups as standard simplemsg pins with millisecond timestamps', async () => {
     const now = 1_764_322_123_456
@@ -218,9 +220,10 @@ describe('sendDeliveryFollowUp', () => {
     ).resolves.toMatchObject({ pinId: `${followUpTxid}i0` })
   })
 
-  it('times out a follow-up broadcast that never receives a wallet response', async () => {
+  it('waits past the old 90s limit before timing out a follow-up broadcast', async () => {
     vi.useFakeTimers()
     let caught: unknown
+    let settled = false
 
     try {
       void sendDeliveryFollowUp({
@@ -233,10 +236,16 @@ describe('sendDeliveryFollowUp', () => {
           createPin: vi.fn().mockReturnValue(new Promise(() => {})),
         },
       }).catch((err: unknown) => {
+        settled = true
         caught = err
       })
 
-      await vi.advanceTimersByTimeAsync(CREATE_PIN_WALLET_RESPONSE_TIMEOUT_MS)
+      await vi.advanceTimersByTimeAsync(OLD_CREATE_PIN_WALLET_RESPONSE_TIMEOUT_MS)
+      expect(settled).toBe(false)
+
+      await vi.advanceTimersByTimeAsync(
+        CREATE_PIN_WALLET_RESPONSE_TIMEOUT_MS - OLD_CREATE_PIN_WALLET_RESPONSE_TIMEOUT_MS,
+      )
     } finally {
       vi.useRealTimers()
     }

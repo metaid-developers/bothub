@@ -59,6 +59,8 @@ const wallet = {
   dogeAddress: 'Dbuyer',
 }
 
+const OLD_CREATE_PIN_WALLET_RESPONSE_TIMEOUT_MS = 90_000
+
 describe('executePayAndRequest', () => {
   it('posts orders as standard simplemsg pins with millisecond timestamps', async () => {
     const now = 1_764_321_987_654
@@ -460,7 +462,7 @@ describe('executePayAndRequest', () => {
     expect(createPin).not.toHaveBeenCalled()
   })
 
-  it('times out a free order broadcast that never receives a wallet response', async () => {
+  it('waits past the old 90s limit before timing out a free order broadcast', async () => {
     vi.useFakeTimers()
     vi.spyOn(crypto, 'getRandomValues').mockImplementation((array) => {
       if (array instanceof Uint8Array) {
@@ -470,6 +472,7 @@ describe('executePayAndRequest', () => {
     })
     const expectedOrderReference = generateRandomHex(32)
     let caught: unknown
+    let settled = false
 
     try {
       void executePayAndRequest({
@@ -483,10 +486,16 @@ describe('executePayAndRequest', () => {
           createPin: vi.fn().mockReturnValue(new Promise(() => {})),
         },
       }).catch((err: unknown) => {
+        settled = true
         caught = err
       })
 
-      await vi.advanceTimersByTimeAsync(CREATE_PIN_WALLET_RESPONSE_TIMEOUT_MS)
+      await vi.advanceTimersByTimeAsync(OLD_CREATE_PIN_WALLET_RESPONSE_TIMEOUT_MS)
+      expect(settled).toBe(false)
+
+      await vi.advanceTimersByTimeAsync(
+        CREATE_PIN_WALLET_RESPONSE_TIMEOUT_MS - OLD_CREATE_PIN_WALLET_RESPONSE_TIMEOUT_MS,
+      )
     } finally {
       vi.useRealTimers()
     }
