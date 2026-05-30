@@ -130,8 +130,13 @@ function unwrapLegacyInfoEnvelope(raw: unknown): unknown {
 
 function avatarNeedsAddressFallback(profile: UserProfile): boolean {
   if (!profile.address?.trim()) return false
-  if (!profile.avatarUrl?.trim()) return true
-  return /\/content\/?$/i.test(profile.avatarUrl.trim())
+  const avatarUrl = profile.avatarUrl?.trim().toLowerCase()
+  if (!avatarUrl) return true
+  if (/\/content\/?$/.test(avatarUrl)) return true
+  if (avatarUrl.includes('/users/avatar/accelerate/')) return true
+  if (avatarUrl.includes('file.metaid.io/metafile-indexer/content/')) return true
+  if (avatarUrl.includes('file.metaid.io/metafile-indexer/api/v1/files/content/')) return true
+  return false
 }
 
 async function fetchUserProfileByAddress(address: string): Promise<UserProfile> {
@@ -139,10 +144,14 @@ async function fetchUserProfileByAddress(address: string): Promise<UserProfile> 
   if (!trimmed) return {}
 
   const baseUrl = getNormalizedMetaSocketBaseUrl()
-  const response = await fetch(`${baseUrl}/api/users/address/${encodeURIComponent(trimmed)}`)
+  const response = await fetch(`${baseUrl}/api/info/address/${encodeURIComponent(trimmed)}`)
   if (!response.ok) return {}
-  const payload: unknown = await response.json()
-  return normalizeUserProfile(unwrapLegacyInfoEnvelope(payload))
+  try {
+    const payload: unknown = await response.json()
+    return normalizeUserProfile(unwrapLegacyInfoEnvelope(payload))
+  } catch {
+    return {}
+  }
 }
 
 export async function fetchUserProfileByGlobalMetaId(globalMetaId: string): Promise<UserProfile> {
@@ -158,7 +167,10 @@ export async function fetchUserProfileByGlobalMetaId(globalMetaId: string): Prom
   const addressProfile = await fetchUserProfileByAddress(profile.address ?? '')
   return {
     ...profile,
-    ...addressProfile,
+    metaid: addressProfile.metaid ?? profile.metaid,
+    globalMetaId: addressProfile.globalMetaId ?? profile.globalMetaId,
+    address: addressProfile.address ?? profile.address,
+    name: addressProfile.name ?? profile.name,
     avatar: addressProfile.avatar ?? profile.avatar,
     avatarImage: addressProfile.avatarImage ?? profile.avatarImage,
     avatarUrl: addressProfile.avatarUrl ?? profile.avatarUrl,

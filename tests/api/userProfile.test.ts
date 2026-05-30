@@ -6,7 +6,9 @@ async function loadUserProfile() {
 
 describe('user profile API client', () => {
   const avatarPin = `${'a'.repeat(64)}i0`
+  const fallbackAvatarPin = `${'b'.repeat(64)}i0`
   const expectedAvatarThumbnail = `/meta-socket/api/v1/users/avatar/accelerate/${avatarPin}?process=thumbnail`
+  const expectedFallbackAvatarThumbnail = `/meta-socket/api/v1/users/avatar/accelerate/${fallbackAvatarPin}?process=thumbnail`
 
   beforeEach(() => {
     vi.stubEnv('VITE_META_SOCKET_BASE_URL', '/meta-socket/')
@@ -153,9 +155,9 @@ describe('user profile API client', () => {
     expect(profile.avatarUrl).toBeUndefined()
   })
 
-  it('falls back to the address profile when the globalMetaId profile has only an unusable avatar', async () => {
+  it('falls back to the meta-socket address profile when the globalMetaId profile has only an unusable avatar', async () => {
     const fetchMock = vi.fn(async (url: string) => {
-      if (url === '/meta-socket/api/users/address/1ProviderAddress') {
+      if (url === '/meta-socket/api/info/address/1ProviderAddress') {
         return {
           ok: true,
           json: async () => ({
@@ -187,10 +189,123 @@ describe('user profile API client', () => {
     const profile = await fetchUserProfileByGlobalMetaId('global-address-fallback')
 
     expect(fetchMock).toHaveBeenCalledWith('/meta-socket/api/info/globalmetaid/global-address-fallback')
-    expect(fetchMock).toHaveBeenCalledWith('/meta-socket/api/users/address/1ProviderAddress')
+    expect(fetchMock).toHaveBeenCalledWith('/meta-socket/api/info/address/1ProviderAddress')
     expect(profile).toMatchObject({
       name: 'Address Bot',
       avatarUrl: expectedAvatarThumbnail,
     })
+  })
+
+  it('merges address profile fields when the globalMetaId avatar normalizes to the avatar accelerate endpoint', async () => {
+    const fetchMock = vi.fn(async (url: string) => {
+      if (url === '/meta-socket/api/info/address/1AccelerateAddress') {
+        return {
+          ok: true,
+          json: async () => ({
+            code: 1,
+            data: {
+              globalMetaId: 'global-accelerate-fallback',
+              address: '1AccelerateAddress',
+              name: 'Address Profile',
+              avatarPinId: fallbackAvatarPin,
+              chatpubkey: '04address',
+            },
+          }),
+        }
+      }
+      return {
+        ok: true,
+        json: async () => ({
+          code: 1,
+          data: {
+            globalMetaId: 'global-accelerate-fallback',
+            address: '1AccelerateAddress',
+            name: 'Global Profile',
+            avatar: `/content/${avatarPin}`,
+            chatpubkey: '04global',
+          },
+        }),
+      }
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    const { fetchUserProfileByGlobalMetaId } = await loadUserProfile()
+    const profile = await fetchUserProfileByGlobalMetaId('global-accelerate-fallback')
+
+    expect(fetchMock).toHaveBeenCalledWith('/meta-socket/api/info/address/1AccelerateAddress')
+    expect(profile).toMatchObject({
+      name: 'Address Profile',
+      avatarUrl: expectedFallbackAvatarThumbnail,
+      chatPubkey: '04address',
+    })
+  })
+
+  it('uses address fallback for file.metaid content avatars', async () => {
+    const fetchMock = vi.fn(async (url: string) => {
+      if (url === '/meta-socket/api/info/address/1FileMetaidAddress') {
+        return {
+          ok: true,
+          json: async () => ({
+            code: 1,
+            data: {
+              address: '1FileMetaidAddress',
+              avatarPinId: fallbackAvatarPin,
+            },
+          }),
+        }
+      }
+      return {
+        ok: true,
+        json: async () => ({
+          code: 1,
+          data: {
+            globalMetaId: 'global-file-metaid-fallback',
+            address: '1FileMetaidAddress',
+            avatar: `https://file.metaid.io/metafile-indexer/content/${avatarPin}`,
+          },
+        }),
+      }
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    const { fetchUserProfileByGlobalMetaId } = await loadUserProfile()
+    const profile = await fetchUserProfileByGlobalMetaId('global-file-metaid-fallback')
+
+    expect(fetchMock).toHaveBeenCalledWith('/meta-socket/api/info/address/1FileMetaidAddress')
+    expect(profile.avatarUrl).toBe(expectedFallbackAvatarThumbnail)
+  })
+
+  it('keeps the globalMetaId profile when address fallback returns a non-json 404 response', async () => {
+    const fetchMock = vi.fn(async (url: string) => {
+      if (url === '/meta-socket/api/info/address/1MissingAddress') {
+        return {
+          ok: false,
+          status: 404,
+          text: async () => 'not found',
+        }
+      }
+      return {
+        ok: true,
+        json: async () => ({
+          code: 1,
+          data: {
+            globalMetaId: 'global-missing-address',
+            address: '1MissingAddress',
+            name: 'Global Profile',
+            avatar: '/content/',
+            chatpubkey: '04global',
+          },
+        }),
+      }
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    const { fetchUserProfileByGlobalMetaId } = await loadUserProfile()
+
+    await expect(fetchUserProfileByGlobalMetaId('global-missing-address')).resolves.toMatchObject({
+      name: 'Global Profile',
+      chatPubkey: '04global',
+    })
+    expect(fetchMock).toHaveBeenCalledWith('/meta-socket/api/info/address/1MissingAddress')
   })
 })

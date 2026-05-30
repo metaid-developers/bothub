@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { DeliveryPage } from '@/routes/Delivery'
 import { fetchUserProfileByGlobalMetaId } from '@/api/userProfile'
 import type { WalletIdentity } from '@/wallet/types'
@@ -48,9 +48,21 @@ function expectBefore(first: Element, second: Element) {
   expect(first.compareDocumentPosition(second) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
 }
 
+function renderDeliveryPage(initialEntry = '/delivery') {
+  return render(
+    <MemoryRouter
+      initialEntries={[initialEntry]}
+      future={{ v7_relativeSplatPath: true, v7_startTransition: true }}
+    >
+      <DeliveryPage />
+    </MemoryRouter>,
+  )
+}
+
 describe('DeliveryPage layout', () => {
   beforeEach(() => {
     Element.prototype.scrollIntoView = vi.fn()
+    vi.stubGlobal('indexedDB', undefined)
     mocks.walletState.identity = null
     mocks.walletState.status = 'disconnected'
     mocks.messageState.byPeer = {}
@@ -60,12 +72,12 @@ describe('DeliveryPage layout', () => {
     vi.clearAllMocks()
   })
 
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
+
   it('orders the mobile workspace as sessions, header, timeline, assets, then composer', () => {
-    render(
-      <MemoryRouter initialEntries={['/delivery']}>
-        <DeliveryPage />
-      </MemoryRouter>,
-    )
+    renderDeliveryPage()
 
     const sessions = screen.getByRole('heading', { name: 'Sessions' })
     const header = screen.getByRole('status', { name: 'No delivery session selected' })
@@ -93,6 +105,8 @@ describe('DeliveryPage layout', () => {
           id: 'pin-order',
           peerGlobalMetaId: 'idqprovider',
           peerChatPubkey: '04' + 'ab'.repeat(64),
+          peerName: 'Provider',
+          peerAvatarUrl: 'https://cdn.example/provider.png',
           fromGlobalMetaId: 'idqbuyer',
           toGlobalMetaId: 'idqprovider',
           content: '[ORDER] Cached identity order\norder id: order-1',
@@ -106,11 +120,7 @@ describe('DeliveryPage layout', () => {
       ],
     }
 
-    render(
-      <MemoryRouter initialEntries={['/delivery']}>
-        <DeliveryPage />
-      </MemoryRouter>,
-    )
+    renderDeliveryPage()
 
     expect(screen.getByRole('textbox', { name: 'Message provider' })).toBeDisabled()
     expect(screen.getByRole('button', { name: 'Send' })).toBeDisabled()
@@ -150,11 +160,7 @@ describe('DeliveryPage layout', () => {
       ],
     }
 
-    render(
-      <MemoryRouter initialEntries={[`/delivery?session=${peerGlobalMetaId}`]}>
-        <DeliveryPage />
-      </MemoryRouter>,
-    )
+    renderDeliveryPage(`/delivery?session=${peerGlobalMetaId}`)
 
     expect(fetchUserProfileByGlobalMetaId).toHaveBeenCalledWith(peerGlobalMetaId)
     expect(await screen.findAllByText('余生请多指教')).toHaveLength(3)
