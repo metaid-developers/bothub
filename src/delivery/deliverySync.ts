@@ -5,8 +5,6 @@ import {
 } from '@/api/privateChat'
 import {
   fetchUserProfileByGlobalMetaId,
-  normalizeAvatarUrl,
-  type UserProfile,
 } from '@/api/userProfile'
 import {
   getMessagesForSession,
@@ -15,6 +13,13 @@ import {
   putSyncState,
 } from '@/delivery/db'
 import { decryptIncoming } from '@/delivery/decrypt'
+import {
+  mergePeerProfiles,
+  peerProfileFromPrivateChatUserInfo,
+  peerProfileFromUserProfile,
+  peerProfileNeedsHydration,
+  type PeerProfile,
+} from '@/delivery/peerProfile'
 import {
   persistDeliveryMessage,
   useMessageStore,
@@ -40,12 +45,6 @@ export interface PrivateChatHistorySyncSummary {
   failedPeers: Array<{ peerGlobalMetaId: string; error: unknown }>
 }
 
-interface PeerProfile {
-  chatPubkey?: string
-  name?: string
-  avatarUrl?: string
-}
-
 type PeerProfileCache = Map<string, Promise<PeerProfile>>
 
 function selfAliasesForWallet(identity: WalletIdentity): string[] {
@@ -64,17 +63,6 @@ function selfAliasesForWallet(identity: WalletIdentity): string[] {
 
 function isSelfAlias(value: string, aliases: ReadonlySet<string>): boolean {
   return aliases.has(value.trim())
-}
-
-function mergePeerProfiles(...profiles: Array<PeerProfile | undefined>): PeerProfile {
-  const merged: PeerProfile = {}
-  for (const profile of profiles) {
-    if (!profile) continue
-    merged.chatPubkey ||= profile.chatPubkey?.trim() || undefined
-    merged.name ||= profile.name?.trim() || undefined
-    merged.avatarUrl ||= profile.avatarUrl?.trim() || undefined
-  }
-  return merged
 }
 
 function peerProfileFromMemory(peerGlobalMetaId: string): PeerProfile {
@@ -135,30 +123,6 @@ function peerUserInfoFromPrivateChat(
   return selfIds.has(item.fromGlobalMetaId.trim()) ? item.toUserInfo : item.fromUserInfo
 }
 
-function peerProfileFromUserInfo(info: PrivateChatUserInfo | undefined): PeerProfile {
-  if (!info) return {}
-  return {
-    chatPubkey:
-      info.chatPublicKey?.trim() ||
-      info.chatPubkey?.trim() ||
-      info.chatpubkey?.trim() ||
-      undefined,
-    name: info.name?.trim() || undefined,
-    avatarUrl: normalizeAvatarUrl(
-      info.avatarUrl?.trim() || info.avatarImage?.trim() || info.avatar?.trim() || undefined,
-      info.avatarId?.trim() || info.avatarPinId?.trim() || undefined,
-    ),
-  }
-}
-
-function peerProfileFromUserProfile(profile: UserProfile): PeerProfile {
-  return {
-    chatPubkey: profile.chatPubkey?.trim() || undefined,
-    name: profile.name?.trim() || undefined,
-    avatarUrl: profile.avatarUrl?.trim() || undefined,
-  }
-}
-
 async function resolvePeerProfile(input: {
   item: PrivateChatItem
   selfGlobalMetaId: string
@@ -168,7 +132,7 @@ async function resolvePeerProfile(input: {
   pushDebug?: (line: string) => void
 }): Promise<PeerProfile> {
   const fromMessage = mergePeerProfiles(
-    peerProfileFromUserInfo(
+    peerProfileFromPrivateChatUserInfo(
       peerUserInfoFromPrivateChat(input.item, input.selfGlobalMetaId, input.selfAliases),
     ),
     {
@@ -179,7 +143,7 @@ async function resolvePeerProfile(input: {
       ),
     },
   )
-  if (fromMessage.chatPubkey && (fromMessage.name || fromMessage.avatarUrl)) {
+  if (!peerProfileNeedsHydration(fromMessage)) {
     return fromMessage
   }
 
@@ -190,7 +154,7 @@ async function resolvePeerProfile(input: {
   if (!cached) {
     cached = (async () => {
       const withMemory = mergePeerProfiles(fromMessage, peerProfileFromMemory(peerGlobalMetaId))
-      if (withMemory.chatPubkey && (withMemory.name || withMemory.avatarUrl)) {
+      if (!peerProfileNeedsHydration(withMemory)) {
         return withMemory
       }
 
@@ -203,7 +167,7 @@ async function resolvePeerProfile(input: {
             peerGlobalMetaId,
           }),
         )
-        if (withFallback.chatPubkey) return withFallback
+        if (!peerProfileNeedsHydration(withFallback)) return withFallback
       } catch (error) {
         const detail = error instanceof Error ? error.message : String(error)
         input.pushDebug?.(

@@ -549,7 +549,44 @@ describe('deliverySync', () => {
     ])
   })
 
-  it('uses a stored local session chat key before fetching the peer profile', async () => {
+  it('fills missing fetched profile fields without overwriting private chat userInfo', async () => {
+    mockedFetchUserProfileByGlobalMetaId.mockResolvedValue({
+      globalMetaId: PEER,
+      name: 'Profile Bot',
+      avatarUrl: 'https://cdn.example/profile-avatar.png',
+      chatPubkey: 'profile-provider-key',
+    })
+
+    const result = await mergePrivateChatItem({
+      item: privateChatItem({
+        fromUserInfo: {
+          globalMetaId: PEER,
+          name: 'Provider Bot',
+          chatPublicKey: 'provider-chat-key',
+        },
+        pinId: 'pin-partial-userinfo-profile',
+        content: '[ORDER_STATUS:order-partial-userinfo-profile] Working',
+      }),
+      selfGlobalMetaId: SELF,
+      walletIdentity: wallet,
+    })
+
+    expect(mockedFetchUserProfileByGlobalMetaId).toHaveBeenCalledWith(PEER)
+    expect(result.message).toEqual(expect.objectContaining({
+      id: 'pin-partial-userinfo-profile',
+      peerChatPubkey: 'provider-chat-key',
+      peerName: 'Provider Bot',
+      peerAvatarUrl: 'https://cdn.example/profile-avatar.png',
+    }))
+    expect(mockedDecryptIncoming).toHaveBeenCalledWith(
+      expect.objectContaining({
+        peerChatPubKey: 'provider-chat-key',
+        messageId: 'pin-partial-userinfo-profile',
+      }),
+    )
+  })
+
+  it('fills missing fetched display fields without overwriting a stored local chat key', async () => {
     await putSession({
       id: `${SELF}:${PEER}:order-local-key`,
       walletGlobalMetaId: SELF,
@@ -562,8 +599,14 @@ describe('deliverySync', () => {
       assetCount: 0,
       unreadCount: 0,
     })
+    mockedFetchUserProfileByGlobalMetaId.mockResolvedValue({
+      globalMetaId: PEER,
+      name: 'Profile Local Bot',
+      avatarUrl: 'https://cdn.example/profile-local.png',
+      chatPubkey: 'profile-should-not-overwrite-key',
+    })
 
-    await mergePrivateChatItem({
+    const result = await mergePrivateChatItem({
       item: privateChatItem({
         fromUserInfo: undefined,
         pinId: 'pin-local-session-key',
@@ -573,17 +616,24 @@ describe('deliverySync', () => {
       walletIdentity: wallet,
     })
 
-    expect(mockedFetchUserProfileByGlobalMetaId).not.toHaveBeenCalled()
+    expect(mockedFetchUserProfileByGlobalMetaId).toHaveBeenCalledWith(PEER)
     expect(mockedDecryptIncoming).toHaveBeenCalledWith(
       expect.objectContaining({
         peerChatPubKey: 'local-session-provider-key',
         messageId: 'pin-local-session-key',
       }),
     )
+    expect(result.message).toEqual(expect.objectContaining({
+      peerChatPubkey: 'local-session-provider-key',
+      peerName: 'Profile Local Bot',
+      peerAvatarUrl: 'https://cdn.example/profile-local.png',
+    }))
     expect(await getSessionsForWallet(SELF)).toContainEqual(
       expect.objectContaining({
         providerGlobalMetaId: PEER,
         providerChatPubkey: 'local-session-provider-key',
+        providerName: 'Profile Local Bot',
+        providerAvatarUrl: 'https://cdn.example/profile-local.png',
       }),
     )
   })

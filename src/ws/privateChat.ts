@@ -118,8 +118,18 @@ function normalizeUserInfo(value: unknown): PrivateChatUserInfo | undefined {
 export function normalizePrivateChatItem(value: unknown): PrivateChatItem | null {
   if (typeof value !== 'object' || value === null || Array.isArray(value)) return null
   const row = value as Record<string, unknown>
-  const fromUserInfo = normalizeUserInfo(row.fromUserInfo ?? row.userInfo ?? row.user_info)
-  const toUserInfo = normalizeUserInfo(row.toUserInfo)
+  const createUserInfo = normalizeUserInfo(row.createUserInfo ?? row.create_user_info)
+  const receiveUserInfo = normalizeUserInfo(
+    row.receiveUserInfo ??
+      row.receive_user_info ??
+      row.targetUserInfo ??
+      row.target_user_info,
+  )
+  const fromUserInfo =
+    normalizeUserInfo(row.fromUserInfo ?? row.from_user_info ?? row.userInfo ?? row.user_info) ??
+    createUserInfo
+  const toUserInfo =
+    normalizeUserInfo(row.toUserInfo ?? row.to_user_info) ?? receiveUserInfo
   const fromGlobalMetaId =
     nonEmptyString(row.fromGlobalMetaId) ??
     nonEmptyString(row.from) ??

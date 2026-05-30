@@ -89,6 +89,37 @@ describe('privateChat', () => {
     })
   })
 
+  it('normalizes create and receive user info aliases into from/to user info', () => {
+    expect(normalizePrivateChatItem({
+      from: 'idqprovider',
+      to: 'idqbuyer',
+      content: 'cipher',
+      timestamp: 1,
+      path: '/protocols/simplemsg',
+      encrypt: 'ecdh',
+      createUserInfo: {
+        globalmetaid: 'idqprovider',
+        name: 'Provider Bot',
+        avatarImage: 'metafile://'.concat('a'.repeat(64), 'i0.png'),
+        chat_public_key: 'provider-chat-key',
+      },
+      receiveUserInfo: {
+        globalMetaId: 'idqbuyer',
+        chatPublicKey: 'buyer-chat-key',
+      },
+    })).toEqual(expect.objectContaining({
+      fromGlobalMetaId: 'idqprovider',
+      toGlobalMetaId: 'idqbuyer',
+      fromUserInfo: expect.objectContaining({
+        name: 'Provider Bot',
+        chatPublicKey: 'provider-chat-key',
+      }),
+      toUserInfo: expect.objectContaining({
+        chatPublicKey: 'buyer-chat-key',
+      }),
+    }))
+  })
+
   it('derives from/to globalMetaId from preserved userInfo when top-level fields are missing', () => {
     const normalized = normalizePrivateChatItem({
       content: 'cipher',
