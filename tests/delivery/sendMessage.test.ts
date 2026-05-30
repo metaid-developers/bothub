@@ -240,6 +240,46 @@ describe('sendDeliveryFollowUp', () => {
     expect(result.encryptedContent).toBeTruthy()
   })
 
+  it('uses a local follow-up id when the createPin response is lost after broadcast', async () => {
+    const createPin = vi.fn().mockRejectedValue(
+      new Error(
+        'A listener indicated an asynchronous response by returning true, but the message channel closed before a response was received',
+      ),
+    )
+
+    const result = await sendDeliveryFollowUp({
+      wallet,
+      providerGlobalMetaId: 'idqprovider',
+      providerChatPubkey: '04' + 'ab'.repeat(64),
+      content: 'Thanks, one more thing.',
+      metalet: {
+        ecdh: vi.fn().mockResolvedValue({ sharedSecret: 'bb'.repeat(32) }),
+        createPin,
+      },
+    })
+
+    expect(createPin).toHaveBeenCalledOnce()
+    expect(result.pinId).toMatch(/^local-follow-up:/)
+    expect(result.encryptedContent).toBeTruthy()
+  })
+
+  it('keeps explicit wallet rejection errors fatal', async () => {
+    const walletError = new Error('User rejected the request')
+
+    await expect(
+      sendDeliveryFollowUp({
+        wallet,
+        providerGlobalMetaId: 'idqprovider',
+        providerChatPubkey: '04' + 'ab'.repeat(64),
+        content: 'Thanks, one more thing.',
+        metalet: {
+          ecdh: vi.fn().mockResolvedValue({ sharedSecret: 'bb'.repeat(32) }),
+          createPin: vi.fn().mockRejectedValue(walletError),
+        },
+      }),
+    ).rejects.toBe(walletError)
+  })
+
   it('fails follow-up broadcast when createPin resolves a failure envelope without a pin id', async () => {
     await expect(
       sendDeliveryFollowUp({

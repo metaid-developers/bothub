@@ -2,6 +2,7 @@ import { ecdhEncryptWithSharedSecret } from '@/order/privateChatCrypto'
 import type { PayAndRequestMetalet } from '@/order/flow'
 import {
   getResolvedCreatePinFailureMessage,
+  isCreatePinTransportResponseLostError,
   resolvePrimaryPinId,
 } from '@/order/pinResult'
 import { WalletResponseTimeoutError, withWalletResponseTimeout } from '@/order/walletTimeout'
@@ -111,6 +112,9 @@ export async function sendDeliveryFollowUp(
       'Follow-up broadcast timed out waiting for wallet response',
     )
   } catch (err) {
+    if (isCreatePinTransportResponseLostError(err)) {
+      return { pinId: createLocalFollowUpId(), encryptedContent }
+    }
     if (err instanceof WalletResponseTimeoutError) {
       throw new DeliveryFollowUpError(err.message, 'broadcast_failed')
     }
