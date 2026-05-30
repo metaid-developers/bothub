@@ -110,6 +110,34 @@ describe('user profile API client', () => {
     expect(profile.avatarUrl).toBe(expectedAvatarUrl)
   })
 
+  it('normalizes delivery avatar URL variants to local accelerated thumbnails', async () => {
+    const pinId = `${'c'.repeat(64)}i0`
+    const expected = `/meta-socket/api/v1/users/avatar/accelerate/${pinId}?process=thumbnail`
+
+    const { normalizeAvatarUrl } = await loadUserProfile()
+
+    expect(normalizeAvatarUrl(`/api/v1/users/avatar/accelerate/${pinId}?process=thumbnail`)).toBe(
+      expected,
+    )
+    expect(normalizeAvatarUrl(`/users/avatar/accelerate/${pinId}?process=thumbnail`)).toBe(
+      expected,
+    )
+    expect(normalizeAvatarUrl(`https://file.metaid.io/metafile-indexer/content/${pinId}`)).toBe(
+      expected,
+    )
+  })
+
+  it('treats bare meta-socket avatar paths as meta-socket-relative URLs', async () => {
+    const { normalizeAvatarUrl } = await loadUserProfile()
+
+    expect(normalizeAvatarUrl('/metafile-indexer/content/avatar-image.png')).toBe(
+      '/meta-socket/metafile-indexer/content/avatar-image.png',
+    )
+    expect(normalizeAvatarUrl('/api/v1/files/content/avatar-image.png')).toBe(
+      '/meta-socket/api/v1/files/content/avatar-image.png',
+    )
+  })
+
   it.each(['avatarId', 'avatarPinId'] as const)(
     'normalizes %s through the avatar thumbnail endpoint',
     async (fieldName) => {

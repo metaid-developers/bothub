@@ -56,6 +56,12 @@ function avatarThumbnailUrl(pinId: string): string {
   return `${getNormalizedMetaSocketBaseUrl()}/api/v1/users/avatar/accelerate/${encodeURIComponent(pinId)}?process=thumbnail`
 }
 
+function isMetaSocketRelativeAvatarPath(avatar: string): boolean {
+  return /^\/(?:api\/v1\/|users\/avatar\/accelerate\/|metafile-indexer\/|files\/content\/)/i.test(
+    avatar,
+  )
+}
+
 export function normalizeAvatarUrl(
   value: string | undefined,
   avatarIdValue?: string | undefined,
@@ -78,7 +84,7 @@ export function normalizeAvatarUrl(
   if (avatar.startsWith('/content/')) {
     return `${getNormalizedMetaSocketBaseUrl()}${avatar}`
   }
-  if (avatar.startsWith('/files/content/')) {
+  if (isMetaSocketRelativeAvatarPath(avatar)) {
     return `${getNormalizedMetaSocketBaseUrl()}${avatar}`
   }
   return avatar
