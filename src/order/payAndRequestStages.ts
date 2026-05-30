@@ -4,7 +4,11 @@ import { buildOrderPayload } from './buildOrderPayload'
 import { ORDER_RAW_REQUEST_MAX_CHARS, validateOrderRawRequest } from './orderMessage'
 import { collectTxidLikeStrings, resolvePrimaryPinId } from './pinResult'
 import { ecdhEncryptWithSharedSecret } from './privateChatCrypto'
-import { WalletResponseTimeoutError, withWalletResponseTimeout } from './walletTimeout'
+import {
+  ECDH_WALLET_RESPONSE_TIMEOUT_MS,
+  WalletResponseTimeoutError,
+  withWalletResponseTimeout,
+} from './walletTimeout'
 
 const SATOSHI_PER_UNIT = 100_000_000
 const SIMPLEMSG_PATH = '/protocols/simplemsg'
@@ -16,6 +20,7 @@ export class PayAndRequestError extends Error {
       | 'invalid_prompt'
       | 'missing_wallet'
       | 'missing_provider_key'
+      | 'encryption_failed'
       | 'payment_failed'
       | 'broadcast_failed',
   ) {
@@ -248,7 +253,24 @@ export async function prepareEncryptedOrderMessage(
     outputType: input.service.outputType,
   })
 
-  const { sharedSecret } = await input.metalet.ecdh({ externalPubKey: input.providerChatPubkey })
+  let sharedSecret: string
+  try {
+    const ecdhResult = await withWalletResponseTimeout(
+      input.metalet.ecdh({ externalPubKey: input.providerChatPubkey }),
+      'Order encryption timed out waiting for Metalet ECDH response',
+      ECDH_WALLET_RESPONSE_TIMEOUT_MS,
+    )
+    sharedSecret = ecdhResult.sharedSecret
+  } catch (err) {
+    const message =
+      err instanceof WalletResponseTimeoutError
+        ? err.message
+        : err instanceof Error && err.message
+          ? `Order encryption failed: ${err.message}`
+          : 'Order encryption failed'
+    throw new PayAndRequestError(message, 'encryption_failed')
+  }
+
   const encryptedContent = ecdhEncryptWithSharedSecret(orderPayload, sharedSecret)
   const simplemsgBody = buildPrivateMessagePayload(input.providerGlobalMetaId, encryptedContent)
 

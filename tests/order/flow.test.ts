@@ -6,7 +6,10 @@ import {
   PayAndRequestBroadcastError,
   PayAndRequestError,
 } from '@/order/flow'
-import { CREATE_PIN_WALLET_RESPONSE_TIMEOUT_MS } from '@/order/walletTimeout'
+import {
+  CREATE_PIN_WALLET_RESPONSE_TIMEOUT_MS,
+  ECDH_WALLET_RESPONSE_TIMEOUT_MS,
+} from '@/order/walletTimeout'
 
 const provider: ProviderInfo = {
   metaid: 'provider-metaid',
@@ -416,6 +419,45 @@ describe('executePayAndRequest', () => {
         sessionKey: `${provider.globalMetaId}:${expectedOrderReference}`,
       },
     })
+  })
+
+  it('times out order encryption before broadcasting when ecdh never receives a wallet response', async () => {
+    vi.useFakeTimers()
+    vi.spyOn(crypto, 'getRandomValues').mockImplementation((array) => {
+      if (array instanceof Uint8Array) {
+        array.fill(0x0e)
+      }
+      return array
+    })
+    const createPin = vi.fn()
+    let caught: unknown
+
+    try {
+      void executePayAndRequest({
+        service: freeService,
+        provider,
+        prompt: 'Free request that stalls while encrypting.',
+        wallet,
+        metalet: {
+          transfer: vi.fn(),
+          ecdh: vi.fn().mockReturnValue(new Promise(() => {})),
+          createPin,
+        },
+      }).catch((err: unknown) => {
+        caught = err
+      })
+
+      await vi.advanceTimersByTimeAsync(ECDH_WALLET_RESPONSE_TIMEOUT_MS)
+    } finally {
+      vi.useRealTimers()
+    }
+
+    expect(caught).toBeInstanceOf(PayAndRequestError)
+    expect(caught).toMatchObject({
+      code: 'encryption_failed',
+      message: 'Order encryption timed out waiting for Metalet ECDH response',
+    })
+    expect(createPin).not.toHaveBeenCalled()
   })
 
   it('times out a free order broadcast that never receives a wallet response', async () => {

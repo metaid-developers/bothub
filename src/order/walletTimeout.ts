@@ -1,4 +1,5 @@
 export const CREATE_PIN_WALLET_RESPONSE_TIMEOUT_MS = 90_000
+export const ECDH_WALLET_RESPONSE_TIMEOUT_MS = 30_000
 
 export class WalletResponseTimeoutError extends Error {
   constructor(message: string) {
