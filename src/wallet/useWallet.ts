@@ -92,9 +92,12 @@ export const useWallet = create<WalletState>()(
       hydrateFromMetalet: async () => {
         const { identity, status } = get()
         if (!identity || status !== 'connected') return
-        if (!metalet.isMetaletInstalled()) return
+        if (!metalet.isMetaletInstalled()) {
+          set({ identity: null, status: 'disconnected', errorMessage: null })
+          return
+        }
         try {
-          const gmid = await metalet.getGlobalMetaid()
+          const gmid = await metalet.ensureReady(identity.globalMetaId)
           const profile = await fetchProfileBestEffort(gmid.globalMetaId)
           set({
             identity: buildWalletIdentity(gmid, profile),
@@ -102,7 +105,7 @@ export const useWallet = create<WalletState>()(
             errorMessage: null,
           })
         } catch {
-          set({ identity: null, status: 'disconnected' })
+          set({ identity: null, status: 'disconnected', errorMessage: null })
         }
       },
     }),

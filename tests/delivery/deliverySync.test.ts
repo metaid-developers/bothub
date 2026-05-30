@@ -7,6 +7,7 @@ import {
   getMessagesForSession,
   getSessionsForWallet,
   getSyncState,
+  putMessage,
   putSession,
   putSyncState,
 } from '@/delivery/db'
@@ -225,6 +226,72 @@ describe('deliverySync', () => {
       expect.objectContaining({
         id: 'pin-outgoing-mvc',
         direction: 'outgoing',
+      }),
+    ])
+  })
+
+  it('groups replyPin follow-ups into the original order session', async () => {
+    const orderCorrelationId = 'order-ref-123'
+    const orderPinId = 'pin-original-order'
+    await putSession({
+      id: `${SELF}:${PEER}:${orderCorrelationId}`,
+      walletGlobalMetaId: SELF,
+      providerGlobalMetaId: PEER,
+      providerChatPubkey: 'provider-chat-key',
+      orderCorrelationId,
+      status: 'waiting',
+      lastMessageId: orderPinId,
+      lastActivityAt: 1_700_000_000_000,
+      assetCount: 0,
+      unreadCount: 0,
+    })
+    await putMessage({
+      id: orderPinId,
+      walletGlobalMetaId: SELF,
+      sessionId: `${SELF}:${PEER}:${orderCorrelationId}`,
+      peerGlobalMetaId: PEER,
+      peerChatPubkey: 'provider-chat-key',
+      direction: 'outgoing',
+      content: 'Original order body',
+      rawContent: 'Original order body',
+      contentType: 'text/plain',
+      encryption: 'plain',
+      protocolTag: 'order',
+      orderCorrelationId,
+      pinId: orderPinId,
+      timestamp: 1_700_000_000_000,
+      decryptStatus: 'plain',
+    })
+
+    await mergePrivateChatItem({
+      item: privateChatItem({
+        content: 'One follow-up without an embedded order marker.',
+        pinId: 'pin-follow-up',
+        replyPin: orderPinId,
+        timestamp: 1_700_000_000_100,
+      }),
+      selfGlobalMetaId: SELF,
+      walletIdentity: wallet,
+    })
+
+    expect(useMessageStore.getState().messagesForSession(`${PEER}:${orderCorrelationId}`, SELF)).toEqual([
+      expect.objectContaining({
+        id: 'pin-follow-up',
+        orderCorrelationId,
+      }),
+    ])
+    expect(useMessageStore.getState().messagesForSession(PEER, SELF)).toEqual([])
+    expect(await getMessagesForSession(`${SELF}:${PEER}:${orderCorrelationId}`)).toEqual([
+      expect.objectContaining({ id: orderPinId }),
+      expect.objectContaining({
+        id: 'pin-follow-up',
+        orderCorrelationId,
+      }),
+    ])
+    expect(await getSessionsForWallet(SELF)).toEqual([
+      expect.objectContaining({
+        id: `${SELF}:${PEER}:${orderCorrelationId}`,
+        orderCorrelationId,
       }),
     ])
   })

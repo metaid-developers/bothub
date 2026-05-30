@@ -8,7 +8,12 @@ import {
   normalizeAvatarUrl,
   type UserProfile,
 } from '@/api/userProfile'
-import { getOrdersForWallet, getSessionsForWallet, putSyncState } from '@/delivery/db'
+import {
+  getMessagesForSession,
+  getOrdersForWallet,
+  getSessionsForWallet,
+  putSyncState,
+} from '@/delivery/db'
 import { decryptIncoming } from '@/delivery/decrypt'
 import {
   persistDeliveryMessage,
@@ -222,6 +227,32 @@ async function resolvePeerProfile(input: {
   return mergePeerProfiles(fromMessage, await cached)
 }
 
+async function resolveReplyOrderCorrelationId(input: {
+  walletGlobalMetaId: string
+  peerGlobalMetaId: string
+  replyPin?: string
+}): Promise<string | undefined> {
+  const wallet = input.walletGlobalMetaId.trim()
+  const peer = input.peerGlobalMetaId.trim()
+  const replyPin = input.replyPin?.trim()
+  if (!wallet || !peer || !replyPin) return undefined
+
+  const sessions = await getSessionsForWallet(wallet)
+  const peerSessions = sessions.filter(
+    (session) => session.providerGlobalMetaId.trim() === peer,
+  )
+  for (const session of peerSessions) {
+    const messages = await getMessagesForSession(session.id)
+    const matched = messages.find(
+      (record) => record.pinId?.trim() === replyPin || record.id.trim() === replyPin,
+    )
+    if (!matched) continue
+    return matched.orderCorrelationId?.trim() || session.orderCorrelationId?.trim() || undefined
+  }
+
+  return undefined
+}
+
 async function privateChatToDeliveryMessage(input: {
   item: PrivateChatItem
   selfGlobalMetaId: string
@@ -265,6 +296,11 @@ async function privateChatToDeliveryMessage(input: {
   const toGlobalMetaId = isSelfAlias(input.item.toGlobalMetaId, selfAliasSet)
     ? self
     : input.item.toGlobalMetaId.trim()
+  const replyOrderCorrelationId = await resolveReplyOrderCorrelationId({
+    walletGlobalMetaId: self,
+    peerGlobalMetaId,
+    replyPin: input.item.replyPin,
+  })
 
   return {
     id: messageIdFromPrivateChat(input.item),
@@ -278,6 +314,7 @@ async function privateChatToDeliveryMessage(input: {
     rawContent,
     encryption: input.item.encryption ?? '',
     contentType: input.item.contentType ?? 'text/plain',
+    orderCorrelationId: replyOrderCorrelationId,
     timestamp: input.item.timestamp,
     pinId: input.item.pinId,
     txId: input.item.txId,

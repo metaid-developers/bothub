@@ -109,6 +109,26 @@ describe('privateChat', () => {
     })
   })
 
+  it('preserves reply metadata from normalized private chat rows', () => {
+    const normalized = normalizePrivateChatItem({
+      from: 'idqpeer',
+      to: 'idqself',
+      content: 'cipher',
+      timestamp: 1_700_000_000,
+      replyPin: 'pin-original-order',
+      replyInfo: { pinId: 'pin-original-order' },
+      replyGlobalMetaId: 'idqself',
+      replyMetaId: 'meta-self',
+    })
+
+    expect(normalized).toMatchObject({
+      replyPin: 'pin-original-order',
+      replyInfo: { pinId: 'pin-original-order' },
+      replyGlobalMetaId: 'idqself',
+      replyMetaId: 'meta-self',
+    })
+  })
+
   it('builds stable message id from pinId', () => {
     expect(messageIdFromPrivateChat(baseItem)).toBe('pin-abc')
     expect(

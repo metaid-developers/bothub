@@ -85,6 +85,7 @@ describe('private chat API client', () => {
                   content: 'cipher',
                   timestamp: 1_700_000_000_000,
                   pinId: 'pin-from-to-history',
+                  replyPin: 'pin-original-order',
                 },
               ],
             },
@@ -104,6 +105,7 @@ describe('private chat API client', () => {
           fromGlobalMetaId: 'idqpeer',
           toGlobalMetaId: 'idqself',
           encryption: 'ecdh',
+          replyPin: 'pin-original-order',
           fromUserInfo: expect.objectContaining({
             chatPublicKey: 'peer-chat-key',
           }),

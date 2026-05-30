@@ -36,6 +36,10 @@ export interface PrivateChatItem {
   encrypt?: string
   encryption?: string
   chatType?: string
+  replyPin?: string
+  replyInfo?: Record<string, unknown>
+  replyGlobalMetaId?: string
+  replyMetaId?: string
   timestamp: number
   chain?: string
   blockHeight?: number
@@ -137,6 +141,10 @@ export function normalizePrivateChatItem(value: unknown): PrivateChatItem | null
   const protocol = nonEmptyString(row.protocol) ?? nonEmptyString(row.path) ?? undefined
   const encryption =
     nonEmptyString(row.encryption) ?? nonEmptyString(row.encrypt) ?? undefined
+  const replyInfo =
+    typeof row.replyInfo === 'object' && row.replyInfo !== null && !Array.isArray(row.replyInfo)
+      ? (row.replyInfo as Record<string, unknown>)
+      : undefined
 
   return {
     fromGlobalMetaId,
@@ -156,6 +164,10 @@ export function normalizePrivateChatItem(value: unknown): PrivateChatItem | null
     encrypt: nonEmptyString(row.encrypt) ?? undefined,
     encryption,
     chatType: nonEmptyString(row.chatType) ?? undefined,
+    replyPin: nonEmptyString(row.replyPin) ?? undefined,
+    replyInfo,
+    replyGlobalMetaId: nonEmptyString(row.replyGlobalMetaId) ?? undefined,
+    replyMetaId: nonEmptyString(row.replyMetaId) ?? undefined,
     timestamp,
     chain: nonEmptyString(row.chain) ?? undefined,
     blockHeight:

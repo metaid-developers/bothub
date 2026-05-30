@@ -8,6 +8,7 @@ import { useWallet } from '@/wallet/useWallet'
 vi.mock('@/wallet/metalet', () => ({
   connect: vi.fn(),
   disconnect: vi.fn(),
+  ensureReady: vi.fn(),
   getGlobalMetaid: vi.fn(),
   isMetaletInstalled: vi.fn(() => true),
   MetaletNotInstalledError: class MetaletNotInstalledError extends Error {
@@ -145,5 +146,33 @@ describe('useWallet store', () => {
 
     expect(result.current.status).toBe('disconnected')
     expect(result.current.identity).toBeNull()
+  })
+
+  it('hydrateFromMetalet clears stale connected identity when live wallet preflight fails', async () => {
+    useWallet.setState({
+      identity: {
+        globalMetaId: 'idq1stale',
+        mvcAddress: '1mvc',
+        btcAddress: 'bc1',
+        dogeAddress: 'Ddoge',
+      },
+      status: 'connected',
+      errorMessage: null,
+    })
+    vi.mocked(metalet.ensureReady).mockRejectedValue(
+      new Error('Metalet wallet is not connected to this site. Connect Metalet and try again.'),
+    )
+
+    const { result } = renderHook(() => useWallet())
+
+    await act(async () => {
+      await result.current.hydrateFromMetalet()
+    })
+
+    expect(metalet.ensureReady).toHaveBeenCalledWith('idq1stale')
+    expect(metalet.getGlobalMetaid).not.toHaveBeenCalled()
+    expect(result.current.identity).toBeNull()
+    expect(result.current.status).toBe('disconnected')
+    expect(result.current.errorMessage).toBeNull()
   })
 })
