@@ -1,8 +1,10 @@
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { DeliveryPage } from '@/routes/Delivery'
 import { fetchUserProfileByGlobalMetaId } from '@/api/userProfile'
+import { retryDecryptPeerMessages } from '@/delivery/decryptRetry'
+import type { DeliveryMessage } from '@/delivery/messageStore'
 import type { WalletIdentity } from '@/wallet/types'
 
 const mocks = vi.hoisted(() => ({
@@ -15,9 +17,9 @@ const mocks = vi.hoisted(() => ({
     lastError: null,
   },
   messageState: {
-    byPeer: {},
+    byPeer: {} as Record<string, DeliveryMessage[]>,
     assetsBySession: {},
-    selectedSessionKey: null,
+    selectedSessionKey: null as string | null,
     setSelectedSession: vi.fn(),
     hydrateFromDb: vi.fn().mockResolvedValue(undefined),
     listSessions: vi.fn(() => []),
@@ -44,8 +46,38 @@ vi.mock('@/api/userProfile', () => ({
   fetchUserProfileByGlobalMetaId: vi.fn(),
 }))
 
+vi.mock('@/delivery/decryptRetry', () => ({
+  retryDecryptPeerMessages: vi.fn().mockResolvedValue({ attempted: 1, updated: 1 }),
+}))
+
 function expectBefore(first: Element, second: Element) {
   expect(first.compareDocumentPosition(second) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+}
+
+const connectedWallet: WalletIdentity = {
+  globalMetaId: 'idqbuyer',
+  mvcAddress: '1BuyerMvc',
+  btcAddress: 'bc1buyer',
+  dogeAddress: 'Dbuyer',
+}
+
+function deliveryMessage(
+  overrides: Partial<DeliveryMessage> & Pick<DeliveryMessage, 'peerGlobalMetaId'>,
+): DeliveryMessage {
+  const { peerGlobalMetaId, ...rest } = overrides
+  return {
+    id: `pin-${peerGlobalMetaId}`,
+    peerGlobalMetaId,
+    fromGlobalMetaId: peerGlobalMetaId,
+    toGlobalMetaId: connectedWallet.globalMetaId,
+    content: 'hello from provider',
+    rawContent: 'hello from provider',
+    encryption: 'plain',
+    contentType: 'text/plain',
+    timestamp: 1,
+    pinId: `pin-${peerGlobalMetaId}`,
+    ...rest,
+  }
 }
 
 function renderDeliveryPage(initialEntry = '/delivery') {
@@ -69,6 +101,7 @@ describe('DeliveryPage layout', () => {
     mocks.messageState.assetsBySession = {}
     mocks.messageState.selectedSessionKey = null
     vi.mocked(fetchUserProfileByGlobalMetaId).mockResolvedValue({})
+    vi.mocked(retryDecryptPeerMessages).mockResolvedValue({ attempted: 1, updated: 1 })
     vi.clearAllMocks()
   })
 
@@ -132,7 +165,8 @@ describe('DeliveryPage layout', () => {
     vi.mocked(fetchUserProfileByGlobalMetaId).mockResolvedValue({
       globalMetaId: peerGlobalMetaId,
       name: '余生请多指教',
-      avatarUrl: '/meta-socket/api/v1/users/avatar/accelerate/37efeed000000000000000000000000000000000000000000000000000000000i0?process=thumbnail',
+      avatarUrl:
+        '/meta-socket/api/v1/users/avatar/accelerate/37efeed000000000000000000000000000000000000000000000000000000000i0?process=thumbnail',
       chatPubkey: '049759',
     })
     mocks.walletState.identity = {
@@ -164,9 +198,440 @@ describe('DeliveryPage layout', () => {
 
     expect(fetchUserProfileByGlobalMetaId).toHaveBeenCalledWith(peerGlobalMetaId)
     expect(await screen.findAllByText('余生请多指教')).toHaveLength(3)
-    expect(
-      screen.getAllByRole('img', { name: '余生请多指教 avatar' }),
-    ).toHaveLength(3)
+    expect(screen.getAllByRole('img', { name: '余生请多指教 avatar' })).toHaveLength(3)
     expect(screen.queryByLabelText('idq133…uv2n avatar')).not.toBeInTheDocument()
+  })
+
+  it('hydrates the selected peer profile and retries decrypting failed ciphertext', async () => {
+    const peerGlobalMetaId = 'idqprovider'
+    vi.mocked(fetchUserProfileByGlobalMetaId).mockResolvedValue({
+      globalMetaId: peerGlobalMetaId,
+      name: 'Provider Keyholder',
+      avatarUrl: 'https://cdn.example/provider-keyholder.png',
+      chatPubkey: 'profile-key',
+    })
+    mocks.walletState.identity = connectedWallet
+    mocks.walletState.status = 'connected'
+    mocks.messageState.byPeer = {
+      [peerGlobalMetaId]: [
+        deliveryMessage({
+          id: 'pin-encrypted',
+          peerGlobalMetaId,
+          content: 'U2FsdGVkX19ciphertext',
+          rawContent: 'U2FsdGVkX19ciphertext',
+          encryption: 'ecdh',
+          decryptError: 'missing peer key',
+        }),
+      ],
+    }
+
+    renderDeliveryPage(`/delivery?session=${peerGlobalMetaId}`)
+
+    await waitFor(() =>
+      expect(fetchUserProfileByGlobalMetaId).toHaveBeenCalledWith(peerGlobalMetaId),
+    )
+    await waitFor(() =>
+      expect(retryDecryptPeerMessages).toHaveBeenCalledWith({
+        walletIdentity: connectedWallet,
+        peerGlobalMetaId,
+        peerProfile: {
+          chatPubkey: 'profile-key',
+          name: 'Provider Keyholder',
+          avatarUrl: 'https://cdn.example/provider-keyholder.png',
+        },
+      }),
+    )
+  })
+
+  it('fetches a cached-identity disconnected profile without retrying decrypt', async () => {
+    const peerGlobalMetaId = 'idqdisconnected-provider'
+    vi.mocked(fetchUserProfileByGlobalMetaId).mockResolvedValue({
+      globalMetaId: peerGlobalMetaId,
+      name: 'Disconnected Provider',
+      avatarUrl: 'https://cdn.example/disconnected-provider.png',
+      chatPubkey: 'disconnected-profile-key',
+    })
+    mocks.walletState.identity = connectedWallet
+    mocks.walletState.status = 'disconnected'
+    mocks.messageState.byPeer = {
+      [peerGlobalMetaId]: [
+        deliveryMessage({
+          peerGlobalMetaId,
+          content: 'U2FsdGVkX19ciphertext',
+          rawContent: 'U2FsdGVkX19ciphertext',
+          encryption: 'ecdh',
+          decryptError: 'missing peer key',
+        }),
+      ],
+    }
+
+    const view = renderDeliveryPage(`/delivery?session=${peerGlobalMetaId}`)
+
+    await waitFor(() =>
+      expect(fetchUserProfileByGlobalMetaId).toHaveBeenCalledWith(peerGlobalMetaId),
+    )
+    expect(await screen.findByText('Disconnected Provider')).toBeInTheDocument()
+    expect(retryDecryptPeerMessages).not.toHaveBeenCalled()
+
+    mocks.walletState.status = 'connected'
+    view.rerender(
+      <MemoryRouter
+        initialEntries={[`/delivery?session=${peerGlobalMetaId}`]}
+        future={{ v7_relativeSplatPath: true, v7_startTransition: true }}
+      >
+        <DeliveryPage />
+      </MemoryRouter>,
+    )
+
+    await waitFor(() =>
+      expect(retryDecryptPeerMessages).toHaveBeenCalledWith({
+        walletIdentity: connectedWallet,
+        peerGlobalMetaId,
+        peerProfile: {
+          chatPubkey: 'disconnected-profile-key',
+          name: 'Disconnected Provider',
+          avatarUrl: 'https://cdn.example/disconnected-provider.png',
+        },
+      }),
+    )
+    expect(retryDecryptPeerMessages).toHaveBeenCalledTimes(1)
+
+    view.rerender(
+      <MemoryRouter
+        initialEntries={[`/delivery?session=${peerGlobalMetaId}`]}
+        future={{ v7_relativeSplatPath: true, v7_startTransition: true }}
+      >
+        <DeliveryPage />
+      </MemoryRouter>,
+    )
+
+    await waitFor(() => expect(retryDecryptPeerMessages).toHaveBeenCalledTimes(1))
+  })
+
+  it('hydrates visible session profiles beyond the selected session', async () => {
+    vi.mocked(fetchUserProfileByGlobalMetaId).mockImplementation(async (peerGlobalMetaId) => ({
+      globalMetaId: peerGlobalMetaId,
+      name: peerGlobalMetaId === 'idqprovider-a' ? 'Provider Alpha' : 'Provider Beta',
+      avatarUrl:
+        peerGlobalMetaId === 'idqprovider-a'
+          ? 'https://cdn.example/provider-alpha.png'
+          : 'https://cdn.example/provider-beta.png',
+      chatPubkey: peerGlobalMetaId === 'idqprovider-a' ? 'alpha-key' : 'beta-key',
+    }))
+    mocks.walletState.identity = connectedWallet
+    mocks.walletState.status = 'connected'
+    mocks.messageState.byPeer = {
+      'idqselected-complete': [
+        deliveryMessage({
+          peerGlobalMetaId: 'idqselected-complete',
+          peerChatPubkey: 'selected-key',
+          peerName: 'Selected Complete',
+          peerAvatarUrl: 'https://cdn.example/selected-complete.png',
+          timestamp: 3,
+        }),
+      ],
+      'idqprovider-a': [
+        deliveryMessage({
+          peerGlobalMetaId: 'idqprovider-a',
+          timestamp: 2,
+        }),
+      ],
+      'idqprovider-b': [
+        deliveryMessage({
+          peerGlobalMetaId: 'idqprovider-b',
+          timestamp: 1,
+        }),
+      ],
+    }
+
+    renderDeliveryPage('/delivery')
+
+    await waitFor(() => {
+      expect(fetchUserProfileByGlobalMetaId).toHaveBeenCalledWith('idqprovider-a')
+      expect(fetchUserProfileByGlobalMetaId).toHaveBeenCalledWith('idqprovider-b')
+    })
+    expect(fetchUserProfileByGlobalMetaId).not.toHaveBeenCalledWith('idqselected-complete')
+    expect(fetchUserProfileByGlobalMetaId).toHaveBeenCalledTimes(2)
+    const sessionList = screen.getByRole('list', { name: 'Sessions' })
+    expect(await within(sessionList).findByText('Provider Alpha')).toBeInTheDocument()
+    expect(await within(sessionList).findByText('Provider Beta')).toBeInTheDocument()
+    expect(
+      within(sessionList).getByRole('img', { name: 'Provider Alpha avatar' }),
+    ).toBeInTheDocument()
+    expect(
+      within(sessionList).getByRole('img', { name: 'Provider Beta avatar' }),
+    ).toBeInTheDocument()
+  })
+
+  it('does not spend the decrypt retry key on plain visible profile hydration', async () => {
+    const peerGlobalMetaId = 'idqprovider-visible-plain'
+    vi.mocked(fetchUserProfileByGlobalMetaId).mockResolvedValue({
+      globalMetaId: peerGlobalMetaId,
+      name: 'Visible Plain Provider',
+      avatarUrl: 'https://cdn.example/visible-plain-provider.png',
+      chatPubkey: 'visible-plain-key',
+    })
+    mocks.walletState.identity = connectedWallet
+    mocks.walletState.status = 'connected'
+    mocks.messageState.byPeer = {
+      'idqselected-complete': [
+        deliveryMessage({
+          peerGlobalMetaId: 'idqselected-complete',
+          peerChatPubkey: 'selected-key',
+          peerName: 'Selected Complete',
+          peerAvatarUrl: 'https://cdn.example/selected-complete.png',
+          timestamp: 2,
+        }),
+      ],
+      [peerGlobalMetaId]: [
+        deliveryMessage({
+          peerGlobalMetaId,
+          timestamp: 1,
+        }),
+      ],
+    }
+
+    const view = renderDeliveryPage('/delivery')
+
+    await waitFor(() =>
+      expect(fetchUserProfileByGlobalMetaId).toHaveBeenCalledWith(peerGlobalMetaId),
+    )
+    const sessionList = screen.getByRole('list', { name: 'Sessions' })
+    expect(await within(sessionList).findByText('Visible Plain Provider')).toBeInTheDocument()
+    expect(
+      within(sessionList).getByRole('img', { name: 'Visible Plain Provider avatar' }),
+    ).toBeInTheDocument()
+    expect(retryDecryptPeerMessages).not.toHaveBeenCalled()
+
+    mocks.messageState.selectedSessionKey = peerGlobalMetaId
+    mocks.messageState.byPeer = {
+      'idqselected-complete': mocks.messageState.byPeer['idqselected-complete'],
+      [peerGlobalMetaId]: [
+        deliveryMessage({
+          peerGlobalMetaId,
+          content: 'U2FsdGVkX19ciphertext',
+          rawContent: 'U2FsdGVkX19ciphertext',
+          encryption: 'ecdh',
+          decryptError: 'missing peer key',
+          timestamp: 3,
+        }),
+      ],
+    }
+    view.rerender(
+      <MemoryRouter
+        initialEntries={['/delivery']}
+        future={{ v7_relativeSplatPath: true, v7_startTransition: true }}
+      >
+        <DeliveryPage />
+      </MemoryRouter>,
+    )
+
+    await waitFor(() =>
+      expect(retryDecryptPeerMessages).toHaveBeenCalledWith({
+        walletIdentity: connectedWallet,
+        peerGlobalMetaId,
+        peerProfile: {
+          chatPubkey: 'visible-plain-key',
+          name: 'Visible Plain Provider',
+          avatarUrl: 'https://cdn.example/visible-plain-provider.png',
+        },
+      }),
+    )
+    expect(retryDecryptPeerMessages).toHaveBeenCalledTimes(1)
+  })
+
+  it('caps visible hydration after filtering to missing peer profiles', async () => {
+    const completeSessions = Object.fromEntries(
+      Array.from({ length: 12 }, (_, index) => {
+        const peerGlobalMetaId = `idqcomplete-${index + 1}`
+        return [
+          peerGlobalMetaId,
+          [
+            deliveryMessage({
+              peerGlobalMetaId,
+              peerChatPubkey: `complete-key-${index + 1}`,
+              peerName: `Complete Provider ${index + 1}`,
+              peerAvatarUrl: `https://cdn.example/complete-${index + 1}.png`,
+              timestamp: 30 - index,
+            }),
+          ],
+        ]
+      }),
+    )
+    vi.mocked(fetchUserProfileByGlobalMetaId).mockResolvedValue({
+      globalMetaId: 'idqmissing-after-complete',
+      name: 'Missing After Complete',
+      avatarUrl: 'https://cdn.example/missing-after-complete.png',
+      chatPubkey: 'missing-after-complete-key',
+    })
+    mocks.walletState.identity = connectedWallet
+    mocks.walletState.status = 'connected'
+    mocks.messageState.byPeer = {
+      ...completeSessions,
+      'idqmissing-after-complete': [
+        deliveryMessage({
+          peerGlobalMetaId: 'idqmissing-after-complete',
+          timestamp: 1,
+        }),
+      ],
+    }
+
+    renderDeliveryPage('/delivery')
+
+    await waitFor(() =>
+      expect(fetchUserProfileByGlobalMetaId).toHaveBeenCalledWith('idqmissing-after-complete'),
+    )
+    expect(fetchUserProfileByGlobalMetaId).toHaveBeenCalledTimes(1)
+  })
+
+  it('does not repeatedly refetch a rejected profile request for the same peer', async () => {
+    const peerGlobalMetaId = 'idqprovider-rejects'
+    vi.mocked(fetchUserProfileByGlobalMetaId).mockRejectedValue(new Error('profile offline'))
+    mocks.walletState.identity = connectedWallet
+    mocks.walletState.status = 'connected'
+    mocks.messageState.byPeer = {
+      [peerGlobalMetaId]: [
+        deliveryMessage({
+          peerGlobalMetaId,
+          content: 'U2FsdGVkX19ciphertext',
+          rawContent: 'U2FsdGVkX19ciphertext',
+          encryption: 'ecdh',
+          decryptError: 'missing peer key',
+        }),
+      ],
+    }
+
+    const view = renderDeliveryPage(`/delivery?session=${peerGlobalMetaId}`)
+
+    await waitFor(() => expect(fetchUserProfileByGlobalMetaId).toHaveBeenCalledTimes(1))
+    view.rerender(
+      <MemoryRouter
+        initialEntries={[`/delivery?session=${peerGlobalMetaId}`]}
+        future={{ v7_relativeSplatPath: true, v7_startTransition: true }}
+      >
+        <DeliveryPage />
+      </MemoryRouter>,
+    )
+
+    await waitFor(() => expect(fetchUserProfileByGlobalMetaId).toHaveBeenCalledTimes(1))
+    expect(retryDecryptPeerMessages).not.toHaveBeenCalled()
+  })
+
+  it('does not let attempted duplicate visible peers starve another missing peer', async () => {
+    const attemptedPeer = 'idqattempted-duplicate'
+    const nextPeer = 'idqmissing-next'
+    vi.mocked(fetchUserProfileByGlobalMetaId).mockImplementation(async (peerGlobalMetaId) => {
+      if (peerGlobalMetaId === attemptedPeer) {
+        throw new Error('profile offline')
+      }
+      return {
+        globalMetaId: nextPeer,
+        name: 'Next Missing Provider',
+        avatarUrl: 'https://cdn.example/next-missing-provider.png',
+        chatPubkey: 'next-missing-key',
+      }
+    })
+    mocks.walletState.identity = connectedWallet
+    mocks.walletState.status = 'connected'
+    mocks.messageState.byPeer = {
+      [attemptedPeer]: [
+        deliveryMessage({
+          peerGlobalMetaId: attemptedPeer,
+          timestamp: 40,
+        }),
+      ],
+    }
+
+    const view = renderDeliveryPage('/delivery')
+
+    await waitFor(() => expect(fetchUserProfileByGlobalMetaId).toHaveBeenCalledWith(attemptedPeer))
+    expect(fetchUserProfileByGlobalMetaId).toHaveBeenCalledTimes(1)
+
+    mocks.messageState.byPeer = {
+      [attemptedPeer]: Array.from({ length: 12 }, (_, index) =>
+        deliveryMessage({
+          id: `pin-${attemptedPeer}-${index + 1}`,
+          peerGlobalMetaId: attemptedPeer,
+          orderCorrelationId: `order-${index + 1}`,
+          timestamp: 40 - index,
+        }),
+      ),
+      [nextPeer]: [
+        deliveryMessage({
+          peerGlobalMetaId: nextPeer,
+          timestamp: 1,
+        }),
+      ],
+    }
+    view.rerender(
+      <MemoryRouter
+        initialEntries={['/delivery']}
+        future={{ v7_relativeSplatPath: true, v7_startTransition: true }}
+      >
+        <DeliveryPage />
+      </MemoryRouter>,
+    )
+
+    await waitFor(() => expect(fetchUserProfileByGlobalMetaId).toHaveBeenCalledWith(nextPeer))
+    expect(fetchUserProfileByGlobalMetaId).toHaveBeenCalledTimes(2)
+    expect(await screen.findByText('Next Missing Provider')).toBeInTheDocument()
+  })
+
+  it('does not repeatedly refetch an empty profile in the same mounted page session', async () => {
+    const peerGlobalMetaId = 'idqprovider-empty'
+    vi.mocked(fetchUserProfileByGlobalMetaId).mockResolvedValue({})
+    mocks.walletState.identity = connectedWallet
+    mocks.walletState.status = 'connected'
+    mocks.messageState.byPeer = {
+      [peerGlobalMetaId]: [
+        deliveryMessage({
+          peerGlobalMetaId,
+          content: 'U2FsdGVkX19ciphertext',
+          rawContent: 'U2FsdGVkX19ciphertext',
+          encryption: 'ecdh',
+          decryptError: 'missing peer key',
+        }),
+      ],
+    }
+
+    const view = renderDeliveryPage(`/delivery?session=${peerGlobalMetaId}`)
+
+    await waitFor(() => expect(fetchUserProfileByGlobalMetaId).toHaveBeenCalledTimes(1))
+    view.rerender(
+      <MemoryRouter
+        initialEntries={[`/delivery?session=${peerGlobalMetaId}`]}
+        future={{ v7_relativeSplatPath: true, v7_startTransition: true }}
+      >
+        <DeliveryPage />
+      </MemoryRouter>,
+    )
+
+    await waitFor(() => expect(fetchUserProfileByGlobalMetaId).toHaveBeenCalledTimes(1))
+    expect(retryDecryptPeerMessages).not.toHaveBeenCalled()
+  })
+
+  it('allows a manual provider key retry after an empty profile response', async () => {
+    const peerGlobalMetaId = 'idqprovider-manual'
+    vi.mocked(fetchUserProfileByGlobalMetaId).mockResolvedValue({})
+    mocks.walletState.identity = connectedWallet
+    mocks.walletState.status = 'connected'
+    mocks.messageState.byPeer = {
+      [peerGlobalMetaId]: [
+        deliveryMessage({
+          peerGlobalMetaId,
+          content: 'U2FsdGVkX19ciphertext',
+          rawContent: 'U2FsdGVkX19ciphertext',
+          encryption: 'ecdh',
+          decryptError: 'missing peer key',
+        }),
+      ],
+    }
+
+    renderDeliveryPage(`/delivery?session=${peerGlobalMetaId}`)
+
+    await waitFor(() => expect(fetchUserProfileByGlobalMetaId).toHaveBeenCalledTimes(1))
+    fireEvent.click(screen.getByRole('button', { name: 'Fetch provider key' }))
+
+    await waitFor(() => expect(fetchUserProfileByGlobalMetaId).toHaveBeenCalledTimes(2))
   })
 })

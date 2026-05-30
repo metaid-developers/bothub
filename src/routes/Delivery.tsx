@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { fetchUserProfileByGlobalMetaId, type UserProfile } from '@/api/userProfile'
 import { WsErrorBanner } from '@/components/common/WsErrorBanner'
@@ -8,6 +8,7 @@ import { MessageList } from '@/components/delivery/MessageList'
 import { SessionHeader } from '@/components/delivery/SessionHeader'
 import { SessionsList } from '@/components/delivery/SessionsList'
 import { getOrdersForWallet } from '@/delivery/db'
+import { retryDecryptPeerMessages } from '@/delivery/decryptRetry'
 import { buildSessionId } from '@/delivery/domain'
 import type { BuyerOrder } from '@/delivery/domain'
 import { useMessageStore } from '@/delivery/messageStore'
@@ -31,23 +32,21 @@ function hasDisplayProfile(input: {
   return Boolean(input.peerName?.trim() && input.peerAvatarUrl?.trim())
 }
 
-function mergeSessionProfileFallback<T extends {
-  peerGlobalMetaId: string
-  peerName?: string
-  peerAvatarUrl?: string
-  providerChatPubkey?: string
-}>(
-  session: T,
-  profile: UserProfile | undefined,
-): T {
+function mergeSessionProfileFallback<
+  T extends {
+    peerGlobalMetaId: string
+    peerName?: string
+    peerAvatarUrl?: string
+    providerChatPubkey?: string
+  },
+>(session: T, profile: UserProfile | undefined): T {
   if (!profile) return session
   return {
     ...session,
     providerChatPubkey:
       session.providerChatPubkey?.trim() || profile.chatPubkey?.trim() || undefined,
     peerName: session.peerName?.trim() || profile.name?.trim() || undefined,
-    peerAvatarUrl:
-      session.peerAvatarUrl?.trim() || profile.avatarUrl?.trim() || undefined,
+    peerAvatarUrl: session.peerAvatarUrl?.trim() || profile.avatarUrl?.trim() || undefined,
   }
 }
 
@@ -61,6 +60,9 @@ export function DeliveryPage() {
   const [orders, setOrders] = useState<BuyerOrder[]>([])
   const [providerProfiles, setProviderProfiles] = useState<Record<string, UserProfile>>({})
   const [providerProfileLoading, setProviderProfileLoading] = useState<Record<string, boolean>>({})
+  const providerProfileRequestsRef = useRef<Set<string>>(new Set())
+  const providerProfileAttemptedRef = useRef<Set<string>>(new Set())
+  const providerProfileRetryRef = useRef<Set<string>>(new Set())
 
   const byPeer = useMessageStore((s) => s.byPeer)
   const assetsBySession = useMessageStore((s) => s.assetsBySession)
@@ -121,11 +123,9 @@ export function DeliveryPage() {
         if (!profile) return message
         return {
           ...message,
-          peerChatPubkey:
-            message.peerChatPubkey?.trim() || profile.chatPubkey?.trim() || undefined,
+          peerChatPubkey: message.peerChatPubkey?.trim() || profile.chatPubkey?.trim() || undefined,
           peerName: message.peerName?.trim() || profile.name?.trim() || undefined,
-          peerAvatarUrl:
-            message.peerAvatarUrl?.trim() || profile.avatarUrl?.trim() || undefined,
+          peerAvatarUrl: message.peerAvatarUrl?.trim() || profile.avatarUrl?.trim() || undefined,
         }
       }),
     [messages, providerProfiles],
@@ -141,10 +141,9 @@ export function DeliveryPage() {
     return assetsBySession[sessionId] ?? []
   }, [assetsBySession, selectedSession, selfGlobalMetaId])
 
-  const selectedProviderProfile =
-    selectedSessionDetails?.peerGlobalMetaId
-      ? providerProfiles[selectedSessionDetails.peerGlobalMetaId]
-      : undefined
+  const selectedProviderProfile = selectedSessionDetails?.peerGlobalMetaId
+    ? providerProfiles[selectedSessionDetails.peerGlobalMetaId]
+    : undefined
   const selectedProviderChatPubkey = useMemo(
     () =>
       resolveProviderChatPubkey({
@@ -161,38 +160,98 @@ export function DeliveryPage() {
         ? {
             ...selectedSessionDetails,
             providerChatPubkey:
-              selectedProviderChatPubkey ||
-              selectedSessionDetails.providerChatPubkey,
+              selectedProviderChatPubkey || selectedSessionDetails.providerChatPubkey,
           }
         : null,
     [selectedProviderChatPubkey, selectedSessionDetails],
   )
 
-  const fetchSelectedProviderProfile = useCallback(() => {
-    const providerGlobalMetaId = selectedSessionDetails?.peerGlobalMetaId.trim()
-    if (!providerGlobalMetaId || providerProfileLoading[providerGlobalMetaId]) return
+  const selectedHasDecryptGap = useMemo(
+    () =>
+      messages.some(
+        (message) =>
+          Boolean(message.decryptError?.trim()) ||
+          (message.content === message.rawContent &&
+            message.encryption.trim().toLowerCase() === 'ecdh'),
+      ),
+    [messages],
+  )
 
-    setProviderProfileLoading((current) => ({
-      ...current,
-      [providerGlobalMetaId]: true,
-    }))
-    void fetchUserProfileByGlobalMetaId(providerGlobalMetaId)
-      .then((profile) => {
+  const retryDecryptWithProviderProfile = useCallback(
+    (peerGlobalMetaId: string, profile: UserProfile): void => {
+      const peer = peerGlobalMetaId.trim()
+      const chatPubkey = profile.chatPubkey?.trim()
+      const walletGlobalMetaId = identity?.globalMetaId.trim()
+      if (!walletConnected || !identity || !walletGlobalMetaId || !peer || !chatPubkey) {
+        return
+      }
+
+      const retryKey = `${walletGlobalMetaId}:${peer}:${chatPubkey}`
+      if (providerProfileRetryRef.current.has(retryKey)) return
+      providerProfileRetryRef.current.add(retryKey)
+
+      void retryDecryptPeerMessages({
+        walletIdentity: identity,
+        peerGlobalMetaId: peer,
+        peerProfile: {
+          chatPubkey,
+          name: profile.name,
+          avatarUrl: profile.avatarUrl,
+        },
+      }).catch((error) => {
+        console.warn('Could not retry delivery decrypt after profile hydration.', error)
+      })
+    },
+    [identity, walletConnected],
+  )
+
+  const fetchProviderProfile = useCallback(
+    async (
+      providerGlobalMetaId: string,
+      options?: { force?: boolean; retryDecrypt?: boolean },
+    ): Promise<UserProfile | undefined> => {
+      const peer = providerGlobalMetaId.trim()
+      const cachedProfile = providerProfiles[peer]
+      if (
+        !peer ||
+        providerProfileRequestsRef.current.has(peer) ||
+        (!options?.force && (cachedProfile || providerProfileAttemptedRef.current.has(peer)))
+      ) {
+        return cachedProfile
+      }
+
+      providerProfileRequestsRef.current.add(peer)
+      providerProfileAttemptedRef.current.add(peer)
+      setProviderProfileLoading((current) => ({
+        ...current,
+        [peer]: true,
+      }))
+
+      try {
+        const profile = await fetchUserProfileByGlobalMetaId(peer)
         setProviderProfiles((current) => ({
           ...current,
-          [providerGlobalMetaId]: profile,
+          [peer]: profile,
         }))
-      })
-      .catch((error) => {
+
+        if (options?.retryDecrypt) {
+          retryDecryptWithProviderProfile(peer, profile)
+        }
+
+        return profile
+      } catch (error) {
         console.warn('Could not fetch provider profile.', error)
-      })
-      .finally(() => {
+        return undefined
+      } finally {
+        providerProfileRequestsRef.current.delete(peer)
         setProviderProfileLoading((current) => ({
           ...current,
-          [providerGlobalMetaId]: false,
+          [peer]: false,
         }))
-      })
-  }, [providerProfileLoading, selectedSessionDetails])
+      }
+    },
+    [providerProfiles, retryDecryptWithProviderProfile],
+  )
 
   useEffect(() => {
     if (!selectedSessionDetails) return
@@ -200,14 +259,59 @@ export function DeliveryPage() {
     if (providerProfiles[providerGlobalMetaId]) return
     const needsChatKey = !selectedProviderChatPubkey
     const needsDisplayProfile = !hasDisplayProfile(selectedSessionDetails)
-    if (!needsChatKey && !needsDisplayProfile) return
-    fetchSelectedProviderProfile()
+    if (!needsChatKey && !needsDisplayProfile && !selectedHasDecryptGap) return
+    void fetchProviderProfile(providerGlobalMetaId, { retryDecrypt: selectedHasDecryptGap })
   }, [
-    fetchSelectedProviderProfile,
+    fetchProviderProfile,
     providerProfiles,
     selectedProviderChatPubkey,
+    selectedHasDecryptGap,
     selectedSessionDetails,
   ])
+
+  useEffect(() => {
+    if (!selectedSessionDetails || !selectedProviderProfile || !selectedHasDecryptGap) return
+    retryDecryptWithProviderProfile(
+      selectedSessionDetails.peerGlobalMetaId,
+      selectedProviderProfile,
+    )
+  }, [
+    retryDecryptWithProviderProfile,
+    selectedHasDecryptGap,
+    selectedProviderProfile,
+    selectedSessionDetails,
+  ])
+
+  useEffect(() => {
+    if (!walletConnected) return
+    const seenProviderPeers = new Set<string>()
+    const missingProviderPeers: string[] = []
+
+    for (const session of displaySessions) {
+      const providerGlobalMetaId = session.peerGlobalMetaId.trim()
+      if (
+        !providerGlobalMetaId ||
+        seenProviderPeers.has(providerGlobalMetaId) ||
+        providerProfiles[providerGlobalMetaId] ||
+        providerProfileRequestsRef.current.has(providerGlobalMetaId) ||
+        providerProfileAttemptedRef.current.has(providerGlobalMetaId)
+      ) {
+        continue
+      }
+
+      const missingDisplayProfile = !hasDisplayProfile(session)
+      const missingChatKey = !session.providerChatPubkey?.trim()
+      if (!missingDisplayProfile && !missingChatKey) continue
+
+      seenProviderPeers.add(providerGlobalMetaId)
+      missingProviderPeers.push(providerGlobalMetaId)
+      if (missingProviderPeers.length >= 12) break
+    }
+
+    for (const providerGlobalMetaId of missingProviderPeers) {
+      void fetchProviderProfile(providerGlobalMetaId)
+    }
+  }, [displaySessions, fetchProviderProfile, providerProfiles, walletConnected])
 
   const selectSession = useCallback(
     (sessionKey: string) => {
@@ -236,7 +340,10 @@ export function DeliveryPage() {
       <WsErrorBanner />
 
       <div className="grid min-h-[560px] overflow-hidden rounded-card border border-hub-border bg-hub-surface/30 md:grid-cols-[minmax(220px,280px)_minmax(0,1fr)_minmax(220px,280px)] md:grid-rows-[minmax(0,1fr)_auto]">
-        <aside aria-label={t('delivery.sessions')} className="border-b border-hub-border p-3 md:row-span-2 md:border-b-0 md:border-r">
+        <aside
+          aria-label={t('delivery.sessions')}
+          className="border-b border-hub-border p-3 md:row-span-2 md:border-b-0 md:border-r"
+        >
           <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-hub-muted">
             {t('delivery.sessions')}
           </h2>
@@ -269,9 +376,18 @@ export function DeliveryPage() {
           providerChatPubkey={selectedProviderChatPubkey}
           providerKeyLoading={Boolean(
             selectedSessionDetails?.peerGlobalMetaId &&
-              providerProfileLoading[selectedSessionDetails.peerGlobalMetaId],
+            providerProfileLoading[selectedSessionDetails.peerGlobalMetaId],
           )}
-          onFetchProviderKey={selectedSessionDetails ? fetchSelectedProviderProfile : undefined}
+          onFetchProviderKey={
+            selectedSessionDetails
+              ? () => {
+                  void fetchProviderProfile(selectedSessionDetails.peerGlobalMetaId, {
+                    force: true,
+                    retryDecrypt: selectedHasDecryptGap,
+                  })
+                }
+              : undefined
+          }
         />
       </div>
     </section>
