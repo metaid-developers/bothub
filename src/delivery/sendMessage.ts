@@ -49,6 +49,14 @@ function buildPrivateMessagePayload(input: {
   })
 }
 
+function createLocalFollowUpId(): string {
+  const random =
+    typeof globalThis.crypto?.randomUUID === 'function'
+      ? globalThis.crypto.randomUUID()
+      : Math.random().toString(36).slice(2)
+  return `local-follow-up:${Date.now()}:${random}`
+}
+
 export async function sendDeliveryFollowUp(
   input: SendDeliveryFollowUpInput,
 ): Promise<SendDeliveryFollowUpResult> {
@@ -106,13 +114,7 @@ export async function sendDeliveryFollowUp(
     throw err
   }
 
-  const pinId = resolvePrimaryPinId(pinResult)
-  if (!pinId) {
-    throw new DeliveryFollowUpError(
-      'Follow-up broadcast did not return an id',
-      'broadcast_failed',
-    )
-  }
+  const pinId = resolvePrimaryPinId(pinResult) || createLocalFollowUpId()
 
   return { pinId, encryptedContent }
 }

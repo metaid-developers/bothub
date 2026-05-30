@@ -163,6 +163,50 @@ describe('RequestModal', () => {
     )
   })
 
+  it('persists a resolved free order without a returned pin id as pending, not failed', async () => {
+    const resolvedWithoutPin: ExecutePayAndRequestResult = {
+      ...result,
+      orderPinId: '',
+      sessionKey: 'idqprovider:order-ref-without-pin',
+      orderReference: 'order-ref-without-pin',
+    }
+    executePayAndRequest.mockResolvedValue(resolvedWithoutPin)
+
+    render(
+      <MemoryRouter>
+        <RequestModal
+          open
+          onClose={vi.fn()}
+          service={service}
+          provider={provider}
+          wallet={wallet}
+        />
+      </MemoryRouter>,
+    )
+
+    fireEvent.change(screen.getByLabelText(/describe what you need/i), {
+      target: { value: 'Tell me my fortune' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Review' }))
+    fireEvent.click(screen.getByRole('button', { name: /confirm & pay/i }))
+
+    await waitFor(() =>
+      expect(navigate).toHaveBeenCalledWith(
+        '/delivery?session=idqprovider%3Aorder-ref-without-pin',
+      ),
+    )
+
+    expect(persistPendingOrder).toHaveBeenCalledWith({
+      wallet,
+      service,
+      provider,
+      prompt: 'Tell me my fortune',
+      result: resolvedWithoutPin,
+    })
+    expect(persistFailedToSendOrder).not.toHaveBeenCalled()
+    expect(screen.queryByText(/free order message failed/i)).not.toBeInTheDocument()
+  })
+
   it('blocks stale connected wallet state before creating an order', async () => {
     vi.mocked(metalet.ensureReady).mockRejectedValue(
       new Error('Metalet wallet did not respond to ping. Reload Metalet and try again.'),

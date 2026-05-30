@@ -220,6 +220,26 @@ describe('sendDeliveryFollowUp', () => {
     ).resolves.toMatchObject({ pinId: `${followUpTxid}i0` })
   })
 
+  it('uses a local follow-up id when createPin resolves without a parseable pin id', async () => {
+    vi.spyOn(Date, 'now').mockReturnValue(1_764_322_222_222)
+    const createPin = vi.fn().mockResolvedValue({ status: 'Task Finished' })
+
+    const result = await sendDeliveryFollowUp({
+      wallet,
+      providerGlobalMetaId: 'idqprovider',
+      providerChatPubkey: '04' + 'ab'.repeat(64),
+      content: 'Thanks, one more thing.',
+      metalet: {
+        ecdh: vi.fn().mockResolvedValue({ sharedSecret: 'bb'.repeat(32) }),
+        createPin,
+      },
+    })
+
+    expect(createPin).toHaveBeenCalledOnce()
+    expect(result.pinId).toMatch(/^local-follow-up:1764322222222:/)
+    expect(result.encryptedContent).toBeTruthy()
+  })
+
   it('waits past the old 90s limit before timing out a follow-up broadcast', async () => {
     vi.useFakeTimers()
     let caught: unknown

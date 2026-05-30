@@ -327,11 +327,7 @@ export async function broadcastPreparedOrder(
     throw new PayAndRequestBroadcastError(message, prepared, err)
   }
 
-  const orderPinId = resolvePrimaryPinId(pinResult)
-  if (!orderPinId) {
-    throw new PayAndRequestBroadcastError('Order pin broadcast did not return an id', prepared)
-  }
-  return orderPinId
+  return resolvePrimaryPinId(pinResult)
 }
 
 export async function executePayAndRequest(
@@ -342,7 +338,7 @@ export async function executePayAndRequest(
   const prepared = await prepareEncryptedOrderMessage(validated, payment)
   const orderPinId = await broadcastPreparedOrder(prepared, validated.metalet)
   const sessionKey =
-    prepared.sessionKey === validated.providerGlobalMetaId
+    prepared.sessionKey === validated.providerGlobalMetaId && orderPinId
       ? `${validated.providerGlobalMetaId}:${orderPinId}`
       : prepared.sessionKey
 

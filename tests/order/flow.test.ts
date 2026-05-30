@@ -258,6 +258,37 @@ describe('executePayAndRequest', () => {
     expect(result.sessionKey).toBe(`${provider.globalMetaId}:${result.orderReference}`)
   })
 
+  it('treats a resolved free order createPin without a parseable pin id as broadcast success', async () => {
+    const transfer = vi.fn()
+    const ecdh = vi.fn().mockResolvedValue({ sharedSecret: 'bb'.repeat(32) })
+    const createPin = vi.fn().mockResolvedValue({ status: 'Task Finished' })
+
+    vi.spyOn(crypto, 'getRandomValues').mockImplementation((array) => {
+      if (array instanceof Uint8Array) {
+        array.fill(0x0f)
+      }
+      return array
+    })
+    const expectedOrderReference = generateRandomHex(32)
+
+    const result = await executePayAndRequest({
+      service: freeService,
+      provider,
+      prompt: 'Free blueprint please.',
+      wallet,
+      metalet: { transfer, ecdh, createPin },
+    })
+
+    expect(transfer).not.toHaveBeenCalled()
+    expect(createPin).toHaveBeenCalledOnce()
+    expect(result.orderPinId).toBe('')
+    expect(result.paymentTxid).toBe('')
+    expect(result.paymentCommitTxid).toBe('')
+    expect(result.orderReference).toBe(expectedOrderReference)
+    expect(result.sessionKey).toBe(`${provider.globalMetaId}:${expectedOrderReference}`)
+    expect(result.orderPayload).toContain(`order id: ${expectedOrderReference}`)
+  })
+
   it('surfaces payment failure when transfer returns no txid', async () => {
     await expect(
       executePayAndRequest({

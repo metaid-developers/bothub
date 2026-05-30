@@ -68,7 +68,9 @@ function OrderBubble({
           </div>
         ) : null}
         {message.decryptError ? (
-          <p className="mt-1 text-xs opacity-70">Could not decrypt — showing ciphertext</p>
+          <p className="mt-1 text-xs opacity-70">
+            Order broadcast issue recorded; showing saved order details.
+          </p>
         ) : null}
       </div>
     </div>
@@ -249,12 +251,6 @@ export function MessageBubble({ message, selfGlobalMetaId }: MessageBubbleProps)
   const isSelf = message.fromGlobalMetaId.trim() === selfGlobalMetaId.trim()
   const variant = getMessageVariant(message)
 
-  if (message.decryptError) {
-    return <DecryptFailedBubble message={message} />
-  }
-  if (variant === 'system') {
-    return <SystemBubble message={message} />
-  }
   if (variant === 'order') {
     return <OrderBubble message={message} isSelf={isSelf} />
   }
@@ -278,6 +274,12 @@ export function MessageBubble({ message, selfGlobalMetaId }: MessageBubbleProps)
   if (variant === 'rating_reserved') {
     const protocol = parseDeliveryProtocol(message.content)
     return <TimelineEvent label="Rating reserved" body={protocol.displayText} />
+  }
+  if (message.decryptError) {
+    return <DecryptFailedBubble message={message} />
+  }
+  if (variant === 'system') {
+    return <SystemBubble message={message} />
   }
   return <TextBubble message={message} isSelf={isSelf} body={message.content} />
 }

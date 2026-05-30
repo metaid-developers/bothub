@@ -162,4 +162,37 @@ describe('MessageBubble', () => {
     expect(screen.getByText('missing peer key')).toBeInTheDocument()
     expect(screen.getByText('encrypted-ciphertext')).toBeInTheDocument()
   })
+
+  it('renders a recoverable plaintext order with decryptError as an order bubble', () => {
+    const orderPayload = [
+      '[ORDER] Free Ecommerce Store Blueprint',
+      '<raw_request>',
+      'Launch a practical ecommerce store.',
+      '</raw_request>',
+      '支付金额 0 SPACE',
+      'order id: order-ref-1',
+      'service id: svc-1',
+      'skill name: ecommerce-blueprint',
+      'output type: text',
+    ].join('\n')
+
+    render(
+      <MessageBubble
+        message={message(orderPayload, {
+          decryptError: 'payment succeeded but order message failed',
+          rawContent: orderPayload,
+        })}
+        selfGlobalMetaId="self"
+      />,
+    )
+
+    expect(screen.getByText('Order')).toBeInTheDocument()
+    expect(screen.getByText('Free Ecommerce Store Blueprint')).toBeInTheDocument()
+    expect(screen.getByText('Price: 0 SPACE')).toBeInTheDocument()
+    expect(screen.queryByText('Unable to decrypt this message')).not.toBeInTheDocument()
+    expect(screen.queryByText(/Could not decrypt/i)).not.toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Show prompt' }))
+    expect(screen.getByText('Launch a practical ecommerce store.')).toBeInTheDocument()
+  })
 })
