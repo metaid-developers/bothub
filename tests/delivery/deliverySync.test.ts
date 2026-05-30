@@ -7,6 +7,7 @@ import {
   getMessagesForSession,
   getSessionsForWallet,
   getSyncState,
+  putSession,
   putSyncState,
 } from '@/delivery/db'
 import {
@@ -21,6 +22,7 @@ import type { PrivateChatItem } from '@/ws/privateChat'
 import { useSocket } from '@/ws/useSocket'
 import { listPrivateChatHistory, listPrivateChatHomes } from '@/api/privateChat'
 import { decryptIncoming } from '@/delivery/decrypt'
+import { fetchUserProfileByGlobalMetaId } from '@/api/userProfile'
 
 vi.mock('@/delivery/decrypt', () => ({
   decryptIncoming: vi.fn(async ({ content }: { content: string }) => ({
@@ -38,6 +40,10 @@ vi.mock('@/api/privateChat', async () => {
     listPrivateChatHistory: vi.fn(),
   }
 })
+
+vi.mock('@/api/userProfile', () => ({
+  fetchUserProfileByGlobalMetaId: vi.fn(),
+}))
 
 const SELF = 'idqself'
 const MVC_SELF = '1SelfMvcAddress'
@@ -77,6 +83,7 @@ function socketEnvelope(item: PrivateChatItem): SocketEnvelope<PrivateChatItem> 
 const mockedHomes = vi.mocked(listPrivateChatHomes)
 const mockedHistory = vi.mocked(listPrivateChatHistory)
 const mockedDecryptIncoming = vi.mocked(decryptIncoming)
+const mockedFetchUserProfileByGlobalMetaId = vi.mocked(fetchUserProfileByGlobalMetaId)
 
 describe('deliverySync', () => {
   beforeEach(() => {
@@ -96,6 +103,8 @@ describe('deliverySync', () => {
     })
     mockedHomes.mockReset()
     mockedHistory.mockReset()
+    mockedFetchUserProfileByGlobalMetaId.mockReset()
+    mockedFetchUserProfileByGlobalMetaId.mockResolvedValue({})
     mockedDecryptIncoming.mockReset()
     mockedDecryptIncoming.mockImplementation(async ({ content }: { content: string }) => ({
       plaintext: content,
@@ -339,5 +348,169 @@ describe('deliverySync', () => {
       peerChatPubKey: 'provider-chat-key',
       messageId: 'pin-stable-decrypt-id',
     })
+  })
+
+  it('fetches the peer profile chat key when private chat userInfo omits it before decrypting', async () => {
+    mockedFetchUserProfileByGlobalMetaId.mockResolvedValue({
+      globalMetaId: PEER,
+      chatPubkey: 'profile-provider-key',
+    })
+
+    const result = await mergePrivateChatItem({
+      item: privateChatItem({
+        fromUserInfo: undefined,
+        pinId: 'pin-profile-key-decrypt',
+        content: 'U2FsdGVkX1+encrypted',
+      }),
+      selfGlobalMetaId: SELF,
+      walletIdentity: wallet,
+    })
+
+    expect(mockedFetchUserProfileByGlobalMetaId).toHaveBeenCalledWith(PEER)
+    expect(mockedDecryptIncoming).toHaveBeenCalledWith(
+      expect.objectContaining({
+        peerChatPubKey: 'profile-provider-key',
+        messageId: 'pin-profile-key-decrypt',
+      }),
+    )
+    expect(result.message.peerChatPubkey).toBe('profile-provider-key')
+  })
+
+  it('stores the profile-fetched chat key on delivery sessions', async () => {
+    mockedFetchUserProfileByGlobalMetaId.mockResolvedValue({
+      globalMetaId: PEER,
+      chatPubkey: 'profile-session-key',
+    })
+
+    await mergePrivateChatItem({
+      item: privateChatItem({
+        fromUserInfo: undefined,
+        pinId: 'pin-profile-session-key',
+        content: '[DELIVERY:order-profile] {"result":"Ready"}',
+      }),
+      selfGlobalMetaId: SELF,
+      walletIdentity: wallet,
+    })
+
+    expect(useMessageStore.getState().listSessions(SELF)).toEqual([
+      expect.objectContaining({
+        sessionKey: `${PEER}:order-profile`,
+        providerChatPubkey: 'profile-session-key',
+      }),
+    ])
+    expect(await getSessionsForWallet(SELF)).toEqual([
+      expect.objectContaining({
+        id: `${SELF}:${PEER}:order-profile`,
+        providerChatPubkey: 'profile-session-key',
+      }),
+    ])
+  })
+
+  it('uses a stored local session chat key before fetching the peer profile', async () => {
+    await putSession({
+      id: `${SELF}:${PEER}:order-local-key`,
+      walletGlobalMetaId: SELF,
+      providerGlobalMetaId: PEER,
+      providerChatPubkey: 'local-session-provider-key',
+      orderCorrelationId: 'order-local-key',
+      status: 'waiting',
+      lastMessageId: 'pending-order',
+      lastActivityAt: 1_700_000_000_000,
+      assetCount: 0,
+      unreadCount: 0,
+    })
+
+    await mergePrivateChatItem({
+      item: privateChatItem({
+        fromUserInfo: undefined,
+        pinId: 'pin-local-session-key',
+        content: 'U2FsdGVkX1+encrypted',
+      }),
+      selfGlobalMetaId: SELF,
+      walletIdentity: wallet,
+    })
+
+    expect(mockedFetchUserProfileByGlobalMetaId).not.toHaveBeenCalled()
+    expect(mockedDecryptIncoming).toHaveBeenCalledWith(
+      expect.objectContaining({
+        peerChatPubKey: 'local-session-provider-key',
+        messageId: 'pin-local-session-key',
+      }),
+    )
+    expect(await getSessionsForWallet(SELF)).toContainEqual(
+      expect.objectContaining({
+        providerGlobalMetaId: PEER,
+        providerChatPubkey: 'local-session-provider-key',
+      }),
+    )
+  })
+
+  it('keeps merging and logs debug when the peer profile chat key request fails', async () => {
+    const pushDebug = vi.fn()
+    mockedFetchUserProfileByGlobalMetaId.mockRejectedValue(new Error('profile offline'))
+
+    const result = await mergePrivateChatItem({
+      item: privateChatItem({
+        fromUserInfo: undefined,
+        pinId: 'pin-profile-failed',
+        content: '[ORDER_STATUS:order-profile-failed] Still persist this message',
+      }),
+      selfGlobalMetaId: SELF,
+      walletIdentity: wallet,
+      pushDebug,
+    })
+
+    expect(result.persisted).toBe(true)
+    expect(useMessageStore.getState().messagesForSession(`${PEER}:order-profile-failed`, SELF)).toEqual([
+      expect.objectContaining({
+        id: 'pin-profile-failed',
+        peerChatPubkey: undefined,
+      }),
+    ])
+    expect(await getMessagesForSession(`${SELF}:${PEER}:order-profile-failed`)).toEqual([
+      expect.objectContaining({ id: 'pin-profile-failed' }),
+    ])
+    expect(pushDebug).toHaveBeenCalledWith(
+      expect.stringContaining('[profile] peer chat key was not loaded'),
+    )
+  })
+
+  it('reuses one fetched peer profile chat key across a history page', async () => {
+    mockedFetchUserProfileByGlobalMetaId.mockResolvedValue({
+      globalMetaId: PEER,
+      chatPubkey: 'profile-history-key',
+    })
+    mockedHomes.mockResolvedValue([{ metaId: PEER, globalMetaId: PEER }])
+    mockedHistory.mockResolvedValue({
+      list: [
+        privateChatItem({
+          fromUserInfo: undefined,
+          pinId: 'pin-history-profile-1',
+          content: '[ORDER_STATUS:order-history-profile] First',
+          timestamp: 1_700_000_000_000,
+        }),
+        privateChatItem({
+          fromUserInfo: undefined,
+          pinId: 'pin-history-profile-2',
+          content: '[ORDER_STATUS:order-history-profile] Second',
+          timestamp: 1_700_000_000_100,
+        }),
+      ],
+      nextCursor: 'profile-cursor',
+      nextTimestamp: 1_700_000_000_100,
+    })
+
+    await syncKnownPrivateChatHistory(wallet)
+
+    expect(mockedFetchUserProfileByGlobalMetaId).toHaveBeenCalledTimes(1)
+    expect(mockedFetchUserProfileByGlobalMetaId).toHaveBeenCalledWith(PEER)
+    expect(mockedDecryptIncoming).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({ peerChatPubKey: 'profile-history-key' }),
+    )
+    expect(mockedDecryptIncoming).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({ peerChatPubKey: 'profile-history-key' }),
+    )
   })
 })
