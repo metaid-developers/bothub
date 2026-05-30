@@ -109,8 +109,11 @@ export function RequestModal({ open, onClose, service, provider, wallet }: Reque
           console.warn('Failed order could not be saved locally.', persistError)
         }
         setRecoverableSessionKey(err.partial.sessionKey)
+        const message = err.partial.payment.paymentTxid
+          ? 'Payment succeeded but the order message failed. The paid request was saved in Delivery for recovery.'
+          : 'The free order message failed. The request was saved in Delivery for recovery.'
         setErrorMessage(
-          'Payment succeeded but the order message failed. The paid request was saved in Delivery for recovery.',
+          message,
         )
         setStep('error')
         return

@@ -254,4 +254,59 @@ describe('RequestModal', () => {
     fireEvent.click(screen.getByRole('button', { name: /open delivery/i }))
     expect(navigate).toHaveBeenCalledWith('/delivery?session=idqprovider%3Apaid-txid-1')
   })
+
+  it('uses free-order recovery wording when a free order broadcast fails', async () => {
+    const partial: PreparedPayAndRequest = {
+      service,
+      provider,
+      prompt: 'Free fortune',
+      payment: {
+        paymentTxid: '',
+        paymentCommitTxid: '',
+        orderReference: 'free-order-ref-1',
+      },
+      orderPayload: '[ORDER] Free fortune\norder id: free-order-ref-1',
+      encryptedContent: 'ciphertext',
+      simplemsgBody: '{"content":"ciphertext"}',
+      sessionKey: 'idqprovider:free-order-ref-1',
+      displaySummary: 'Free fortune',
+    }
+    executePayAndRequest.mockRejectedValue(
+      new PayAndRequestBroadcastError('Order pin broadcast failed', partial),
+    )
+
+    render(
+      <MemoryRouter>
+        <RequestModal
+          open
+          onClose={vi.fn()}
+          service={service}
+          provider={provider}
+          wallet={wallet}
+        />
+      </MemoryRouter>,
+    )
+
+    fireEvent.change(screen.getByLabelText(/describe what you need/i), {
+      target: { value: 'Free fortune' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Review' }))
+    fireEvent.click(screen.getByRole('button', { name: /confirm & pay/i }))
+
+    expect(
+      await screen.findByText(/order message failed/i),
+    ).toHaveTextContent(
+      'The free order message failed. The request was saved in Delivery for recovery.',
+    )
+    expect(
+      screen.queryByText(/payment succeeded but the order message failed/i),
+    ).not.toBeInTheDocument()
+    expect(persistFailedToSendOrder).toHaveBeenCalledWith({
+      wallet,
+      service,
+      provider,
+      prompt: 'Free fortune',
+      partial,
+    })
+  })
 })

@@ -206,6 +206,51 @@ describe('executePayAndRequest', () => {
     expect(result.displaySummary).toBe('Free reading please.')
   })
 
+  it('happy path: free order resolves a nested Metalet txid response to a simplemsg pin id', async () => {
+    const orderTxid = 'a'.repeat(64)
+    const transfer = vi.fn()
+    const ecdh = vi.fn().mockResolvedValue({ sharedSecret: 'bb'.repeat(32) })
+    const createPin = vi.fn().mockResolvedValue({
+      data: {
+        result: {
+          raw: {
+            payload: {
+              res: {
+                transactions: [
+                  {
+                    revealTxId: `broadcast ok: ${orderTxid}`,
+                  },
+                ],
+              },
+            },
+          },
+        },
+      },
+    })
+
+    vi.spyOn(crypto, 'getRandomValues').mockImplementation((array) => {
+      if (array instanceof Uint8Array) {
+        array.fill(0x0c)
+      }
+      return array
+    })
+
+    const result = await executePayAndRequest({
+      service: freeService,
+      provider,
+      prompt: 'Free blueprint please.',
+      wallet,
+      metalet: { transfer, ecdh, createPin },
+    })
+
+    expect(transfer).not.toHaveBeenCalled()
+    expect(result.orderPinId).toBe(`${orderTxid}i0`)
+    expect(result.paymentTxid).toBe('')
+    expect(result.paymentCommitTxid).toBe('')
+    expect(result.orderReference).toBe(generateRandomHex(32))
+    expect(result.sessionKey).toBe(`${provider.globalMetaId}:${result.orderReference}`)
+  })
+
   it('surfaces payment failure when transfer returns no txid', async () => {
     await expect(
       executePayAndRequest({

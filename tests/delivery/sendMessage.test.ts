@@ -188,4 +188,32 @@ describe('sendDeliveryFollowUp', () => {
       }),
     ).resolves.toMatchObject({ pinId: 'txid-a' })
   })
+
+  it('resolves a nested Metalet txid response to a simplemsg pin id', async () => {
+    const followUpTxid = 'c'.repeat(64)
+    const createPin = vi.fn().mockResolvedValue({
+      result: {
+        res: {
+          transactions: [
+            {
+              revealTxid: `sent ${followUpTxid}`,
+            },
+          ],
+        },
+      },
+    })
+
+    await expect(
+      sendDeliveryFollowUp({
+        wallet,
+        providerGlobalMetaId: 'idqprovider',
+        providerChatPubkey: '04' + 'ab'.repeat(64),
+        content: 'Thanks, one more thing.',
+        metalet: {
+          ecdh: vi.fn().mockResolvedValue({ sharedSecret: 'bb'.repeat(32) }),
+          createPin,
+        },
+      }),
+    ).resolves.toMatchObject({ pinId: `${followUpTxid}i0` })
+  })
 })

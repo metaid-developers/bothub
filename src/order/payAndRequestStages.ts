@@ -2,6 +2,7 @@ import type { ProviderInfo, SkillServiceCore } from '@/api/aggregator.types'
 import type { TransferTask, WalletIdentity } from '@/wallet/types'
 import { buildOrderPayload } from './buildOrderPayload'
 import { ORDER_RAW_REQUEST_MAX_CHARS, validateOrderRawRequest } from './orderMessage'
+import { collectTxidLikeStrings, resolvePrimaryPinId } from './pinResult'
 import { ecdhEncryptWithSharedSecret } from './privateChatCrypto'
 
 const SATOSHI_PER_UNIT = 100_000_000
@@ -154,35 +155,6 @@ function amountToAtomicString(price: string): string {
     throw new PayAndRequestError('Invalid service price', 'payment_failed')
   }
   return String(Math.floor(numeric * SATOSHI_PER_UNIT))
-}
-
-function collectTxidLikeStrings(value: unknown, out: string[] = []): string[] {
-  if (!value || typeof value !== 'object') return out
-  if (Array.isArray(value)) {
-    for (const item of value) {
-      if (typeof item === 'string' && item.trim()) out.push(item.trim())
-      else collectTxidLikeStrings(item, out)
-    }
-    return out
-  }
-
-  const record = value as Record<string, unknown>
-  for (const key of ['txids', 'txIds', 'txid', 'txId', 'transactionId', 'hash']) {
-    const candidate = record[key]
-    if (typeof candidate === 'string' && candidate.trim()) out.push(candidate.trim())
-    else if (Array.isArray(candidate)) collectTxidLikeStrings(candidate, out)
-  }
-  for (const key of ['data', 'result', 'raw', 'payload']) {
-    collectTxidLikeStrings(record[key], out)
-  }
-  return out
-}
-
-function resolvePrimaryPinId(result: unknown): string {
-  if (!result || typeof result !== 'object') return ''
-  const direct = (result as { pinId?: unknown }).pinId
-  if (typeof direct === 'string' && direct.trim()) return direct.trim()
-  return collectTxidLikeStrings(result)[0] ?? ''
 }
 
 function extractTransferTxids(result: unknown): string[] {

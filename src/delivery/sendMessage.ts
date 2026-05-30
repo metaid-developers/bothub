@@ -1,5 +1,6 @@
 import { ecdhEncryptWithSharedSecret } from '@/order/privateChatCrypto'
 import type { PayAndRequestMetalet } from '@/order/flow'
+import { resolvePrimaryPinId } from '@/order/pinResult'
 import type { WalletIdentity } from '@/wallet/types'
 
 const SIMPLEMSG_PATH = '/protocols/simplemsg'
@@ -30,35 +31,6 @@ export interface SendDeliveryFollowUpInput {
 export interface SendDeliveryFollowUpResult {
   pinId: string
   encryptedContent: string
-}
-
-function collectTxidLikeStrings(value: unknown, out: string[] = []): string[] {
-  if (!value || typeof value !== 'object') return out
-  if (Array.isArray(value)) {
-    for (const item of value) {
-      if (typeof item === 'string' && item.trim()) out.push(item.trim())
-      else collectTxidLikeStrings(item, out)
-    }
-    return out
-  }
-
-  const record = value as Record<string, unknown>
-  for (const key of ['txids', 'txIds', 'txid', 'txId', 'transactionId', 'hash']) {
-    const candidate = record[key]
-    if (typeof candidate === 'string' && candidate.trim()) out.push(candidate.trim())
-    else if (Array.isArray(candidate)) collectTxidLikeStrings(candidate, out)
-  }
-  for (const key of ['data', 'result', 'raw', 'payload']) {
-    collectTxidLikeStrings(record[key], out)
-  }
-  return out
-}
-
-function resolvePrimaryPinId(result: unknown): string {
-  if (!result || typeof result !== 'object') return ''
-  const direct = (result as { pinId?: unknown }).pinId
-  if (typeof direct === 'string' && direct.trim()) return direct.trim()
-  return collectTxidLikeStrings(result)[0] ?? ''
 }
 
 function buildPrivateMessagePayload(input: {
