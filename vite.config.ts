@@ -15,6 +15,7 @@ export default defineConfig({
       '/meta-socket': {
         target: 'http://127.0.0.1:18091',
         changeOrigin: true,
+        ws: true,
         rewrite: (path) => path.replace(/^\/meta-socket/, ''),
       },
     },
