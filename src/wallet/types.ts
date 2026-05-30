@@ -46,7 +46,7 @@ export interface MetaletWalletApi {
   getBalance: (params?: { path?: string }) => Promise<unknown>
   transfer: (params: { tasks: TransferTask[] }) => Promise<unknown>
   createPin: (params: Record<string, unknown>) => Promise<unknown>
-  ecdh: (params: { externalPubKey: string; path?: string }) => Promise<EcdhResult>
+  ecdh?: (params: { externalPubKey: string; path?: string }) => Promise<EcdhResult>
   eciesEncrypt: (params: { message: string }) => Promise<{ encrypted: string }>
   eciesDecrypt: (params: { encrypted: string }) => Promise<{ message: string }>
   on: (eventName: string, handler: (...args: unknown[]) => void) => void

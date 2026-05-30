@@ -118,13 +118,34 @@ describe('metalet adapter', () => {
     expect(walletWithDelayedCommon.ecdh).not.toHaveBeenCalled()
   })
 
-  it('ecdh fails when common.ecdh is not injected before the wait timeout', async () => {
+  it('ecdh falls back to top-level wallet.ecdh when common.ecdh is not injected before the wait timeout', async () => {
+    vi.useFakeTimers()
+    const topLevelEcdh = vi.fn().mockResolvedValue({ sharedSecret: 'top-level-secret' })
+    vi.stubGlobal('window', {
+      ...window,
+      metaidwallet: {
+        ...mockWallet,
+        common: {},
+        ecdh: topLevelEcdh,
+      },
+    })
+
+    const pending = ecdh({ externalPubKey: 'provider-chat-key' })
+    await vi.advanceTimersByTimeAsync(METALET_COMMON_ECDH_WAIT_TIMEOUT_MS)
+    const result = await pending
+
+    expect(result.sharedSecret).toBe('top-level-secret')
+    expect(topLevelEcdh).toHaveBeenCalledWith({ externalPubKey: 'provider-chat-key' })
+  })
+
+  it('ecdh fails when neither common.ecdh nor top-level wallet.ecdh is available', async () => {
     vi.useFakeTimers()
     vi.stubGlobal('window', {
       ...window,
       metaidwallet: {
         ...mockWallet,
         common: {},
+        ecdh: undefined,
       },
     })
 
@@ -133,16 +154,17 @@ describe('metalet adapter', () => {
     await vi.advanceTimersByTimeAsync(METALET_COMMON_ECDH_WAIT_TIMEOUT_MS)
 
     await rejection
-    expect(mockWallet.ecdh).not.toHaveBeenCalled()
   })
 
-  it('ecdh times out when Metalet common.ecdh never responds', async () => {
+  it('ecdh falls back to top-level wallet.ecdh when common.ecdh never responds', async () => {
     vi.useFakeTimers()
     const commonEcdh = vi.fn().mockReturnValue(new Promise(() => {}))
+    const topLevelEcdh = vi.fn().mockResolvedValue({ sharedSecret: 'top-level-secret' })
     vi.stubGlobal('window', {
       ...window,
       metaidwallet: {
         ...mockWallet,
+        ecdh: topLevelEcdh,
         common: {
           ecdh: commonEcdh,
         },
@@ -150,11 +172,53 @@ describe('metalet adapter', () => {
     })
 
     const pending = ecdh({ externalPubKey: 'provider-chat-key' })
-    const rejection = expect(pending).rejects.toThrow(/Metalet ECDH request timed out/)
+    await vi.advanceTimersByTimeAsync(METALET_ECDH_RESPONSE_TIMEOUT_MS)
+    const result = await pending
+
+    expect(result.sharedSecret).toBe('top-level-secret')
+    expect(commonEcdh).toHaveBeenCalledWith({ externalPubKey: 'provider-chat-key' })
+    expect(topLevelEcdh).toHaveBeenCalledWith({ externalPubKey: 'provider-chat-key' })
+  })
+
+  it('ecdh fails clearly when common.ecdh times out and top-level wallet.ecdh is unavailable', async () => {
+    vi.useFakeTimers()
+    const commonEcdh = vi.fn().mockReturnValue(new Promise(() => {}))
+    vi.stubGlobal('window', {
+      ...window,
+      metaidwallet: {
+        ...mockWallet,
+        ecdh: undefined,
+        common: {
+          ecdh: commonEcdh,
+        },
+      },
+    })
+
+    const pending = ecdh({ externalPubKey: 'provider-chat-key' })
+    const rejection = expect(pending).rejects.toThrow(
+      /Metalet common\.ecdh request timed out and top-level wallet\.ecdh API is unavailable/,
+    )
     await vi.advanceTimersByTimeAsync(METALET_ECDH_RESPONSE_TIMEOUT_MS)
 
     await rejection
-    expect(mockWallet.ecdh).not.toHaveBeenCalled()
+  })
+
+  it('ecdh does not fall back when common.ecdh explicitly rejects', async () => {
+    const commonEcdh = vi.fn().mockRejectedValue(new Error('user rejected'))
+    const topLevelEcdh = vi.fn().mockResolvedValue({ sharedSecret: 'top-level-secret' })
+    vi.stubGlobal('window', {
+      ...window,
+      metaidwallet: {
+        ...mockWallet,
+        ecdh: topLevelEcdh,
+        common: {
+          ecdh: commonEcdh,
+        },
+      },
+    })
+
+    await expect(ecdh({ externalPubKey: 'provider-chat-key' })).rejects.toThrow(/user rejected/)
+    expect(topLevelEcdh).not.toHaveBeenCalled()
   })
 
   it('throws MetaletNotInstalledError when extension missing', async () => {
