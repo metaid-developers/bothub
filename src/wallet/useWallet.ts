@@ -11,9 +11,13 @@ interface WalletState {
   connect: () => Promise<void>
   disconnect: () => Promise<void>
   hydrateFromMetalet: () => Promise<void>
+  clearStaleConnection: () => void
+  isWalletReadinessError: (err: unknown) => boolean
 }
 
 const STORAGE_KEY = 'bothub-wallet'
+const WALLET_READINESS_ERROR_RE =
+  /Metalet wallet (?:is not connected to this site|is locked|is not logged in|has no wallet set up|did not respond to (?:ping|isConnected|getGlobalMetaid))|Connected Metalet account changed/i
 
 async function fetchProfileBestEffort(globalMetaId: string): Promise<UserProfile | null> {
   try {
@@ -56,6 +60,11 @@ function persistableIdentity(identity: WalletIdentity | null): WalletIdentity | 
   }
 }
 
+function isWalletReadinessError(err: unknown): boolean {
+  const message = err instanceof Error ? err.message : String(err ?? '')
+  return WALLET_READINESS_ERROR_RE.test(message)
+}
+
 export const useWallet = create<WalletState>()(
   persist(
     (set, get) => ({
@@ -88,6 +97,12 @@ export const useWallet = create<WalletState>()(
         }
         set({ identity: null, status: 'disconnected', errorMessage: null })
       },
+
+      clearStaleConnection: () => {
+        set({ identity: null, status: 'disconnected', errorMessage: null })
+      },
+
+      isWalletReadinessError,
 
       hydrateFromMetalet: async () => {
         const { identity, status } = get()

@@ -18,6 +18,7 @@ import {
 import { ORDER_RAW_REQUEST_MAX_CHARS } from '@/order/orderMessage'
 import * as metalet from '@/wallet/metalet'
 import type { WalletIdentity } from '@/wallet/types'
+import { useWallet } from '@/wallet/useWallet'
 
 export type RequestModalStep =
   | 'prompt'
@@ -134,6 +135,10 @@ export function RequestModal({ open, onClose, service, provider, wallet }: Reque
           : err instanceof Error
             ? err.message
             : 'Request failed'
+      const walletStore = useWallet.getState()
+      if (walletStore.isWalletReadinessError(err)) {
+        walletStore.clearStaleConnection()
+      }
       setErrorMessage(message)
       setStep('error')
     }

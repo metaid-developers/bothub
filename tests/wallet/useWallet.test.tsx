@@ -148,6 +148,50 @@ describe('useWallet store', () => {
     expect(result.current.identity).toBeNull()
   })
 
+  it('clearStaleConnection clears local connected state without calling Metalet', async () => {
+    useWallet.setState({
+      identity: {
+        globalMetaId: 'idq1abc',
+        mvcAddress: '1mvc',
+        btcAddress: 'bc1',
+        dogeAddress: 'Ddoge',
+      },
+      status: 'connected',
+      errorMessage: null,
+    })
+
+    const { result } = renderHook(() => useWallet())
+
+    act(() => {
+      result.current.clearStaleConnection()
+    })
+
+    expect(result.current.status).toBe('disconnected')
+    expect(result.current.identity).toBeNull()
+    expect(result.current.errorMessage).toBeNull()
+    expect(metalet.disconnect).not.toHaveBeenCalled()
+  })
+
+  it('identifies wallet readiness errors that should clear local state', () => {
+    expect(
+      useWallet
+        .getState()
+        .isWalletReadinessError(
+          new Error('Metalet wallet is not connected to this site. Connect Metalet and try again.'),
+        ),
+    ).toBe(true)
+    expect(
+      useWallet
+        .getState()
+        .isWalletReadinessError(
+          new Error('Connected Metalet account changed. Reconnect your wallet before sending a request.'),
+        ),
+    ).toBe(true)
+    expect(
+      useWallet.getState().isWalletReadinessError(new Error('Order encryption failed')),
+    ).toBe(false)
+  })
+
   it('hydrateFromMetalet clears stale connected identity when live wallet preflight fails', async () => {
     useWallet.setState({
       identity: {

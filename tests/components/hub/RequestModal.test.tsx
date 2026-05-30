@@ -11,6 +11,7 @@ import {
 import type { PreparedPayAndRequest } from '@/order/payAndRequestStages'
 import * as metalet from '@/wallet/metalet'
 import type { WalletIdentity } from '@/wallet/types'
+import { useWallet } from '@/wallet/useWallet'
 
 const navigate = vi.fn()
 const executePayAndRequest = vi.fn()
@@ -100,6 +101,11 @@ describe('RequestModal', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     useMessageStore.setState({ byPeer: {}, assetsBySession: {}, selectedSessionKey: null })
+    useWallet.setState({
+      identity: null,
+      status: 'disconnected',
+      errorMessage: null,
+    })
     executePayAndRequest.mockResolvedValue(result)
     persistPendingOrder.mockResolvedValue({})
     persistFailedToSendOrder.mockResolvedValue({})
@@ -208,6 +214,11 @@ describe('RequestModal', () => {
   })
 
   it('blocks stale connected wallet state before creating an order', async () => {
+    useWallet.setState({
+      identity: wallet,
+      status: 'connected',
+      errorMessage: null,
+    })
     vi.mocked(metalet.ensureReady).mockRejectedValue(
       new Error('Metalet wallet did not respond to ping. Reload Metalet and try again.'),
     )
@@ -233,6 +244,75 @@ describe('RequestModal', () => {
     expect(await screen.findByText(/did not respond to ping/i)).toBeInTheDocument()
     expect(executePayAndRequest).not.toHaveBeenCalled()
     expect(persistPendingOrder).not.toHaveBeenCalled()
+    expect(useWallet.getState().identity).toBeNull()
+    expect(useWallet.getState().status).toBe('disconnected')
+  })
+
+  it('clears global wallet state when checkout preflight finds Metalet is disconnected', async () => {
+    useWallet.setState({
+      identity: wallet,
+      status: 'connected',
+      errorMessage: null,
+    })
+    vi.mocked(metalet.ensureReady).mockRejectedValue(
+      new Error('Metalet wallet is not connected to this site. Connect Metalet and try again.'),
+    )
+
+    render(
+      <MemoryRouter>
+        <RequestModal
+          open
+          onClose={vi.fn()}
+          service={service}
+          provider={provider}
+          wallet={wallet}
+        />
+      </MemoryRouter>,
+    )
+
+    fireEvent.change(screen.getByLabelText(/describe what you need/i), {
+      target: { value: 'Tell me my fortune' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Review' }))
+    fireEvent.click(screen.getByRole('button', { name: /confirm & pay/i }))
+
+    expect(await screen.findByText(/not connected to this site/i)).toBeInTheDocument()
+    expect(executePayAndRequest).not.toHaveBeenCalled()
+    expect(useWallet.getState().identity).toBeNull()
+    expect(useWallet.getState().status).toBe('disconnected')
+    expect(useWallet.getState().errorMessage).toBeNull()
+  })
+
+  it('does not clear global wallet state for non-readiness checkout errors', async () => {
+    useWallet.setState({
+      identity: wallet,
+      status: 'connected',
+      errorMessage: null,
+    })
+    vi.mocked(metalet.ensureReady).mockRejectedValue(new Error('Order encryption failed'))
+
+    render(
+      <MemoryRouter>
+        <RequestModal
+          open
+          onClose={vi.fn()}
+          service={service}
+          provider={provider}
+          wallet={wallet}
+        />
+      </MemoryRouter>,
+    )
+
+    fireEvent.change(screen.getByLabelText(/describe what you need/i), {
+      target: { value: 'Tell me my fortune' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Review' }))
+    fireEvent.click(screen.getByRole('button', { name: /confirm & pay/i }))
+
+    expect(await screen.findByText(/Order encryption failed/i)).toBeInTheDocument()
+    expect(executePayAndRequest).not.toHaveBeenCalled()
+    expect(useWallet.getState().identity).toEqual(wallet)
+    expect(useWallet.getState().status).toBe('connected')
   })
 
   it('still navigates after order success when pending persistence fails', async () => {
