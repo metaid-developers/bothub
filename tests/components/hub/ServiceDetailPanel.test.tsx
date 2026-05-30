@@ -81,11 +81,11 @@ describe('ServiceDetailPanel', () => {
     expect(screen.queryByText(/example/i)).not.toBeInTheDocument()
   })
 
-  it('disables Pay & Request when wallet is not connected', () => {
+  it('keeps Pay & Request available with a connect-required hint when wallet is not connected', () => {
     renderPanel()
 
     const payButton = screen.getByRole('button', { name: 'Pay & Request' })
-    expect(payButton).toBeDisabled()
+    expect(payButton).toBeEnabled()
     expect(payButton).toHaveAttribute('title', expect.stringMatching(/Metalet|Connect|连接/))
   })
 

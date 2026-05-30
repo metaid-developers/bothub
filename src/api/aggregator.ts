@@ -1,4 +1,4 @@
-import { getMetaSocketBaseUrl, useAggregatorMock } from '@/api/config'
+import { getNormalizedMetaSocketBaseUrl, isAggregatorMockEnabled } from '@/api/config'
 import type {
   ApiEnvelope,
   GetServiceDetailParams,
@@ -60,11 +60,11 @@ function buildDetailQuery(params: GetServiceDetailParams = {}): string {
 export async function listServices(
   params: ListServicesParams = {},
 ): Promise<SkillServiceListData> {
-  if (useAggregatorMock()) {
+  if (isAggregatorMockEnabled()) {
     return unwrapEnvelope(mockListEnvelope as ApiEnvelope<SkillServiceListData>)
   }
 
-  const baseUrl = getMetaSocketBaseUrl().replace(/\/$/, '')
+  const baseUrl = getNormalizedMetaSocketBaseUrl()
   const url = `${baseUrl}/api/bot-hub/skill-service/list${buildListQuery(params)}`
   const response = await fetch(url)
   const envelope = (await response.json()) as ApiEnvelope<SkillServiceListData>
@@ -75,11 +75,11 @@ export async function getServiceDetail(
   serviceId: string,
   params: GetServiceDetailParams = {},
 ): Promise<SkillServiceDetailData> {
-  if (useAggregatorMock()) {
+  if (isAggregatorMockEnabled()) {
     return unwrapEnvelope(mockDetailEnvelope as ApiEnvelope<SkillServiceDetailData>)
   }
 
-  const baseUrl = getMetaSocketBaseUrl().replace(/\/$/, '')
+  const baseUrl = getNormalizedMetaSocketBaseUrl()
   const encodedId = encodeURIComponent(serviceId)
   const url = `${baseUrl}/api/bot-hub/skill-service/detail/${encodedId}${buildDetailQuery(params)}`
   const response = await fetch(url)

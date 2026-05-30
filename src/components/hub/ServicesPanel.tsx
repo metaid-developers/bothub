@@ -12,6 +12,7 @@ export interface ServicesPanelProps {
   className?: string
   onServicesLoaded?: (items: SkillServiceListItem[]) => void
   onSelectService?: (service: SkillServiceListItem) => void
+  onRequestService?: (service: SkillServiceListItem) => void
   selectedServiceId?: string
 }
 
@@ -20,6 +21,7 @@ export function ServicesPanel({
   className,
   onServicesLoaded,
   onSelectService,
+  onRequestService,
   selectedServiceId,
 }: ServicesPanelProps) {
   const loadMoreRef = useRef<HTMLDivElement>(null)
@@ -101,6 +103,7 @@ export function ServicesPanel({
             <ServiceCard
               service={service}
               onSelect={onSelectService}
+              onRequest={onRequestService ?? onSelectService}
               selected={selectedServiceId === service.id}
             />
           </li>

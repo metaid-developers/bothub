@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   MetaletNotInstalledError,
   connect,
+  ecdh,
   getGlobalMetaid,
   isMetaletInstalled,
 } from '@/wallet/metalet'
@@ -65,6 +66,45 @@ describe('metalet adapter', () => {
   it('connect delegates to window.metaidwallet', async () => {
     await connect()
     expect(mockWallet.connect).toHaveBeenCalledOnce()
+  })
+
+  it('ecdh prefers the demo-chat compatible common.ecdh surface', async () => {
+    const commonEcdh = vi.fn().mockResolvedValue({ sharedSecret: 'common-secret' })
+    mockWallet.ecdh.mockResolvedValue({ sharedSecret: 'top-level-secret' })
+    vi.stubGlobal('window', {
+      ...window,
+      metaidwallet: {
+        ...mockWallet,
+        common: {
+          ecdh: commonEcdh,
+        },
+      },
+    })
+
+    const result = await ecdh({ externalPubKey: 'provider-chat-key' })
+
+    expect(result.sharedSecret).toBe('common-secret')
+    expect(commonEcdh).toHaveBeenCalledWith({ externalPubKey: 'provider-chat-key' })
+    expect(mockWallet.ecdh).not.toHaveBeenCalled()
+  })
+
+  it('ecdh falls back to top-level wallet.ecdh when common.ecdh is unavailable', async () => {
+    mockWallet.ecdh.mockResolvedValue({ sharedSecret: 'fallback-secret' })
+    vi.stubGlobal('window', {
+      ...window,
+      metaidwallet: {
+        ...mockWallet,
+        common: {},
+      },
+    })
+
+    const result = await ecdh({ externalPubKey: 'provider-chat-key', path: '/protocols/simplemsg' })
+
+    expect(result.sharedSecret).toBe('fallback-secret')
+    expect(mockWallet.ecdh).toHaveBeenCalledWith({
+      externalPubKey: 'provider-chat-key',
+      path: '/protocols/simplemsg',
+    })
   })
 
   it('throws MetaletNotInstalledError when extension missing', async () => {

@@ -1,4 +1,5 @@
 import type { DeliveryMessage, DeliverySession } from '@/delivery/messageStore'
+import type { UserProfile } from '@/api/userProfile'
 import {
   findCorrelationInText,
   getOrderCorrelationId,
@@ -44,11 +45,85 @@ function sessionLabelFromOrder(
   return order.serviceName || order.skillName || order.displaySummary
 }
 
+function isMessageForSelf(message: DeliveryMessage, selfGlobalMetaId: string): boolean {
+  const self = selfGlobalMetaId.trim()
+  if (!self) return false
+  return (
+    message.fromGlobalMetaId.trim() === self ||
+    message.toGlobalMetaId.trim() === self
+  )
+}
+
+function providerChatPubkeyForSession(
+  messages: DeliveryMessage[],
+  selfGlobalMetaId: string,
+): string | undefined {
+  const self = selfGlobalMetaId.trim()
+  const fromOutgoingOrder = messages.find(
+    (message) =>
+      message.fromGlobalMetaId.trim() === self && message.peerChatPubkey?.trim(),
+  )
+  if (fromOutgoingOrder?.peerChatPubkey?.trim()) {
+    return fromOutgoingOrder.peerChatPubkey.trim()
+  }
+
+  return [...messages]
+    .reverse()
+    .find((message) => message.peerChatPubkey?.trim())
+    ?.peerChatPubkey?.trim()
+}
+
+export function resolveProviderChatPubkey(input: {
+  session: (Pick<DeliverySession, 'peerGlobalMetaId' | 'providerChatPubkey'> & {
+    orderCorrelationId?: string | null
+  }) | null
+  orders?: Array<{
+    providerGlobalMetaId: string
+    providerChatPubkey?: string
+    orderCorrelationId?: string
+    paymentTxid?: string
+    orderReference?: string
+  }>
+  messages?: DeliveryMessage[]
+  providerProfile?: Pick<UserProfile, 'chatPubkey'> | null
+}): string {
+  const sessionKey = input.session?.providerChatPubkey?.trim()
+  if (sessionKey) return sessionKey
+
+  const peer = input.session?.peerGlobalMetaId.trim() ?? ''
+  const correlation = input.session?.orderCorrelationId?.trim() ?? ''
+  const peerOrders = input.orders?.filter(
+    (order) => order.providerGlobalMetaId.trim() === peer && order.providerChatPubkey?.trim(),
+  ) ?? []
+  const orderKey = (
+    peerOrders.find((order) => {
+      if (!correlation) return true
+      return [order.orderCorrelationId, order.paymentTxid, order.orderReference].some(
+        (value) => value?.trim() === correlation,
+      )
+    }) ?? peerOrders[0]
+  )?.providerChatPubkey?.trim()
+  if (orderKey) return orderKey
+
+  const newestMessageKey = [...(input.messages ?? [])]
+    .sort((a, b) => {
+      if (a.timestamp !== b.timestamp) return b.timestamp - a.timestamp
+      return b.id.localeCompare(a.id)
+    })
+    .find((message) => message.peerChatPubkey?.trim())
+    ?.peerChatPubkey?.trim()
+  if (newestMessageKey) return newestMessageKey
+
+  return input.providerProfile?.chatPubkey?.trim() ?? ''
+}
+
 export function groupPeerMessagesBySession(
   messages: DeliveryMessage[],
   selfGlobalMetaId: string,
 ): Map<string, DeliveryMessage[]> {
-  const sorted = sortMessagesAsc(messages)
+  const sorted = sortMessagesAsc(
+    messages.filter((message) => isMessageForSelf(message, selfGlobalMetaId)),
+  )
   const buckets = new Map<string, DeliveryMessage[]>()
   const knownCorrelations = new Set<string>()
   const self = selfGlobalMetaId.trim()
@@ -60,10 +135,16 @@ export function groupPeerMessagesBySession(
     const parsed = parseOrderMessage(message.content)
     const isSelf = message.fromGlobalMetaId.trim() === self
     const correlation = parsed ? getOrderCorrelationId(parsed) : ''
+    const storedCorrelation = message.orderCorrelationId?.trim() ?? ''
 
     if (parsed && isSelf && correlation) {
       knownCorrelations.add(correlation)
       return buildSessionKey(peer, correlation)
+    }
+
+    if (storedCorrelation) {
+      knownCorrelations.add(storedCorrelation)
+      return buildSessionKey(peer, storedCorrelation)
     }
 
     if (correlation && knownCorrelations.has(correlation)) {
@@ -126,6 +207,7 @@ export function buildGroupedSessionList(
       sessions.push({
         sessionKey,
         peerGlobalMetaId: peerGlobalMetaId.trim(),
+        providerChatPubkey: providerChatPubkeyForSession(sorted, selfGlobalMetaId),
         orderCorrelationId,
         serviceLabel,
         lastMessage,
@@ -153,6 +235,7 @@ export function buildSessionList(
     sessions.push({
       sessionKey: peerGlobalMetaId,
       peerGlobalMetaId,
+      providerChatPubkey: providerChatPubkeyForSession(sorted, ''),
       orderCorrelationId: null,
       serviceLabel: null,
       lastMessage,

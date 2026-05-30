@@ -1,7 +1,8 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
+import { fetchUserProfileByGlobalMetaId, type UserProfile } from '@/api/userProfile'
 import * as metalet from './metalet'
-import type { WalletIdentity, WalletStatus } from './types'
+import type { GlobalMetaidResult, WalletIdentity, WalletStatus } from './types'
 
 interface WalletState {
   identity: WalletIdentity | null
@@ -13,6 +14,47 @@ interface WalletState {
 }
 
 const STORAGE_KEY = 'bothub-wallet'
+
+async function fetchProfileBestEffort(globalMetaId: string): Promise<UserProfile | null> {
+  try {
+    return await fetchUserProfileByGlobalMetaId(globalMetaId)
+  } catch {
+    return null
+  }
+}
+
+function buildWalletIdentity(gmid: GlobalMetaidResult, profile: UserProfile | null): WalletIdentity {
+  return {
+    globalMetaId: gmid.globalMetaId,
+    mvcAddress: gmid.mvcAddress,
+    btcAddress: gmid.btcAddress,
+    dogeAddress: gmid.dogeAddress,
+    metaid: profile?.metaid,
+    name: profile?.name,
+    avatar: profile?.avatar,
+    avatarUrl: profile?.avatarUrl,
+    chatPubkey: profile?.chatPubkey,
+    chatPublicKey: profile?.chatPubkey,
+    profileUpdatedAt: profile ? Date.now() : undefined,
+  }
+}
+
+function persistableIdentity(identity: WalletIdentity | null): WalletIdentity | null {
+  if (!identity) return null
+  return {
+    globalMetaId: identity.globalMetaId,
+    mvcAddress: identity.mvcAddress,
+    btcAddress: identity.btcAddress,
+    dogeAddress: identity.dogeAddress,
+    metaid: identity.metaid,
+    name: identity.name,
+    avatar: identity.avatar,
+    avatarUrl: identity.avatarUrl,
+    chatPubkey: identity.chatPubkey,
+    chatPublicKey: identity.chatPublicKey,
+    profileUpdatedAt: identity.profileUpdatedAt,
+  }
+}
 
 export const useWallet = create<WalletState>()(
   persist(
@@ -26,12 +68,8 @@ export const useWallet = create<WalletState>()(
         try {
           await metalet.connect()
           const gmid = await metalet.getGlobalMetaid()
-          const identity: WalletIdentity = {
-            globalMetaId: gmid.globalMetaId,
-            mvcAddress: gmid.mvcAddress,
-            btcAddress: gmid.btcAddress,
-            dogeAddress: gmid.dogeAddress,
-          }
+          const profile = await fetchProfileBestEffort(gmid.globalMetaId)
+          const identity = buildWalletIdentity(gmid, profile)
           set({ identity, status: 'connected', errorMessage: null })
         } catch (err) {
           const message = err instanceof Error ? err.message : String(err)
@@ -57,13 +95,9 @@ export const useWallet = create<WalletState>()(
         if (!metalet.isMetaletInstalled()) return
         try {
           const gmid = await metalet.getGlobalMetaid()
+          const profile = await fetchProfileBestEffort(gmid.globalMetaId)
           set({
-            identity: {
-              globalMetaId: gmid.globalMetaId,
-              mvcAddress: gmid.mvcAddress,
-              btcAddress: gmid.btcAddress,
-              dogeAddress: gmid.dogeAddress,
-            },
+            identity: buildWalletIdentity(gmid, profile),
             status: 'connected',
             errorMessage: null,
           })
@@ -75,11 +109,12 @@ export const useWallet = create<WalletState>()(
     {
       name: STORAGE_KEY,
       partialize: (state) => ({
-        identity: state.identity,
+        identity: persistableIdentity(state.identity),
         status: state.status === 'connected' ? 'connected' : 'disconnected',
       }),
       onRehydrateStorage: () => (state) => {
-        if (!state?.identity?.globalMetaId?.trim()) {
+        if (!state) return
+        if (!state.identity?.globalMetaId?.trim()) {
           state.identity = null
           state.status = 'disconnected'
           state.errorMessage = null

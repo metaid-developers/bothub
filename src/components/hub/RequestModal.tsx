@@ -3,10 +3,16 @@ import { clsx } from 'clsx'
 import { useCallback, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import type { ProviderInfo, SkillServiceCore } from '@/api/aggregator.types'
+import { useMessageStore } from '@/delivery/messageStore'
+import {
+  persistFailedToSendOrder,
+  persistPendingOrder,
+} from '@/delivery/orderStore'
 import { formatPrice } from '@/lib/format'
 import {
   buildDeliverySessionPath,
   executePayAndRequest,
+  PayAndRequestBroadcastError,
   PayAndRequestError,
 } from '@/order/flow'
 import { ORDER_RAW_REQUEST_MAX_CHARS } from '@/order/orderMessage'
@@ -20,7 +26,7 @@ export interface RequestModalProps {
   onClose: () => void
   service: SkillServiceCore
   provider: ProviderInfo
-  wallet: WalletIdentity
+  wallet: WalletIdentity | null
 }
 
 export function RequestModal({ open, onClose, service, provider, wallet }: RequestModalProps) {
@@ -28,6 +34,7 @@ export function RequestModal({ open, onClose, service, provider, wallet }: Reque
   const [prompt, setPrompt] = useState('')
   const [step, setStep] = useState<RequestModalStep>('prompt')
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
+  const [recoverableSessionKey, setRecoverableSessionKey] = useState<string | null>(null)
 
   const price = useMemo(() => formatPrice(service.price, service.currency), [service])
   const providerName = provider.name?.trim() || 'Unknown Bot'
@@ -38,11 +45,18 @@ export function RequestModal({ open, onClose, service, provider, wallet }: Reque
     setPrompt('')
     setStep('prompt')
     setErrorMessage(null)
+    setRecoverableSessionKey(null)
     onClose()
   }, [onClose])
 
   const handleConfirm = async () => {
     setErrorMessage(null)
+    setRecoverableSessionKey(null)
+    if (!wallet?.globalMetaId?.trim()) {
+      setErrorMessage('Connect your Metalet wallet before sending a request.')
+      setStep('error')
+      return
+    }
     const isFree = service.price === '0'
     try {
       setStep(isFree ? 'encrypting' : 'paying')
@@ -70,10 +84,37 @@ export function RequestModal({ open, onClose, service, provider, wallet }: Reque
         },
       })
 
+      try {
+        await persistPendingOrder({ wallet, service, provider, prompt, result })
+        await useMessageStore.getState().hydrateFromDb(wallet.globalMetaId)
+      } catch (persistError) {
+        console.warn('Order was sent but could not be saved locally.', persistError)
+      }
+
       setStep('done')
       navigate(buildDeliverySessionPath(result.sessionKey))
       resetAndClose()
     } catch (err) {
+      if (err instanceof PayAndRequestBroadcastError) {
+        try {
+          await persistFailedToSendOrder({
+            wallet,
+            service,
+            provider,
+            prompt,
+            partial: err.partial,
+          })
+          await useMessageStore.getState().hydrateFromDb(wallet.globalMetaId)
+        } catch (persistError) {
+          console.warn('Failed order could not be saved locally.', persistError)
+        }
+        setRecoverableSessionKey(err.partial.sessionKey)
+        setErrorMessage(
+          'Payment succeeded but the order message failed. The paid request was saved in Delivery for recovery.',
+        )
+        setStep('error')
+        return
+      }
       const message =
         err instanceof PayAndRequestError
           ? err.message
@@ -222,10 +263,20 @@ export function RequestModal({ open, onClose, service, provider, wallet }: Reque
                 <button
                   type="button"
                   onClick={() => setStep('confirm')}
+                  disabled={Boolean(recoverableSessionKey)}
                   className="rounded-lg bg-hub-accent px-4 py-2 text-sm font-semibold text-hub-bg"
                 >
-                  Try again
+                  {recoverableSessionKey ? 'Retry saved in Delivery' : 'Try again'}
                 </button>
+                {recoverableSessionKey ? (
+                  <button
+                    type="button"
+                    onClick={() => navigate(buildDeliverySessionPath(recoverableSessionKey))}
+                    className="rounded-lg bg-hub-accent px-4 py-2 text-sm font-semibold text-hub-bg"
+                  >
+                    Open Delivery
+                  </button>
+                ) : null}
               </div>
             </div>
           ) : null}

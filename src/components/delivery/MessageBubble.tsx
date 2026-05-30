@@ -3,6 +3,9 @@ import { clsx } from 'clsx'
 import type { DeliveryMessage } from '@/delivery/messageStore'
 import { getMessageVariant } from '@/delivery/messageDisplay'
 import { parseOrderMessage } from '@/delivery/orderParser'
+import { parseDeliveryProtocol } from '@/delivery/protocol'
+import { deliveryAssetsFromMessage } from '@/delivery/sessionDisplay'
+import { AssetPreviewCard } from '@/components/delivery/AssetPreviewCard'
 
 export interface MessageBubbleProps {
   message: DeliveryMessage
@@ -110,15 +113,153 @@ function SystemBubble({ message }: { message: DeliveryMessage }) {
   )
 }
 
+function DecryptFailedBubble({ message }: { message: DeliveryMessage }) {
+  const [detailsOpen, setDetailsOpen] = useState(false)
+  const copyValue = (value: string | undefined) => {
+    if (!value?.trim()) return
+    void navigator.clipboard?.writeText(value.trim()).catch(() => undefined)
+  }
+
+  return (
+    <div className="flex justify-start">
+      <article className="max-w-[min(100%,32rem)] rounded-card border border-amber-400/30 bg-hub-surface2 px-3 py-2 text-sm leading-relaxed text-white">
+        <p className="font-medium">Unable to decrypt this message</p>
+        <p className="mt-1 text-xs text-hub-muted">
+          The session is still usable. You can retry after the provider key is available.
+        </p>
+        <div className="mt-2 flex flex-wrap gap-2 text-xs text-hub-muted">
+          {message.pinId ? (
+            <button
+              type="button"
+              onClick={() => copyValue(message.pinId)}
+              className="rounded-full border border-hub-border px-2 py-1 hover:border-hub-muted"
+            >
+              Pin: {message.pinId}
+            </button>
+          ) : null}
+          {message.txId ? (
+            <button
+              type="button"
+              onClick={() => copyValue(message.txId)}
+              className="rounded-full border border-hub-border px-2 py-1 hover:border-hub-muted"
+            >
+              Tx: {message.txId}
+            </button>
+          ) : null}
+        </div>
+        <button
+          type="button"
+          onClick={() => setDetailsOpen((open) => !open)}
+          className="mt-2 text-xs text-hub-accent underline"
+        >
+          {detailsOpen ? 'Hide technical details' : 'Show technical details'}
+        </button>
+        {detailsOpen ? (
+          <div className="mt-2 space-y-2 text-xs text-hub-muted">
+            {message.decryptError ? (
+              <p className="whitespace-pre-wrap break-words">{message.decryptError}</p>
+            ) : null}
+            <pre className="max-h-48 overflow-auto whitespace-pre-wrap break-words rounded border border-hub-border bg-black/20 p-2">
+              {message.rawContent || message.content}
+            </pre>
+          </div>
+        ) : null}
+      </article>
+    </div>
+  )
+}
+
+function TimelineEvent({
+  label,
+  body,
+  tone = 'muted',
+}: {
+  label: string
+  body: string
+  tone?: 'muted' | 'success'
+}) {
+  return (
+    <div className="flex justify-center">
+      <div
+        role="status"
+        aria-label={label}
+        className={clsx(
+          'max-w-[min(100%,34rem)] rounded-full border px-3 py-1 text-center text-xs',
+          tone === 'success'
+            ? 'border-emerald-400/30 bg-emerald-400/10 text-emerald-100'
+            : 'border-hub-border bg-hub-surface2/80 text-hub-muted',
+        )}
+      >
+        {body || label}
+      </div>
+    </div>
+  )
+}
+
+function DeliveryBubble({ message }: { message: DeliveryMessage }) {
+  const protocol = parseDeliveryProtocol(message.content)
+  const assets = deliveryAssetsFromMessage(message)
+
+  return (
+    <div className="flex justify-start">
+      <article
+        aria-label="Delivery result"
+        className="max-w-[min(100%,32rem)] rounded-card border border-hub-accent/40 bg-hub-surface2 px-3 py-2 text-sm leading-relaxed text-white"
+      >
+        <p className="text-xs font-semibold uppercase tracking-wide text-hub-accent">
+          Delivery
+        </p>
+        <p className="mt-1 whitespace-pre-wrap break-words">
+          {protocol.displayText || 'Delivery received'}
+        </p>
+        <p className="mt-2 text-xs text-hub-muted">
+          {assets.length} asset{assets.length === 1 ? '' : 's'} attached
+        </p>
+        {assets.length > 0 ? (
+          <div className="mt-2 grid max-w-full grid-cols-2 gap-2">
+            {assets.map((asset) => (
+              <AssetPreviewCard key={asset.uri} asset={asset} />
+            ))}
+          </div>
+        ) : null}
+      </article>
+    </div>
+  )
+}
+
 export function MessageBubble({ message, selfGlobalMetaId }: MessageBubbleProps) {
   const isSelf = message.fromGlobalMetaId.trim() === selfGlobalMetaId.trim()
   const variant = getMessageVariant(message)
 
+  if (message.decryptError) {
+    return <DecryptFailedBubble message={message} />
+  }
   if (variant === 'system') {
     return <SystemBubble message={message} />
   }
   if (variant === 'order') {
     return <OrderBubble message={message} isSelf={isSelf} />
+  }
+  if (variant === 'status') {
+    const protocol = parseDeliveryProtocol(message.content)
+    return <TimelineEvent label="Order status update" body={protocol.displayText} />
+  }
+  if (variant === 'delivery') {
+    return <DeliveryBubble message={message} />
+  }
+  if (variant === 'completion') {
+    const protocol = parseDeliveryProtocol(message.content)
+    return (
+      <TimelineEvent
+        label="Order completed"
+        body={protocol.displayText || 'Order completed'}
+        tone="success"
+      />
+    )
+  }
+  if (variant === 'rating_reserved') {
+    const protocol = parseDeliveryProtocol(message.content)
+    return <TimelineEvent label="Rating reserved" body={protocol.displayText} />
   }
   return <TextBubble message={message} isSelf={isSelf} body={message.content} />
 }

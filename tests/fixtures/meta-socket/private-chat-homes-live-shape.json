@@ -1,0 +1,31 @@
+{
+  "code": 0,
+  "data": {
+    "list": [
+      {
+        "metaId": "idq160rca8swdygt7hn59em03nqhr96zmjd4yd668z",
+        "globalMetaId": "idq160rca8swdygt7hn59em03nqhr96zmjd4yd668z",
+        "lastMessage": {
+          "fromGlobalMetaId": "1JzFmwf498bXRyFiJTrxikSP7xh9iZ3JrX",
+          "from": "1JzFmwf498bXRyFiJTrxikSP7xh9iZ3JrX",
+          "fromAddress": "1JzFmwf498bXRyFiJTrxikSP7xh9iZ3JrX",
+          "toGlobalMetaId": "idq160rca8swdygt7hn59em03nqhr96zmjd4yd668z",
+          "to": "idq160rca8swdygt7hn59em03nqhr96zmjd4yd668z",
+          "toAddress": "",
+          "txId": "41b4efe33c2ddf73d3089e0b91853c1a44a57661cbf6ac20018d99435696bb8bi0",
+          "pinId": "41b4efe33c2ddf73d3089e0b91853c1a44a57661cbf6ac20018d99435696bb8bi0",
+          "protocol": "bc1p20k3x2c4mglfxr5wa5sgtgechwstpld80kru2cg4gmm4urvuaqqsvapxu0:/protocols/simplemsg",
+          "content": "U2FsdGVkX18KhWHWHGLOL2yOWsWicR9CvcPxQbWce5s=",
+          "contentType": "text/plain",
+          "encryption": "",
+          "timestamp": 1777322934,
+          "chain": "mvc",
+          "blockHeight": 170729,
+          "index": -1
+        }
+      }
+    ]
+  },
+  "message": "",
+  "processingTime": 1779975818371
+}

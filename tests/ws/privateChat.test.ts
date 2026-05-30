@@ -3,6 +3,7 @@ import {
   isPrivateChatForRecipient,
   isPrivateChatItem,
   messageIdFromPrivateChat,
+  peerChatPublicKeyFromPrivateChat,
   peerGlobalMetaIdFromPrivateChat,
   type PrivateChatItem,
 } from '@/ws/privateChat'
@@ -30,6 +31,22 @@ describe('privateChat', () => {
   it('resolves peer globalMetaId from sender perspective', () => {
     expect(peerGlobalMetaIdFromPrivateChat(baseItem, 'idqself')).toBe('idqpeer')
     expect(peerGlobalMetaIdFromPrivateChat(baseItem, 'idqpeer')).toBe('idqself')
+  })
+
+  it('resolves peer id and chat key using self aliases', () => {
+    const item: PrivateChatItem = {
+      ...baseItem,
+      fromGlobalMetaId: '1SelfMvcAddress',
+      toGlobalMetaId: 'idqpeer',
+      toUserInfo: { chatPublicKey: 'peer-key' },
+    }
+
+    expect(
+      peerGlobalMetaIdFromPrivateChat(item, 'idqself', ['1SelfMvcAddress']),
+    ).toBe('idqpeer')
+    expect(
+      peerChatPublicKeyFromPrivateChat(item, 'idqself', ['1SelfMvcAddress']),
+    ).toBe('peer-key')
   })
 
   it('builds stable message id from pinId', () => {

@@ -3,27 +3,10 @@ import { MagnifyingGlassIcon, FunnelIcon } from '@heroicons/react/24/outline'
 import { clsx } from 'clsx'
 import type {
   SkillServiceCurrency,
-  SkillServiceOrder,
   SkillServiceOutputType,
-  SkillServiceSortBy,
 } from '@/api/aggregator.types'
+import type { HubFilters } from '@/components/hub/filters'
 import { t } from '@/i18n'
-
-export interface HubFilters {
-  keyword: string
-  currency: SkillServiceCurrency | ''
-  outputType: SkillServiceOutputType | ''
-  sortBy: SkillServiceSortBy
-  order: SkillServiceOrder
-}
-
-export const defaultHubFilters: HubFilters = {
-  keyword: '',
-  currency: '',
-  outputType: '',
-  sortBy: 'rating',
-  order: 'desc',
-}
 
 const CURRENCIES: { value: SkillServiceCurrency | ''; label: string }[] = [
   { value: '', label: t('hub.currencyAll') },
@@ -42,13 +25,12 @@ const OUTPUT_TYPES: { value: SkillServiceOutputType | ''; label: string }[] = [
   { value: 'other', label: t('filters.other') },
 ]
 
-const SORT_OPTIONS: { sortBy: SkillServiceSortBy; order: SkillServiceOrder; label: string }[] =
-  [
-    { sortBy: 'rating', order: 'desc', label: t('hub.sortTopRated') },
-    { sortBy: 'updated', order: 'desc', label: t('hub.sortRecent') },
-    { sortBy: 'price', order: 'asc', label: t('hub.sortPriceAsc') },
-    { sortBy: 'price', order: 'desc', label: t('hub.sortPriceDesc') },
-  ]
+const SORT_OPTIONS: (Pick<HubFilters, 'sortBy' | 'order'> & { label: string })[] = [
+  { sortBy: 'rating', order: 'desc', label: t('hub.sortTopRated') },
+  { sortBy: 'updated', order: 'desc', label: t('hub.sortRecent') },
+  { sortBy: 'price', order: 'asc', label: t('hub.sortPriceAsc') },
+  { sortBy: 'price', order: 'desc', label: t('hub.sortPriceDesc') },
+]
 
 const KEYWORD_DEBOUNCE_MS = 300
 

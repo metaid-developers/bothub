@@ -55,6 +55,51 @@ const wallet = {
 }
 
 describe('executePayAndRequest', () => {
+  it('posts orders as standard simplemsg pins with millisecond timestamps', async () => {
+    const now = 1_764_321_987_654
+    vi.spyOn(Date, 'now').mockReturnValue(now)
+    const paymentTxid = 'e'.repeat(64)
+    const createPin = vi.fn().mockResolvedValue({ pinId: 'pin-order-standard' })
+
+    await executePayAndRequest({
+      service: paidService,
+      provider,
+      prompt: 'Please deliver my standard simplemsg order.',
+      wallet,
+      metalet: {
+        transfer: vi.fn().mockResolvedValue({ txids: [paymentTxid] }),
+        ecdh: vi.fn().mockResolvedValue({ sharedSecret: 'aa'.repeat(32) }),
+        createPin,
+      },
+    })
+
+    const pinArgs = createPin.mock.calls[0][0] as {
+      dataList: Array<{
+        metaidData: {
+          path: string
+          body: string
+          contentType: string
+          encryption: string
+        }
+      }>
+    }
+    const metaidData = pinArgs.dataList[0].metaidData
+    expect(metaidData.path).toBe('/protocols/simplemsg')
+    expect(metaidData.contentType).toBe('application/json')
+    expect(metaidData.encryption).toBe('0')
+    const body = JSON.parse(metaidData.body) as {
+      to: string
+      encrypt: string
+      contentType: string
+      timestamp: number
+    }
+    expect(body.to).toBe(provider.globalMetaId)
+    expect(body.encrypt).toBe('ecdh')
+    expect(body.contentType).toBe('text/plain')
+    expect(body.timestamp).toBe(now)
+    expect(body.timestamp).toBeGreaterThan(10_000_000_000)
+  })
+
   it('rejects empty prompt', async () => {
     await expect(
       executePayAndRequest({
@@ -86,6 +131,26 @@ describe('executePayAndRequest', () => {
     })
 
     expect(transfer).toHaveBeenCalledOnce()
+    expect(transfer).toHaveBeenCalledWith({
+      tasks: [
+        {
+          chain: paidService.paymentChain,
+          currency: paidService.currency,
+          receivers: [
+            {
+              address: paidService.paymentAddress,
+              amount: '100000000',
+            },
+          ],
+        },
+      ],
+    })
+    expect(transfer.mock.invocationCallOrder[0]).toBeLessThan(
+      ecdh.mock.invocationCallOrder[0],
+    )
+    expect(ecdh.mock.invocationCallOrder[0]).toBeLessThan(
+      createPin.mock.invocationCallOrder[0],
+    )
     expect(ecdh).toHaveBeenCalledWith({ externalPubKey: provider.chatPubkey })
     expect(createPin).toHaveBeenCalledOnce()
     const pinArgs = createPin.mock.calls[0][0] as {
@@ -93,7 +158,7 @@ describe('executePayAndRequest', () => {
       dataList: Array<{ metaidData: { path: string; body: string } }>
     }
     expect(pinArgs.chain).toBe('mvc')
-    expect(pinArgs.dataList[0].metaidData.path).toBe('/private/chat/simplemsg')
+    expect(pinArgs.dataList[0].metaidData.path).toBe('/protocols/simplemsg')
     const body = JSON.parse(pinArgs.dataList[0].metaidData.body) as {
       to: string
       encrypt: string
@@ -104,9 +169,12 @@ describe('executePayAndRequest', () => {
     expect(body.content).toBeTruthy()
 
     expect(result.paymentTxid).toBe(paymentTxid)
+    expect(result.paymentCommitTxid).toBe('')
     expect(result.orderReference).toBe('')
     expect(result.orderPinId).toBe('pin-order-001')
     expect(result.sessionKey).toBe(`${provider.globalMetaId}:${paymentTxid}`)
+    expect(result.orderPayload).toContain(`txid: ${paymentTxid}`)
+    expect(result.displaySummary).toBe('Please deliver my fortune reading.')
   })
 
   it('happy path: free order skips transfer and uses order reference', async () => {
@@ -131,8 +199,11 @@ describe('executePayAndRequest', () => {
 
     expect(transfer).not.toHaveBeenCalled()
     expect(result.paymentTxid).toBe('')
+    expect(result.paymentCommitTxid).toBe('')
     expect(result.orderReference).toBe(generateRandomHex(32))
     expect(result.sessionKey).toBe(`${provider.globalMetaId}:${result.orderReference}`)
+    expect(result.orderPayload).toContain(`order id: ${result.orderReference}`)
+    expect(result.displaySummary).toBe('Free reading please.')
   })
 
   it('surfaces payment failure when transfer returns no txid', async () => {
@@ -149,5 +220,154 @@ describe('executePayAndRequest', () => {
         },
       }),
     ).rejects.toMatchObject({ code: 'payment_failed' } satisfies Partial<PayAndRequestError>)
+  })
+
+  it('fails native paid preflight before transfer when payment address is missing', async () => {
+    const transfer = vi.fn()
+    await expect(
+      executePayAndRequest({
+        service: { ...paidService, paymentAddress: '   ' },
+        provider,
+        prompt: 'Need this service.',
+        wallet,
+        metalet: {
+          transfer,
+          ecdh: vi.fn(),
+          createPin: vi.fn(),
+        },
+      }),
+    ).rejects.toMatchObject({ code: 'payment_failed' } satisfies Partial<PayAndRequestError>)
+
+    expect(transfer).not.toHaveBeenCalled()
+  })
+
+  it('fails preflight before transfer when wallet identity is missing', async () => {
+    const transfer = vi.fn()
+    await expect(
+      executePayAndRequest({
+        service: paidService,
+        provider,
+        prompt: 'Need this service.',
+        wallet: { ...wallet, globalMetaId: '   ' },
+        metalet: {
+          transfer,
+          ecdh: vi.fn(),
+          createPin: vi.fn(),
+        },
+      }),
+    ).rejects.toMatchObject({ code: 'missing_wallet' } satisfies Partial<PayAndRequestError>)
+
+    expect(transfer).not.toHaveBeenCalled()
+  })
+
+  it('fails preflight before transfer when provider global meta id is missing', async () => {
+    const transfer = vi.fn()
+    await expect(
+      executePayAndRequest({
+        service: paidService,
+        provider: { ...provider, globalMetaId: '   ' },
+        prompt: 'Need this service.',
+        wallet,
+        metalet: {
+          transfer,
+          ecdh: vi.fn(),
+          createPin: vi.fn(),
+        },
+      }),
+    ).rejects.toMatchObject({ code: 'missing_provider_key' } satisfies Partial<PayAndRequestError>)
+
+    expect(transfer).not.toHaveBeenCalled()
+  })
+
+  it('blocks paid MRC20 checkout with a clear unsupported-state error before transfer', async () => {
+    const transfer = vi.fn()
+    await expect(
+      executePayAndRequest({
+        service: {
+          ...paidService,
+          settlementKind: 'mrc20',
+          currency: 'MRC20',
+          paymentChain: 'btc',
+          mrc20Ticker: 'DEMO',
+          mrc20Id: 'mrc20-genesis-id-demo',
+          paymentAddress: 'bc1qmrc20recipient',
+        },
+        provider,
+        prompt: 'Need MRC20 service.',
+        wallet,
+        metalet: {
+          transfer,
+          ecdh: vi.fn(),
+          createPin: vi.fn(),
+        },
+      }),
+    ).rejects.toMatchObject({
+      code: 'payment_failed',
+      message: expect.stringMatching(/MRC20 paid checkout is not supported/i),
+    } satisfies Partial<PayAndRequestError>)
+
+    expect(transfer).not.toHaveBeenCalled()
+  })
+
+  it('throws a broadcast error with paid payment context when createPin fails', async () => {
+    const paymentTxid = 'd'.repeat(64)
+
+    await expect(
+      executePayAndRequest({
+        service: paidService,
+        provider,
+        prompt: 'Paid request that should be recoverable.',
+        wallet,
+        metalet: {
+          transfer: vi.fn().mockResolvedValue({ txids: [paymentTxid] }),
+          ecdh: vi.fn().mockResolvedValue({ sharedSecret: 'aa'.repeat(32) }),
+          createPin: vi.fn().mockRejectedValue(new Error('network down')),
+        },
+      }),
+    ).rejects.toMatchObject({
+      code: 'broadcast_failed',
+      partial: {
+        payment: {
+          paymentTxid,
+          paymentCommitTxid: '',
+          orderReference: '',
+        },
+        sessionKey: `${provider.globalMetaId}:${paymentTxid}`,
+      },
+    })
+  })
+
+  it('throws a broadcast error with a free order reference when createPin fails', async () => {
+    vi.spyOn(crypto, 'getRandomValues').mockImplementation((array) => {
+      if (array instanceof Uint8Array) {
+        array.fill(0x0b)
+      }
+      return array
+    })
+    const expectedOrderReference = generateRandomHex(32)
+
+    await expect(
+      executePayAndRequest({
+        service: freeService,
+        provider,
+        prompt: 'Free request that should be recoverable.',
+        wallet,
+        metalet: {
+          transfer: vi.fn(),
+          ecdh: vi.fn().mockResolvedValue({ sharedSecret: 'bb'.repeat(32) }),
+          createPin: vi.fn().mockRejectedValue(new Error('network down')),
+        },
+      }),
+    ).rejects.toMatchObject({
+      code: 'broadcast_failed',
+      partial: {
+        payment: {
+          paymentTxid: '',
+          paymentCommitTxid: '',
+          orderReference: expectedOrderReference,
+        },
+        sessionKey: `${provider.globalMetaId}:${expectedOrderReference}`,
+      },
+    })
   })
 })

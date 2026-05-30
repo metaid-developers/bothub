@@ -1,12 +1,12 @@
 import { clsx } from 'clsx'
 import { EmptyState } from '@/components/common/EmptyState'
-import type { DeliverySession } from '@/delivery/messageStore'
 import { sessionPreviewText } from '@/delivery/messageDisplay'
+import type { EnrichedDeliverySession } from '@/delivery/sessionDisplay'
 import { t } from '@/i18n'
 import { truncateGlobalMetaId } from '@/wallet/format'
 
 export interface SessionsListProps {
-  sessions: DeliverySession[]
+  sessions: EnrichedDeliverySession[]
   selectedSessionKey: string | null
   onSelectSession: (sessionKey: string) => void
   walletConnected: boolean
@@ -60,8 +60,13 @@ export function SessionsList({
                   : 'border-hub-border bg-hub-surface/60 hover:border-hub-muted/50',
               )}
             >
-              <div className="font-semibold text-white">
-                {truncateGlobalMetaId(session.peerGlobalMetaId)}
+              <div className="flex min-w-0 items-center justify-between gap-2">
+                <span className="truncate font-semibold text-white">
+                  {truncateGlobalMetaId(session.peerGlobalMetaId)}
+                </span>
+                <span className="shrink-0 rounded-full border border-hub-border px-2 py-0.5 text-[10px] font-medium text-hub-muted">
+                  {t(`delivery.status.${session.status}`)}
+                </span>
               </div>
               {session.serviceLabel ? (
                 <p className="mt-0.5 text-xs font-medium text-hub-accent">
@@ -71,8 +76,13 @@ export function SessionsList({
               <p className="mt-1 line-clamp-2 text-xs text-hub-muted">
                 {sessionPreviewText(session.lastMessage.content)}
               </p>
-              <p className="mt-1 text-[11px] text-hub-muted">
-                {session.messageCount} message{session.messageCount === 1 ? '' : 's'}
+              <p className="mt-1 flex items-center justify-between gap-2 text-[11px] text-hub-muted">
+                <span>
+                  {session.messageCount} message{session.messageCount === 1 ? '' : 's'}
+                </span>
+                <span>
+                  {session.assetCount} asset{session.assetCount === 1 ? '' : 's'}
+                </span>
               </p>
             </button>
           </li>

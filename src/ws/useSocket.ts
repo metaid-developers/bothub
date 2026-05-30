@@ -1,14 +1,9 @@
 import { create } from 'zustand'
-import { decryptIncoming } from '@/delivery/decrypt'
-import { useMessageStore, type DeliveryMessage } from '@/delivery/messageStore'
-import { useWsMock } from '@/api/config'
+import { mergePrivateChatItem } from '@/delivery/deliverySync'
+import { useWsMock as isWsMockEnabled } from '@/api/config'
 import {
   isPrivateChatForRecipient,
-  isPrivateChatItem,
-  messageIdFromPrivateChat,
-  peerChatPublicKeyFromPrivateChat,
-  peerGlobalMetaIdFromPrivateChat,
-  type PrivateChatItem,
+  normalizePrivateChatItem,
 } from './privateChat'
 import {
   connectSocket,
@@ -16,19 +11,22 @@ import {
   type SocketController,
 } from './socket'
 import { WS_SERVER_NOTIFY_PRIVATE_CHAT, type SocketEnvelope } from './envelope'
+import type { WalletIdentity } from '@/wallet/types'
 
 const DEBUG_LOG_LIMIT = 40
+type SocketIdentityInput = WalletIdentity | string
 
 interface SocketState {
   status: SocketConnectionStatus
   connectedGlobalMetaId: string | null
+  connectedIdentity: WalletIdentity | null
   lastError: string | null
   debugLog: string[]
-  connect: (globalMetaId: string) => void
+  connect: (identity: SocketIdentityInput) => void
   disconnect: () => void
   pushDebug: (line: string) => void
-  handleEnvelope: (envelope: SocketEnvelope, selfGlobalMetaId: string) => Promise<void>
-  injectMockEnvelope: (envelope: SocketEnvelope, selfGlobalMetaId: string) => void
+  handleEnvelope: (envelope: SocketEnvelope, identity: SocketIdentityInput) => Promise<void>
+  injectMockEnvelope: (envelope: SocketEnvelope, identity: SocketIdentityInput) => void
 }
 
 let activeController: SocketController | null = null
@@ -39,44 +37,32 @@ function pushDebugLine(lines: string[], line: string): string[] {
   return next
 }
 
-async function privateChatToDeliveryMessage(
-  item: PrivateChatItem,
-  selfGlobalMetaId: string,
-  pushDebug: (line: string) => void,
-): Promise<DeliveryMessage> {
-  const peerGlobalMetaId = peerGlobalMetaIdFromPrivateChat(item, selfGlobalMetaId)
-  const rawContent = item.content
-  const peerChatPubKey = peerChatPublicKeyFromPrivateChat(item, selfGlobalMetaId)
-
-  const { plaintext, error } = await decryptIncoming({
-    content: rawContent,
-    encryption: item.encryption,
-    peerChatPubKey,
-  })
-
-  if (error) {
-    pushDebug(`[decrypt] ${peerGlobalMetaId.slice(0, 8)}…: ${error}`)
-  }
-
+function identityFromInput(input: SocketIdentityInput): WalletIdentity {
+  if (typeof input !== 'string') return input
   return {
-    id: messageIdFromPrivateChat(item),
-    peerGlobalMetaId,
-    fromGlobalMetaId: item.fromGlobalMetaId.trim(),
-    toGlobalMetaId: item.toGlobalMetaId.trim(),
-    content: plaintext || rawContent,
-    rawContent,
-    encryption: item.encryption ?? '',
-    contentType: item.contentType ?? 'text/plain',
-    timestamp: item.timestamp,
-    pinId: item.pinId,
-    txId: item.txId,
-    decryptError: error,
+    globalMetaId: input,
+    mvcAddress: '',
+    btcAddress: '',
+    dogeAddress: '',
   }
+}
+
+function isPrivateChatForIdentity(
+  envelope: SocketEnvelope,
+  identity: WalletIdentity,
+): boolean {
+  const item = normalizePrivateChatItem(envelope.D)
+  if (!item) return false
+  return (
+    isPrivateChatForRecipient(item, identity.globalMetaId) ||
+    (!!identity.mvcAddress && isPrivateChatForRecipient(item, identity.mvcAddress))
+  )
 }
 
 export const useSocket = create<SocketState>()((set, get) => ({
   status: 'disconnected',
   connectedGlobalMetaId: null,
+  connectedIdentity: null,
   lastError: null,
   debugLog: [],
 
@@ -84,37 +70,56 @@ export const useSocket = create<SocketState>()((set, get) => ({
     set((state) => ({ debugLog: pushDebugLine(state.debugLog, line) }))
   },
 
-  handleEnvelope: async (envelope, selfGlobalMetaId) => {
+  handleEnvelope: async (envelope, identityInput) => {
     if (envelope.M !== WS_SERVER_NOTIFY_PRIVATE_CHAT) return
-    if (!isPrivateChatItem(envelope.D)) {
+    const item = normalizePrivateChatItem(envelope.D)
+    if (!item) {
       get().pushDebug('[ws] dropped private chat: invalid payload')
       return
     }
-    if (!isPrivateChatForRecipient(envelope.D, selfGlobalMetaId)) return
+    const identity = identityFromInput(identityInput)
+    const selfGlobalMetaId = identity.globalMetaId.trim()
+    if (!selfGlobalMetaId || !isPrivateChatForIdentity(envelope, identity)) return
 
-    const message = await privateChatToDeliveryMessage(
-      envelope.D,
-      selfGlobalMetaId,
-      get().pushDebug,
-    )
-    useMessageStore.getState().append(message)
+    let result: Awaited<ReturnType<typeof mergePrivateChatItem>>
+    try {
+      result = await mergePrivateChatItem({
+        item,
+        selfGlobalMetaId,
+        walletIdentity: identity,
+        pushDebug: get().pushDebug,
+      })
+    } catch (error) {
+      const detail = error instanceof Error ? error.message : String(error)
+      get().pushDebug(`[delivery] private chat was not merged: ${detail}`)
+      return
+    }
+    if (!result.persisted) {
+      const detail =
+        result.persistenceError instanceof Error
+          ? result.persistenceError.message
+          : String(result.persistenceError)
+      get().pushDebug(`[cache] delivery message was not saved: ${detail}`)
+    }
   },
 
-  injectMockEnvelope: (envelope, selfGlobalMetaId) => {
-    if (!import.meta.env.DEV && !useWsMock()) return
-    void get().handleEnvelope(envelope, selfGlobalMetaId)
+  injectMockEnvelope: (envelope, identityInput) => {
+    if (!import.meta.env.DEV && !isWsMockEnabled()) return
+    void get().handleEnvelope(envelope, identityInput)
   },
 
-  connect: (globalMetaId) => {
-    const gmid = globalMetaId.trim()
+  connect: (identityInput) => {
+    const identity = identityFromInput(identityInput)
+    const gmid = identity.globalMetaId.trim()
     if (!gmid) return
 
-    if (useWsMock()) {
+    if (isWsMockEnabled()) {
       activeController?.disconnect()
       activeController = null
       set({
         status: 'connected',
         connectedGlobalMetaId: gmid,
+        connectedIdentity: identity,
         lastError: null,
       })
       get().pushDebug('[ws] mock mode — no socket connection')
@@ -129,13 +134,13 @@ export const useSocket = create<SocketState>()((set, get) => ({
     activeController = connectSocket({
       globalMetaId: gmid,
       onEnvelope: (envelope) => {
-        void get().handleEnvelope(envelope, gmid)
+        void get().handleEnvelope(envelope, identity)
       },
       onStatus: (status) => set({ status }),
       onError: (message) => set({ lastError: message }),
     })
 
-    set({ connectedGlobalMetaId: gmid, lastError: null })
+    set({ connectedGlobalMetaId: gmid, connectedIdentity: identity, lastError: null })
   },
 
   disconnect: () => {
@@ -144,6 +149,7 @@ export const useSocket = create<SocketState>()((set, get) => ({
     set({
       status: 'disconnected',
       connectedGlobalMetaId: null,
+      connectedIdentity: null,
       lastError: null,
     })
   },
@@ -157,8 +163,8 @@ declare global {
 
 if (import.meta.env.DEV && typeof window !== 'undefined') {
   window.__bothubInjectWsMessage = (envelope) => {
-    const gmid = useSocket.getState().connectedGlobalMetaId
-    if (!gmid) return
-    useSocket.getState().injectMockEnvelope(envelope, gmid)
+    const identity = useSocket.getState().connectedIdentity
+    if (!identity) return
+    useSocket.getState().injectMockEnvelope(envelope, identity)
   }
 }
