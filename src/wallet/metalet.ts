@@ -4,10 +4,15 @@ import type { EcdhResult, GlobalMetaidResult, MetaletWalletApi, TransferTask } f
 export { normalizeGlobalMetaidResponse } from './normalizeGlobalMetaid'
 
 export const METALET_COMMON_ECDH_WAIT_TIMEOUT_MS = 5_000
-export const METALET_ECDH_RESPONSE_TIMEOUT_MS = 10_000
 export const METALET_QUERY_RESPONSE_TIMEOUT_MS = 5_000
+export const METALET_AUTHORIZE_RESPONSE_TIMEOUT_MS = 120_000
+export const METALET_ECDH_RESPONSE_TIMEOUT_MS = METALET_AUTHORIZE_RESPONSE_TIMEOUT_MS
 
 const METALET_COMMON_ECDH_POLL_INTERVAL_MS = 50
+
+function authorizeTimeoutMessage(action: string): string {
+  return `Confirm the ${action} request in Metalet, or retry from Bothub if the Metalet window closed.`
+}
 
 export class MetaletNotInstalledError extends Error {
   constructor() {
@@ -24,9 +29,16 @@ export class MetaletEcdhUnavailableError extends Error {
 }
 
 export class MetaletEcdhTimeoutError extends Error {
-  constructor(message = 'Metalet ECDH request timed out') {
+  constructor(message = authorizeTimeoutMessage('ECDH')) {
     super(message)
     this.name = 'MetaletEcdhTimeoutError'
+  }
+}
+
+export class MetaletAuthorizeTimeoutError extends Error {
+  constructor(action: string) {
+    super(authorizeTimeoutMessage(action))
+    this.name = 'MetaletAuthorizeTimeoutError'
   }
 }
 
@@ -126,7 +138,30 @@ function withMetaletEcdhTimeout<T>(
 ): Promise<T> {
   return new Promise((resolve, reject) => {
     const timer = setTimeout(() => {
-      reject(new MetaletEcdhTimeoutError('Metalet ECDH request timed out'))
+      reject(new MetaletEcdhTimeoutError())
+    }, timeoutMs)
+
+    promise.then(
+      (value) => {
+        clearTimeout(timer)
+        resolve(value)
+      },
+      (err: unknown) => {
+        clearTimeout(timer)
+        reject(err)
+      },
+    )
+  })
+}
+
+function withMetaletAuthorizeTimeout<T>(
+  promise: Promise<T>,
+  action: string,
+  timeoutMs = METALET_AUTHORIZE_RESPONSE_TIMEOUT_MS,
+): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => {
+      reject(new MetaletAuthorizeTimeoutError(action))
     }, timeoutMs)
 
     promise.then(
@@ -180,7 +215,7 @@ export function isMetaletInstalled(): boolean {
 }
 
 export async function connect(): Promise<unknown> {
-  const res = await withMetaletResponseTimeout(
+  const res = await withMetaletAuthorizeTimeout(
     Promise.resolve().then(() => getWallet().connect()),
     'connect',
   )
@@ -260,9 +295,7 @@ export async function ecdh(params: {
 
     const topLevelEcdh = resolveTopLevelEcdh(wallet)
     if (topLevelEcdh) return invokeMetaletEcdh(topLevelEcdh, params)
-    throw new MetaletEcdhTimeoutError(
-      'Metalet common.ecdh request timed out and top-level wallet.ecdh API is unavailable',
-    )
+    throw new MetaletEcdhTimeoutError()
   }
 }
 

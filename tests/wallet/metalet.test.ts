@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
+  METALET_AUTHORIZE_RESPONSE_TIMEOUT_MS,
   METALET_COMMON_ECDH_WAIT_TIMEOUT_MS,
   METALET_ECDH_RESPONSE_TIMEOUT_MS,
   METALET_QUERY_RESPONSE_TIMEOUT_MS,
@@ -81,14 +82,28 @@ describe('metalet adapter', () => {
     expect(mockWallet.connect).toHaveBeenCalledOnce()
   })
 
-  it('connect rejects when Metalet does not respond', async () => {
+  it('connect waits past the short query timeout before rejecting an unconfirmed authorization', async () => {
     vi.useFakeTimers()
     mockWallet.connect.mockReturnValueOnce(new Promise(() => {}))
 
     const pending = connect()
-    const rejection = expect(pending).rejects.toThrow(/Metalet wallet did not respond to connect/)
-    await vi.advanceTimersByTimeAsync(METALET_QUERY_RESPONSE_TIMEOUT_MS)
+    let settled = false
+    pending.then(
+      () => {
+        settled = true
+      },
+      () => {
+        settled = true
+      },
+    )
 
+    await vi.advanceTimersByTimeAsync(METALET_QUERY_RESPONSE_TIMEOUT_MS)
+    expect(settled).toBe(false)
+
+    const rejection = expect(pending).rejects.toThrow(/Confirm the connect request in Metalet/)
+    await vi.advanceTimersByTimeAsync(
+      METALET_AUTHORIZE_RESPONSE_TIMEOUT_MS - METALET_QUERY_RESPONSE_TIMEOUT_MS,
+    )
     await rejection
     expect(mockWallet.connect).toHaveBeenCalledOnce()
   })
@@ -293,10 +308,23 @@ describe('metalet adapter', () => {
     })
 
     const pending = ecdh({ externalPubKey: 'provider-chat-key' })
-    const rejection = expect(pending).rejects.toThrow(
-      /Metalet common\.ecdh request timed out and top-level wallet\.ecdh API is unavailable/,
+    let settled = false
+    pending.then(
+      () => {
+        settled = true
+      },
+      () => {
+        settled = true
+      },
     )
-    await vi.advanceTimersByTimeAsync(METALET_ECDH_RESPONSE_TIMEOUT_MS)
+
+    await vi.advanceTimersByTimeAsync(10_000)
+    expect(settled).toBe(false)
+
+    const rejection = expect(pending).rejects.toThrow(
+      /Confirm the ECDH request in Metalet/,
+    )
+    await vi.advanceTimersByTimeAsync(METALET_ECDH_RESPONSE_TIMEOUT_MS - 10_000)
 
     await rejection
   })

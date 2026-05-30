@@ -110,17 +110,17 @@ describe('useWallet store', () => {
 
   it('connect resets from connecting to error when Metalet does not respond', async () => {
     vi.mocked(metalet.connect).mockRejectedValue(
-      new Error('Metalet wallet did not respond to connect. Reload or unlock Metalet and try again.'),
+      new Error('Confirm the connect request in Metalet, or retry if the window closed.'),
     )
 
     const { result } = renderHook(() => useWallet())
 
     await act(async () => {
-      await expect(result.current.connect()).rejects.toThrow(/did not respond to connect/)
+      await expect(result.current.connect()).rejects.toThrow(/Confirm the connect request/)
     })
 
     expect(result.current.status).toBe('error')
-    expect(result.current.errorMessage).toMatch(/did not respond to connect/)
+    expect(result.current.errorMessage).toMatch(/Confirm the connect request/)
     expect(result.current.identity).toBeNull()
     expect(metalet.getGlobalMetaid).not.toHaveBeenCalled()
   })
