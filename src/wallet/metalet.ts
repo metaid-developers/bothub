@@ -180,7 +180,12 @@ export function isMetaletInstalled(): boolean {
 }
 
 export async function connect(): Promise<unknown> {
-  return getWallet().connect()
+  const res = await withMetaletResponseTimeout(
+    Promise.resolve().then(() => getWallet().connect()),
+    'connect',
+  )
+  assertNoMetaletStatus(res)
+  return res
 }
 
 export async function disconnect(): Promise<unknown> {

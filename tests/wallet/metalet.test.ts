@@ -81,6 +81,24 @@ describe('metalet adapter', () => {
     expect(mockWallet.connect).toHaveBeenCalledOnce()
   })
 
+  it('connect rejects when Metalet does not respond', async () => {
+    vi.useFakeTimers()
+    mockWallet.connect.mockReturnValueOnce(new Promise(() => {}))
+
+    const pending = connect()
+    const rejection = expect(pending).rejects.toThrow(/Metalet wallet did not respond to connect/)
+    await vi.advanceTimersByTimeAsync(METALET_QUERY_RESPONSE_TIMEOUT_MS)
+
+    await rejection
+    expect(mockWallet.connect).toHaveBeenCalledOnce()
+  })
+
+  it('connect rejects Metalet status responses', async () => {
+    mockWallet.connect.mockResolvedValueOnce({ status: 'locked' })
+
+    await expect(connect()).rejects.toThrow(/Metalet wallet is locked/)
+  })
+
   it('ensureReady verifies the live wallet bridge before checkout', async () => {
     const result = await ensureReady('idq1testglobalmetaid1234567890')
 

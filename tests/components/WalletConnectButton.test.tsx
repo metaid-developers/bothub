@@ -67,4 +67,16 @@ describe('WalletConnectButton', () => {
     expect(screen.getByText('A')).toBeInTheDocument()
     expect(screen.getByText('Ada')).toBeInTheDocument()
   })
+
+  it('shows a retryable connect button after a connection error', () => {
+    useWallet.setState({
+      status: 'error',
+      errorMessage: 'Metalet wallet did not respond to connect.',
+    })
+
+    render(<WalletConnectButton />)
+
+    expect(screen.getByRole('button', { name: '连接钱包' })).toBeEnabled()
+    expect(screen.getByText(/did not respond to connect/i)).toBeInTheDocument()
+  })
 })
