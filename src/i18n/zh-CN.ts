@@ -94,7 +94,7 @@ export const zhCN = {
     noSessionsTitle: 'No sessions yet',
     noSessionsHint: 'Incoming simplemsg notifications will appear here.',
     walletNotConnectedTitle: 'Wallet not connected',
-    walletNotConnectedHint: 'Connect your Metalet wallet to receive private chat over Socket.IO.',
+    walletNotConnectedHint: '连接 Metalet 钱包后即可查看和管理交付记录。',
     wsError: 'WebSocket connection failed',
     wsReconnect: 'Reconnect',
     workspace: {
