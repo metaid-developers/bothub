@@ -1,6 +1,8 @@
 import { describe, expect, it, vi } from 'vitest'
 import type { ProviderInfo, SkillServiceCore } from '@/api/aggregator.types'
 import {
+  buildDeliveryOrderPath,
+  buildDeliverySessionPath,
   executePayAndRequest,
   generateRandomHex,
   PayAndRequestBroadcastError,
@@ -60,6 +62,20 @@ const wallet = {
 }
 
 const OLD_CREATE_PIN_WALLET_RESPONSE_TIMEOUT_MS = 90_000
+
+describe('Delivery route helpers', () => {
+  it('builds an order-centered Delivery URL', () => {
+    expect(buildDeliveryOrderPath('idqbuyer:idqprovider:order-ref-1')).toBe(
+      '/delivery?order=idqbuyer%3Aidqprovider%3Aorder-ref-1',
+    )
+  })
+
+  it('keeps the session Delivery URL helper compatible', () => {
+    expect(buildDeliverySessionPath('idqprovider:order-ref-1')).toBe(
+      '/delivery?session=idqprovider%3Aorder-ref-1',
+    )
+  })
+})
 
 describe('executePayAndRequest', () => {
   it('posts orders as standard simplemsg pins with millisecond timestamps', async () => {

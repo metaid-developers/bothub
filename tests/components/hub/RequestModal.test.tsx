@@ -107,8 +107,12 @@ describe('RequestModal', () => {
       errorMessage: null,
     })
     executePayAndRequest.mockResolvedValue(result)
-    persistPendingOrder.mockResolvedValue({})
-    persistFailedToSendOrder.mockResolvedValue({})
+    persistPendingOrder.mockResolvedValue({
+      order: { id: 'idqbuyer:idqprovider:order-ref-1' },
+    })
+    persistFailedToSendOrder.mockResolvedValue({
+      order: { id: 'idqbuyer:idqprovider:failed-order' },
+    })
     vi.mocked(metalet.ensureReady).mockResolvedValue({
       globalMetaId: wallet.globalMetaId,
       mvcAddress: wallet.mvcAddress,
@@ -142,7 +146,9 @@ describe('RequestModal', () => {
     fireEvent.click(screen.getByRole('button', { name: /confirm & pay/i }))
 
     await waitFor(() =>
-      expect(navigate).toHaveBeenCalledWith('/delivery?session=idqprovider%3Aorder-ref-1'),
+      expect(navigate).toHaveBeenCalledWith(
+        '/delivery?order=idqbuyer%3Aidqprovider%3Aorder-ref-1',
+      ),
     )
 
     expect(persistPendingOrder).toHaveBeenCalledWith({
@@ -169,6 +175,53 @@ describe('RequestModal', () => {
     )
   })
 
+  it('navigates a persisted paid order using the payment txid correlation id', async () => {
+    const paidService = { ...service, price: '1' }
+    const paidResult: ExecutePayAndRequestResult = {
+      ...result,
+      paymentTxid: 'paid-txid-1',
+      orderReference: '',
+      sessionKey: 'idqprovider:paid-txid-1',
+      orderPayload: '[ORDER] Paid fortune\ntxid: paid-txid-1',
+    }
+    executePayAndRequest.mockResolvedValue(paidResult)
+    persistPendingOrder.mockResolvedValueOnce({
+      order: { id: 'idqbuyer:idqprovider:paid-txid-1' },
+    })
+
+    render(
+      <MemoryRouter>
+        <RequestModal
+          open
+          onClose={vi.fn()}
+          service={paidService}
+          provider={provider}
+          wallet={wallet}
+        />
+      </MemoryRouter>,
+    )
+
+    fireEvent.change(screen.getByLabelText(/describe what you need/i), {
+      target: { value: 'Paid fortune' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Review' }))
+    fireEvent.click(screen.getByRole('button', { name: /confirm & pay/i }))
+
+    await waitFor(() =>
+      expect(navigate).toHaveBeenCalledWith(
+        '/delivery?order=idqbuyer%3Aidqprovider%3Apaid-txid-1',
+      ),
+    )
+
+    expect(persistPendingOrder).toHaveBeenCalledWith({
+      wallet,
+      service: paidService,
+      provider,
+      prompt: 'Paid fortune',
+      result: paidResult,
+    })
+  })
+
   it('persists a resolved free order without a returned pin id as pending, not failed', async () => {
     const resolvedWithoutPin: ExecutePayAndRequestResult = {
       ...result,
@@ -177,6 +230,9 @@ describe('RequestModal', () => {
       orderReference: 'order-ref-without-pin',
     }
     executePayAndRequest.mockResolvedValue(resolvedWithoutPin)
+    persistPendingOrder.mockResolvedValueOnce({
+      order: { id: 'idqbuyer:idqprovider:order-ref-without-pin' },
+    })
 
     render(
       <MemoryRouter>
@@ -198,7 +254,7 @@ describe('RequestModal', () => {
 
     await waitFor(() =>
       expect(navigate).toHaveBeenCalledWith(
-        '/delivery?session=idqprovider%3Aorder-ref-without-pin',
+        '/delivery?order=idqbuyer%3Aidqprovider%3Aorder-ref-without-pin',
       ),
     )
 
@@ -388,6 +444,9 @@ describe('RequestModal', () => {
       sessionKey: 'idqprovider:paid-txid-1',
       displaySummary: 'Paid fortune',
     }
+    persistFailedToSendOrder.mockResolvedValueOnce({
+      order: { id: 'idqbuyer:idqprovider:paid-txid-1' },
+    })
     executePayAndRequest.mockRejectedValue(
       new PayAndRequestBroadcastError('Order pin broadcast failed', partial),
     )
@@ -422,7 +481,9 @@ describe('RequestModal', () => {
     })
     expect(useMessageStore.getState().hydrateFromDb).toHaveBeenCalledWith(wallet.globalMetaId)
     fireEvent.click(screen.getByRole('button', { name: /open delivery/i }))
-    expect(navigate).toHaveBeenCalledWith('/delivery?session=idqprovider%3Apaid-txid-1')
+    expect(navigate).toHaveBeenCalledWith(
+      '/delivery?order=idqbuyer%3Aidqprovider%3Apaid-txid-1',
+    )
   })
 
   it('uses free-order recovery wording when a free order broadcast fails', async () => {

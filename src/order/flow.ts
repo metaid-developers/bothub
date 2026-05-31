@@ -18,6 +18,10 @@ export type {
   PreparedPayAndRequest,
 } from './payAndRequestStages'
 
+export function buildDeliveryOrderPath(orderId: string): string {
+  return `/delivery?order=${encodeURIComponent(orderId)}`
+}
+
 export function buildDeliverySessionPath(sessionKey: string): string {
   return `/delivery?session=${encodeURIComponent(sessionKey)}`
 }

@@ -10,6 +10,7 @@ import {
 } from '@/delivery/orderStore'
 import { formatPrice } from '@/lib/format'
 import {
+  buildDeliveryOrderPath,
   buildDeliverySessionPath,
   executePayAndRequest,
   PayAndRequestBroadcastError,
@@ -43,7 +44,7 @@ export function RequestModal({ open, onClose, service, provider, wallet }: Reque
   const [prompt, setPrompt] = useState('')
   const [step, setStep] = useState<RequestModalStep>('prompt')
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
-  const [recoverableSessionKey, setRecoverableSessionKey] = useState<string | null>(null)
+  const [recoverableDeliveryPath, setRecoverableDeliveryPath] = useState<string | null>(null)
 
   const price = useMemo(() => formatPrice(service.price, service.currency), [service])
   const providerName = provider.name?.trim() || 'Unknown Bot'
@@ -54,13 +55,13 @@ export function RequestModal({ open, onClose, service, provider, wallet }: Reque
     setPrompt('')
     setStep('prompt')
     setErrorMessage(null)
-    setRecoverableSessionKey(null)
+    setRecoverableDeliveryPath(null)
     onClose()
   }, [onClose])
 
   const handleConfirm = async () => {
     setErrorMessage(null)
-    setRecoverableSessionKey(null)
+    setRecoverableDeliveryPath(null)
     if (!wallet?.globalMetaId?.trim()) {
       setErrorMessage('Connect your Metalet wallet before sending a request.')
       setStep('error')
@@ -95,20 +96,23 @@ export function RequestModal({ open, onClose, service, provider, wallet }: Reque
         },
       })
 
+      let deliveryPath = buildDeliverySessionPath(result.sessionKey)
       try {
-        await persistPendingOrder({ wallet, service, provider, prompt, result })
+        const persisted = await persistPendingOrder({ wallet, service, provider, prompt, result })
         await useMessageStore.getState().hydrateFromDb(wallet.globalMetaId)
+        deliveryPath = buildDeliveryOrderPath(persisted.order.id)
       } catch (persistError) {
         console.warn('Order was sent but could not be saved locally.', persistError)
       }
 
       setStep('done')
-      navigate(buildDeliverySessionPath(result.sessionKey))
+      navigate(deliveryPath)
       resetAndClose()
     } catch (err) {
       if (err instanceof PayAndRequestBroadcastError) {
+        let deliveryPath = buildDeliverySessionPath(err.partial.sessionKey)
         try {
-          await persistFailedToSendOrder({
+          const persisted = await persistFailedToSendOrder({
             wallet,
             service,
             provider,
@@ -116,10 +120,11 @@ export function RequestModal({ open, onClose, service, provider, wallet }: Reque
             partial: err.partial,
           })
           await useMessageStore.getState().hydrateFromDb(wallet.globalMetaId)
+          deliveryPath = buildDeliveryOrderPath(persisted.order.id)
         } catch (persistError) {
           console.warn('Failed order could not be saved locally.', persistError)
         }
-        setRecoverableSessionKey(err.partial.sessionKey)
+        setRecoverableDeliveryPath(deliveryPath)
         const message = err.partial.payment.paymentTxid
           ? 'Payment succeeded but the order message failed. The paid request was saved in Delivery for recovery.'
           : 'The free order message failed. The request was saved in Delivery for recovery.'
@@ -290,15 +295,15 @@ export function RequestModal({ open, onClose, service, provider, wallet }: Reque
                 <button
                   type="button"
                   onClick={() => setStep('confirm')}
-                  disabled={Boolean(recoverableSessionKey)}
+                  disabled={Boolean(recoverableDeliveryPath)}
                   className="rounded-lg bg-hub-accent px-4 py-2 text-sm font-semibold text-hub-bg"
                 >
-                  {recoverableSessionKey ? 'Retry saved in Delivery' : 'Try again'}
+                  {recoverableDeliveryPath ? 'Retry saved in Delivery' : 'Try again'}
                 </button>
-                {recoverableSessionKey ? (
+                {recoverableDeliveryPath ? (
                   <button
                     type="button"
-                    onClick={() => navigate(buildDeliverySessionPath(recoverableSessionKey))}
+                    onClick={() => navigate(recoverableDeliveryPath)}
                     className="rounded-lg bg-hub-accent px-4 py-2 text-sm font-semibold text-hub-bg"
                   >
                     Open Delivery
