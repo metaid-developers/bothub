@@ -30,6 +30,7 @@ export function DeliveryComposer(props: {
   const [draft, setDraft] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [sending, setSending] = useState(false)
+  const [detailsOpen, setDetailsOpen] = useState(false)
   const appendOutgoingFollowUp = useMessageStore((s) => s.appendOutgoingFollowUp)
 
   const providerChatPubkey =
@@ -112,13 +113,24 @@ export function DeliveryComposer(props: {
         <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-hub-muted">
           <p role={error ? 'alert' : undefined}>{error ?? disabledReason}</p>
           {canFetchProviderKey ? (
-            <button
-              type="button"
-              onClick={props.onFetchProviderKey}
-              className="rounded-full border border-hub-border px-2 py-1 text-hub-accent hover:border-hub-muted"
-            >
-              Fetch provider key
-            </button>
+            <>
+              <button
+                type="button"
+                onClick={() => setDetailsOpen((open) => !open)}
+                className="rounded-full border border-hub-border px-2 py-1 text-hub-accent hover:border-hub-muted"
+              >
+                {t('delivery.technicalDetails')}
+              </button>
+              {detailsOpen ? (
+                <button
+                  type="button"
+                  onClick={props.onFetchProviderKey}
+                  className="rounded-full border border-hub-border px-2 py-1 text-hub-accent hover:border-hub-muted"
+                >
+                  {t('delivery.providerKeyRetry')}
+                </button>
+              ) : null}
+            </>
           ) : null}
         </div>
       )}

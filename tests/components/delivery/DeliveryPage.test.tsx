@@ -113,10 +113,10 @@ describe('DeliveryPage layout', () => {
     renderDeliveryPage()
 
     const orders = screen.getByRole('heading', { name: '我的请求' })
-    const header = screen.getByRole('status', { name: 'No delivery session selected' })
+    const header = screen.getByRole('status', { name: '选择一个请求查看交付' })
     const timeline = screen.getAllByText('选择一个请求查看交付进度')[0]
     const assets = screen.getByRole('heading', { name: '成果库' })
-    const composer = screen.getByRole('textbox', { name: 'Message provider' })
+    const composer = screen.getByRole('textbox', { name: '补充需求或询问进度' })
 
     expectBefore(orders, header)
     expectBefore(header, timeline)
@@ -155,9 +155,10 @@ describe('DeliveryPage layout', () => {
 
     renderDeliveryPage()
 
-    expect(screen.getByRole('textbox', { name: 'Message provider' })).toBeDisabled()
-    expect(screen.getByRole('button', { name: 'Send' })).toBeDisabled()
-    expect(screen.getByText('Connect wallet to reply')).toBeInTheDocument()
+    expect(screen.getByRole('textbox', { name: '补充需求或询问进度' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: '发送' })).toBeDisabled()
+    expect(screen.getByText('连接钱包后可继续沟通')).toBeInTheDocument()
+    expect(screen.queryByText('Connect wallet to reply')).not.toBeInTheDocument()
   })
 
   it('fetches and displays selected peer profile even when the session already has a chat key', async () => {
@@ -631,7 +632,8 @@ describe('DeliveryPage layout', () => {
     renderDeliveryPage(`/delivery?session=${peerGlobalMetaId}`)
 
     await waitFor(() => expect(fetchUserProfileByGlobalMetaId).toHaveBeenCalledTimes(1))
-    fireEvent.click(screen.getByRole('button', { name: 'Fetch provider key' }))
+    fireEvent.click(screen.getByRole('button', { name: '技术详情' }))
+    fireEvent.click(screen.getByRole('button', { name: '重试同步资料' }))
 
     await waitFor(() => expect(fetchUserProfileByGlobalMetaId).toHaveBeenCalledTimes(2))
   })
@@ -641,7 +643,10 @@ describe('DeliveryPage layout', () => {
 
     expect(screen.getByRole('heading', { name: '我的交付' })).toBeInTheDocument()
     expect(
-      screen.queryByText(/simplemsg|Socket.IO|meta-socket|chat key|ciphertext/i),
+      screen.queryByText(/simplemsg|Socket\.IO|meta-socket|chat key|ciphertext|session/i),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByText(/Wallet not connected|Connect wallet to reply|Message provider/i),
     ).not.toBeInTheDocument()
   })
 })

@@ -54,5 +54,9 @@ describe('DeliveryWorkspaceHeader', () => {
     render(<DeliveryWorkspaceHeader order={null} />)
 
     expect(screen.getByText('选择一个请求查看交付进度')).toBeInTheDocument()
+    expect(screen.getByRole('status', { name: '选择一个请求查看交付' })).toBeInTheDocument()
+    expect(
+      screen.queryByRole('status', { name: 'No delivery session selected' }),
+    ).not.toBeInTheDocument()
   })
 })

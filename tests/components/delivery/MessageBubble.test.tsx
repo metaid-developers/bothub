@@ -138,7 +138,7 @@ describe('MessageBubble', () => {
     ).not.toBeInTheDocument()
   })
 
-  it('keeps decrypt-failed raw ciphertext hidden behind explicit details', () => {
+  it('keeps decrypt-failed raw content hidden behind explicit technical details', () => {
     render(
       <MessageBubble
         message={message('encrypted-ciphertext', {
@@ -151,13 +151,14 @@ describe('MessageBubble', () => {
       />,
     )
 
-    expect(screen.getByText('Unable to decrypt this message')).toBeInTheDocument()
+    expect(screen.getByText('这条交付记录暂时无法显示，已保留原始记录')).toBeInTheDocument()
     expect(screen.getByText('Pin: pin-decrypt-failed')).toBeInTheDocument()
     expect(screen.getByText('Tx: tx-decrypt-failed')).toBeInTheDocument()
     expect(screen.queryByText('encrypted-ciphertext')).not.toBeInTheDocument()
+    expect(screen.queryByText(/ciphertext|Unable to decrypt/i)).not.toBeInTheDocument()
     expect(screen.queryByText(/connect wallet|pay/i)).not.toBeInTheDocument()
 
-    fireEvent.click(screen.getByRole('button', { name: 'Show technical details' }))
+    fireEvent.click(screen.getByRole('button', { name: '技术详情' }))
 
     expect(screen.getByText('missing peer key')).toBeInTheDocument()
     expect(screen.getByText('encrypted-ciphertext')).toBeInTheDocument()
@@ -189,7 +190,7 @@ describe('MessageBubble', () => {
     expect(screen.getByText('Order')).toBeInTheDocument()
     expect(screen.getByText('Free Ecommerce Store Blueprint')).toBeInTheDocument()
     expect(screen.getByText('Price: 0 SPACE')).toBeInTheDocument()
-    expect(screen.queryByText('Unable to decrypt this message')).not.toBeInTheDocument()
+    expect(screen.queryByText('这条交付记录暂时无法显示，已保留原始记录')).not.toBeInTheDocument()
     expect(screen.queryByText(/Could not decrypt/i)).not.toBeInTheDocument()
 
     fireEvent.click(screen.getByRole('button', { name: 'Show prompt' }))

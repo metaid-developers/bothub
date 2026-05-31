@@ -63,17 +63,26 @@ describe('DeliveryComposer', () => {
     })
   })
 
-  it('is disabled with no provider key and shows the reason', () => {
+  it('keeps missing provider key retry behind explicit technical details', () => {
+    const onFetchProviderKey = vi.fn()
     render(
       <DeliveryComposer
         wallet={wallet}
         session={{ ...session, providerChatPubkey: undefined }}
+        onFetchProviderKey={onFetchProviderKey}
       />,
     )
 
-    expect(screen.getByRole('textbox', { name: 'Message provider' })).toBeDisabled()
-    expect(screen.getByRole('button', { name: 'Send' })).toBeDisabled()
-    expect(screen.getByText('Provider chat key unavailable')).toBeInTheDocument()
+    expect(screen.getByRole('textbox', { name: '补充需求或询问进度' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: '发送' })).toBeDisabled()
+    expect(screen.getByText('暂时无法发送，正在补全对方资料')).toBeInTheDocument()
+    expect(screen.queryByText('Provider chat key unavailable')).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Fetch provider key' })).not.toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: '技术详情' }))
+    fireEvent.click(screen.getByRole('button', { name: '重试同步资料' }))
+
+    expect(onFetchProviderKey).toHaveBeenCalledOnce()
   })
 
   it('enables sending when a resolved provider key is supplied outside the session', async () => {
@@ -85,10 +94,10 @@ describe('DeliveryComposer', () => {
       />,
     )
 
-    fireEvent.change(screen.getByRole('textbox', { name: 'Message provider' }), {
+    fireEvent.change(screen.getByRole('textbox', { name: '补充需求或询问进度' }), {
       target: { value: 'Use the resolved key.' },
     })
-    fireEvent.click(screen.getByRole('button', { name: 'Send' }))
+    fireEvent.click(screen.getByRole('button', { name: '发送' }))
 
     await waitFor(() =>
       expect(mocks.sendDeliveryFollowUp).toHaveBeenCalledWith(
@@ -102,37 +111,21 @@ describe('DeliveryComposer', () => {
     )
   })
 
-  it('offers a fetch key action when the provider key is missing and retry is feasible', () => {
-    const onFetchProviderKey = vi.fn()
-    render(
-      <DeliveryComposer
-        wallet={wallet}
-        session={{ ...session, providerChatPubkey: undefined }}
-        onFetchProviderKey={onFetchProviderKey}
-      />,
-    )
-
-    fireEvent.click(screen.getByRole('button', { name: 'Fetch provider key' }))
-
-    expect(screen.getByRole('textbox', { name: 'Message provider' })).toBeDisabled()
-    expect(screen.getByText('Provider chat key unavailable')).toBeInTheDocument()
-    expect(onFetchProviderKey).toHaveBeenCalledOnce()
-  })
-
   it('is disabled with no connected wallet and shows the reason', () => {
     render(<DeliveryComposer wallet={null} session={session} />)
 
-    expect(screen.getByRole('textbox', { name: 'Message provider' })).toBeDisabled()
-    expect(screen.getByRole('button', { name: 'Send' })).toBeDisabled()
-    expect(screen.getByText('Connect wallet to reply')).toBeInTheDocument()
+    expect(screen.getByRole('textbox', { name: '补充需求或询问进度' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: '发送' })).toBeDisabled()
+    expect(screen.getByText('连接钱包后可继续沟通')).toBeInTheDocument()
+    expect(screen.queryByText('Connect wallet to reply')).not.toBeInTheDocument()
   })
 
   it('is disabled with no selected session and shows the reason', () => {
     render(<DeliveryComposer wallet={wallet} session={null} />)
 
-    expect(screen.getByRole('textbox', { name: 'Message provider' })).toBeDisabled()
-    expect(screen.getByRole('button', { name: 'Send' })).toBeDisabled()
-    expect(screen.getByText('Select a session to reply')).toBeInTheDocument()
+    expect(screen.getByRole('textbox', { name: '补充需求或询问进度' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: '发送' })).toBeDisabled()
+    expect(screen.getByText('选择一个请求后可继续沟通')).toBeInTheDocument()
   })
 
   it('disables the send button while sending', async () => {
@@ -140,14 +133,14 @@ describe('DeliveryComposer', () => {
 
     render(<DeliveryComposer wallet={wallet} session={session} />)
 
-    fireEvent.change(screen.getByRole('textbox', { name: 'Message provider' }), {
+    fireEvent.change(screen.getByRole('textbox', { name: '补充需求或询问进度' }), {
       target: { value: 'Please send the source files too.' },
     })
-    fireEvent.click(screen.getByRole('button', { name: 'Send' }))
+    fireEvent.click(screen.getByRole('button', { name: '发送' }))
 
-    const sendingButton = await screen.findByRole('button', { name: 'Sending' })
+    const sendingButton = await screen.findByRole('button', { name: '发送中' })
     expect(sendingButton).toBeDisabled()
-    expect(screen.getByRole('textbox', { name: 'Message provider' })).toBeDisabled()
+    expect(screen.getByRole('textbox', { name: '补充需求或询问进度' })).toBeDisabled()
   })
 
   it('preserves typed content when sending fails', async () => {
@@ -155,13 +148,13 @@ describe('DeliveryComposer', () => {
 
     render(<DeliveryComposer wallet={wallet} session={session} />)
 
-    fireEvent.change(screen.getByRole('textbox', { name: 'Message provider' }), {
+    fireEvent.change(screen.getByRole('textbox', { name: '补充需求或询问进度' }), {
       target: { value: 'Please send the source files too.' },
     })
-    fireEvent.click(screen.getByRole('button', { name: 'Send' }))
+    fireEvent.click(screen.getByRole('button', { name: '发送' }))
 
     await screen.findByText('wallet rejected')
-    expect(screen.getByRole('textbox', { name: 'Message provider' })).toHaveValue(
+    expect(screen.getByRole('textbox', { name: '补充需求或询问进度' })).toHaveValue(
       'Please send the source files too.',
     )
     expect(mocks.appendOutgoingFollowUp).not.toHaveBeenCalled()
@@ -171,10 +164,10 @@ describe('DeliveryComposer', () => {
     const onSent = vi.fn()
     render(<DeliveryComposer wallet={wallet} session={session} onSent={onSent} />)
 
-    fireEvent.change(screen.getByRole('textbox', { name: 'Message provider' }), {
+    fireEvent.change(screen.getByRole('textbox', { name: '补充需求或询问进度' }), {
       target: { value: 'Please send the source files too.' },
     })
-    fireEvent.click(screen.getByRole('button', { name: 'Send' }))
+    fireEvent.click(screen.getByRole('button', { name: '发送' }))
 
     await waitFor(() =>
       expect(mocks.appendOutgoingFollowUp).toHaveBeenCalledWith({
@@ -185,7 +178,7 @@ describe('DeliveryComposer', () => {
         pinId: 'pin-follow-up',
       }),
     )
-    expect(screen.getByRole('textbox', { name: 'Message provider' })).toHaveValue('')
+    expect(screen.getByRole('textbox', { name: '补充需求或询问进度' })).toHaveValue('')
     expect(onSent).toHaveBeenCalledOnce()
   })
 })

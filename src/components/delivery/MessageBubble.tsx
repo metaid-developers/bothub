@@ -8,6 +8,7 @@ import { deliveryAssetsFromMessage } from '@/delivery/sessionDisplay'
 import { AssetPreviewCard } from '@/components/delivery/AssetPreviewCard'
 import { PeerAvatar } from '@/components/delivery/PeerAvatar'
 import { peerDisplayName } from '@/components/delivery/peerDisplay'
+import { t } from '@/i18n'
 
 export interface MessageBubbleProps {
   message: DeliveryMessage
@@ -114,7 +115,7 @@ function TextBubble({
         ) : null}
         <p className="whitespace-pre-wrap break-words">{body}</p>
         {message.decryptError ? (
-          <p className="mt-1 text-xs opacity-70">Could not decrypt — showing ciphertext</p>
+          <p className="mt-1 text-xs opacity-70">{t('delivery.decryptFailedDefault')}</p>
         ) : null}
       </div>
     </div>
@@ -126,7 +127,7 @@ function SystemBubble({ message }: { message: DeliveryMessage }) {
     <div className="flex justify-center">
       <p className="max-w-[min(100%,32rem)] rounded-full border border-hub-border bg-hub-surface2/80 px-3 py-1 text-center text-xs text-hub-muted">
         {message.decryptError
-          ? 'Could not decrypt this message — stored ciphertext only.'
+          ? t('delivery.decryptFailedDefault')
           : message.content || 'System message'}
       </p>
     </div>
@@ -143,10 +144,7 @@ function DecryptFailedBubble({ message }: { message: DeliveryMessage }) {
   return (
     <div className="flex justify-start">
       <article className="max-w-[min(100%,32rem)] rounded-card border border-amber-400/30 bg-hub-surface2 px-3 py-2 text-sm leading-relaxed text-white">
-        <p className="font-medium">Unable to decrypt this message</p>
-        <p className="mt-1 text-xs text-hub-muted">
-          The session is still usable. You can retry after the provider key is available.
-        </p>
+        <p className="font-medium">{t('delivery.decryptFailedDefault')}</p>
         <div className="mt-2 flex flex-wrap gap-2 text-xs text-hub-muted">
           {message.pinId ? (
             <button
@@ -172,7 +170,7 @@ function DecryptFailedBubble({ message }: { message: DeliveryMessage }) {
           onClick={() => setDetailsOpen((open) => !open)}
           className="mt-2 text-xs text-hub-accent underline"
         >
-          {detailsOpen ? 'Hide technical details' : 'Show technical details'}
+          {t('delivery.technicalDetails')}
         </button>
         {detailsOpen ? (
           <div className="mt-2 space-y-2 text-xs text-hub-muted">
