@@ -62,6 +62,16 @@ export interface DeliverySession {
   messageCount: number
 }
 
+export interface FollowUpSessionInput {
+  sessionKey: string
+  peerGlobalMetaId: string
+  providerChatPubkey?: string
+  peerName?: string
+  peerAvatarUrl?: string
+  orderCorrelationId: string | null
+  serviceLabel: string | null
+}
+
 interface MessageStoreState {
   byPeer: Record<string, DeliveryMessage[]>
   assetsBySession: Record<string, DeliveryAssetRecord[]>
@@ -70,7 +80,7 @@ interface MessageStoreState {
   append: (message: DeliveryMessage) => void
   appendOutgoingFollowUp: (input: {
     wallet: WalletIdentity
-    session: DeliverySession
+    session: FollowUpSessionInput
     content: string
     rawContent: string
     pinId: string

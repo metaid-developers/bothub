@@ -5,8 +5,8 @@ import { WsErrorBanner } from '@/components/common/WsErrorBanner'
 import { DeliveredAssetsPanel } from '@/components/delivery/DeliveredAssetsPanel'
 import { DeliveryComposer } from '@/components/delivery/DeliveryComposer'
 import { DeliveryOrderList } from '@/components/delivery/DeliveryOrderList'
-import { MessageList } from '@/components/delivery/MessageList'
-import { SessionHeader } from '@/components/delivery/SessionHeader'
+import { DeliveryStatusTimeline } from '@/components/delivery/DeliveryStatusTimeline'
+import { DeliveryWorkspaceHeader } from '@/components/delivery/DeliveryWorkspaceHeader'
 import { getOrdersForWallet } from '@/delivery/db'
 import { retryDecryptPeerMessages } from '@/delivery/decryptRetry'
 import { buildSessionId, type BuyerOrder } from '@/delivery/domain'
@@ -427,19 +427,9 @@ export function DeliveryPage() {
         </aside>
 
         <div className="flex min-w-0 flex-col md:col-start-2 md:row-start-1">
-          <SessionHeader
-            session={
-              selectedOrder
-                ? workspaceOrderToComposerSession(
-                    selectedOrder,
-                    providerProfiles[selectedOrder.providerGlobalMetaId],
-                  )
-                : null
-            }
-          />
-          <MessageList
-            sessionKey={selectedOrder?.sessionKey ?? null}
-            messages={messagesWithProfileFallback}
+          <DeliveryWorkspaceHeader order={selectedOrder} />
+          <DeliveryStatusTimeline
+            order={selectedOrder}
             selfGlobalMetaId={selfGlobalMetaId}
           />
         </div>

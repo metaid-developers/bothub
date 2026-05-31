@@ -1,14 +1,25 @@
 import { useState } from 'react'
 import { sendDeliveryFollowUp } from '@/delivery/sendMessage'
 import { useMessageStore } from '@/delivery/messageStore'
-import type { EnrichedDeliverySession } from '@/delivery/sessionDisplay'
+import type { DeliveryMessage } from '@/delivery/messageStore'
 import { t } from '@/i18n'
 import * as metalet from '@/wallet/metalet'
 import type { WalletIdentity } from '@/wallet/types'
 
+export interface ComposerSessionInput {
+  sessionKey: string
+  peerGlobalMetaId: string
+  providerChatPubkey?: string
+  peerName?: string
+  peerAvatarUrl?: string
+  orderCorrelationId: string | null
+  serviceLabel: string | null
+  lastMessage?: DeliveryMessage
+}
+
 export function DeliveryComposer(props: {
   wallet: WalletIdentity | null
-  session: EnrichedDeliverySession | null
+  session: ComposerSessionInput | null
   providerChatPubkey?: string | null
   disabledReason?: string | null
   providerKeyLoading?: boolean
@@ -51,7 +62,7 @@ export function DeliveryComposer(props: {
         providerGlobalMetaId: session.peerGlobalMetaId,
         providerChatPubkey,
         content,
-        replyPin: session.lastMessage.pinId,
+        replyPin: session.lastMessage?.pinId,
         metalet,
       })
       await appendOutgoingFollowUp({
