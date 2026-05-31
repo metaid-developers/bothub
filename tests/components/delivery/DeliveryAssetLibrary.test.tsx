@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, within } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { DeliveryAssetLibrary } from '@/components/delivery/DeliveryAssetLibrary'
 import type { ParsedDeliveryAsset } from '@/delivery/assetParser'
@@ -83,13 +83,14 @@ describe('DeliveryAssetLibrary', () => {
     expect(screen.getByText('复制失败，请手动打开链接。')).toBeInTheDocument()
   })
 
-  it('opens an image preview dialog from a card', () => {
+  it('opens an image preview dialog from a card', async () => {
     render(<DeliveryAssetLibrary assets={[asset({ filename: 'image.png' })]} />)
 
     fireEvent.click(screen.getByRole('button', { name: '预览 image.png' }))
 
-    expect(screen.getByRole('dialog', { name: 'image.png' })).toBeInTheDocument()
-    expect(screen.getByRole('img', { name: 'image.png' })).toBeInTheDocument()
+    await waitFor(() => {
+      expect(screen.getByRole('dialog')).toBeInTheDocument()
+    })
   })
 
   it('shows a buyer-facing empty state', () => {

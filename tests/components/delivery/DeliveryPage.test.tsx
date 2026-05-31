@@ -114,7 +114,7 @@ describe('DeliveryPage layout', () => {
 
     const orders = screen.getByRole('heading', { name: '我的请求' })
     const header = screen.getByRole('status', { name: 'No delivery session selected' })
-    const timeline = screen.getByText('选择一个请求查看交付进度')
+    const timeline = screen.getAllByText('选择一个请求查看交付进度')[0]
     const assets = screen.getByRole('heading', { name: '成果库' })
     const composer = screen.getByRole('textbox', { name: 'Message provider' })
 
