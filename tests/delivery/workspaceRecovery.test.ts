@@ -5,8 +5,6 @@ import {
   putOrder,
   putSession,
   putAsset,
-  getOrdersForWallet,
-  getSessionsForWallet,
 } from '@/delivery/db'
 import { loadDeliveryWorkspaceRecords } from '@/delivery/workspaceRecovery'
 import { buildDeliveryWorkspace, selectWorkspaceOrder } from '@/delivery/workspace'
@@ -171,7 +169,6 @@ describe('delivery workspace recovery', () => {
   })
 
   it('delivered asset in IndexedDB is visible when no live socket message arrives', async () => {
-    const sessionId = `${SELF}:${PROVIDER}:order-1`
     await putSession(session({ serviceLabel: 'Image Render' }))
     await putAsset(asset({ filename: 'image.png' }))
     const records = await loadDeliveryWorkspaceRecords(SELF)
