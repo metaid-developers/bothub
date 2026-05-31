@@ -193,3 +193,68 @@ Run before handing this Task 5 pass back for controller review:
 | `git diff --check` | passed | No whitespace errors in the Bothub diff. |
 
 Task 5 verification completed at 2026-05-31 22:25 CST / 2026-05-31 14:25 UTC.
+
+## Task 6 Real Asset Preview And Management
+
+Task 6 hardened real delivered-asset parsing and preview fallback behavior.
+
+- Date checked: 2026-05-31 22:36 CST / 2026-05-31 14:36 UTC
+- Bothub base revision: `6f43e4f`
+- Task state: uncommitted worker diff for controller review
+
+### Automated Coverage Added Or Confirmed
+
+The Task 6 pass added or confirmed tests for:
+
+- `metafile://<pinid>.png`, `.mp4`, `.wav`, and `.pdf` delivery references.
+- Direct `https://file.metaid.io/metafile-indexer/api/v1/files/accelerate/content/<pinid>` links.
+- ASCII and Chinese punctuation around delivery URLs.
+- Duplicate asset references deduped by pin id.
+- Image preview fallback from accelerate URL to content URL.
+- Video/audio preview failure retaining a stable 16:9 card frame with open/download actions.
+- Document/archive cards exposing `打开` and `下载` without an inline preview button.
+- Preview dialog fallback copy: `预览暂不可用，可打开文件`.
+- Existing copy-one-link and copy-all-links behavior in `DeliveryAssetLibrary`.
+
+### Implementation Notes
+
+Task 6 kept the current asset model and made only targeted preview-management changes:
+
+- `assetParser` now trims full-width Chinese URL wrappers/trailing punctuation before parsing pin ids.
+- `AssetPreviewCard` uses a shared card fallback state for failed media and non-inline assets.
+- `AssetPreviewCard` now exposes `打开` plus `下载`; document/archive/other cards no longer show a `预览` action.
+- `AssetPreviewDialog` now tries accelerate first, falls back to content URL, then shows buyer-facing fallback copy while keeping `打开` and `下载` visible.
+
+### Real Asset Evidence
+
+Real asset verification used a local MetaBot delivery-history record, not a fake `preview.example` URL:
+
+```text
+[DELIVERY:5b146d4c0c063f108853809a16d5e79a81acc36f3164b9dccfbb6563234992bf]
+交付文件: metafile://b081b32c2891f0e2b2b8dccc22b3256ebf54957aaa43053f712d90646f377ed6i0.png
+下载链接: https://file.metaid.io/metafile-indexer/api/v1/files/accelerate/content/b081b32c2891f0e2b2b8dccc22b3256ebf54957aaa43053f712d90646f377ed6i0
+```
+
+Observed service behavior:
+
+| Check | Result | Evidence |
+| --- | --- | --- |
+| Accelerate `HEAD` | not usable | `HTTP/1.1 404 Not Found`, `Content-Type: text/plain`, `Content-Length: 18`. |
+| Content `HEAD` | not usable | `HTTP/1.1 404 Not Found`, `Content-Type: text/plain`, `Content-Length: 18`. |
+| Accelerate ranged `GET` | usable | `http_code=206`, `content_type=image/jpeg`, `size_download=32`, redirected to `https://metafs.oss-cn-beijing.aliyuncs.com/indexer/mvc/b081b32c2891f0e2b2b8dccc22b3256ebf54957aaa43053f712d90646f377ed6i0.jpg`; `file` detected JPEG data. |
+| Content `GET` | usable | `http_code=200`, `content_type=image/png;binary`, `size_download=1000901`, `file` detected JPEG image data, 2304x1728. |
+
+Real asset acceptance is passed for direct open/download availability. The service's `HEAD` behavior is documented but was not treated as a blocker because browser previews and direct opens rely on `GET`.
+
+No new meta-socket issue was created; this was a file-service `HEAD` nuance with working `GET` delivery URLs, not a new meta-socket aggregator blocker.
+
+### Task 6 Verification Commands
+
+Run before handing this Task 6 pass back for controller review:
+
+| Command | Result | Notes |
+| --- | --- | --- |
+| `pnpm test -- tests/delivery/assetParser.test.ts tests/components/delivery/AssetPreviewCard.test.tsx tests/components/delivery/AssetPreviewDialog.test.tsx tests/components/delivery/DeliveryAssetLibrary.test.tsx` | passed | 56 test files / 416 tests passed. Existing React Router, FocusTrap, profile-offline, and act warnings were observed. |
+| `pnpm build` | passed | TypeScript build and Vite production build completed. Vite reported the existing large-chunk warning for the app bundle. |
+| `pnpm lint` | passed | ESLint completed with `--max-warnings 0`. |
+| `git diff --check` | passed | No whitespace errors in the Bothub diff. |

@@ -109,4 +109,24 @@ describe('extractMetafileAssets', () => {
       kind: 'other',
     })
   })
+
+  it('extracts real metafile forms, trims punctuation, and deduplicates by pin id', () => {
+    const assets = extractMetafileAssets(`
+      图片：(metafile://realimage001i0.png)，
+      视频：metafile://realvideo001i0.mp4。
+      音频：[metafile://realaudio001i0.wav];
+      文档：{metafile://realdoc001i0.pdf}!
+      重复图片：metafile://realimage001i0.png。
+      直链：https://file.metaid.io/metafile-indexer/api/v1/files/accelerate/content/realdirect001i0）
+      重复直链：https://file.metaid.io/metafile-indexer/api/v1/files/accelerate/content/realdirect001i0。
+    `)
+
+    expect(assets.map((asset) => [asset.uri, asset.pinId, asset.kind, asset.mimeType])).toEqual([
+      ['metafile://realimage001i0.png', 'realimage001i0', 'image', 'image/png'],
+      ['metafile://realvideo001i0.mp4', 'realvideo001i0', 'video', 'video/mp4'],
+      ['metafile://realaudio001i0.wav', 'realaudio001i0', 'audio', 'audio/wav'],
+      ['metafile://realdoc001i0.pdf', 'realdoc001i0', 'document', 'application/pdf'],
+      ['metafile://realdirect001i0', 'realdirect001i0', 'other', undefined],
+    ])
+  })
 })
