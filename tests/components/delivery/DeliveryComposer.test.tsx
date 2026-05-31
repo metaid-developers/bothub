@@ -79,7 +79,7 @@ describe('DeliveryComposer', () => {
     expect(screen.queryByText('Provider chat key unavailable')).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Fetch provider key' })).not.toBeInTheDocument()
 
-    expect(screen.getByText('可手动重试同步资料')).toBeInTheDocument()
+    expect(screen.getByText('需要时可展开详情处理资料同步。')).toBeInTheDocument()
     const detailsButton = screen.getByRole('button', { name: '同步资料技术详情' })
     expect(detailsButton).toHaveTextContent('技术详情')
     expect(detailsButton).toHaveAttribute('aria-expanded', 'false')

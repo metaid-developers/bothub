@@ -79,7 +79,7 @@ export const zhCN = {
     composerNoProviderKey: '暂时无法发送，正在补全对方资料',
     composerSendFailed: '消息发送失败',
     providerKeyRetry: '重试同步资料',
-    providerKeyRetryHint: '可手动重试同步资料',
+    providerKeyRetryHint: '需要时可展开详情处理资料同步。',
     providerKeyDetailsLabel: '同步资料技术详情',
     technicalDetails: '技术详情',
     decryptFailedDefault: '这条交付记录暂时无法显示，已保留原始记录',

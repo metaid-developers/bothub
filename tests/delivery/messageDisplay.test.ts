@@ -31,4 +31,11 @@ describe('sessionPreviewText', () => {
     expect(preview).not.toContain('RAW PROMPT SHOULD NOT APPEAR')
     expect(preview).not.toContain('<raw_request>')
   })
+
+  it('uses buyer-facing fallback text for protocol-only messages', () => {
+    expect(sessionPreviewText('[DELIVERY:order-demo]')).toBe('已收到交付')
+    expect(sessionPreviewText('[ORDER_STATUS:order-demo]')).toBe('交付状态更新')
+    expect(sessionPreviewText('[ORDER_END:order-demo]')).toBe('订单已完成')
+    expect(sessionPreviewText('[NeedsRating:order-demo]')).toBe('评价待开放')
+  })
 })

@@ -37,21 +37,21 @@ export function getMessageVariant(message: DeliveryMessage): MessageBubbleVarian
 export function sessionPreviewText(content: string): string {
   const order = parseOrderMessage(content)
   if (order) {
-    return truncatePreview(order.displaySummary || 'Order')
+    return truncatePreview(order.displaySummary || '请求')
   }
 
   const protocol = parseDeliveryProtocol(content)
   if (protocol.kind === 'delivery') {
-    return truncatePreview(protocol.displayText || 'Delivery received')
+    return truncatePreview(protocol.displayText || '已收到交付')
   }
   if (protocol.kind === 'order_status') {
-    return truncatePreview(protocol.displayText || 'Order status update')
+    return truncatePreview(protocol.displayText || '交付状态更新')
   }
   if (protocol.kind === 'order_end') {
-    return truncatePreview(protocol.displayText || 'Order completed')
+    return truncatePreview(protocol.displayText || '订单已完成')
   }
   if (protocol.kind === 'needs_rating') {
-    return truncatePreview(protocol.displayText || 'Rating reserved')
+    return truncatePreview(protocol.displayText || '评价待开放')
   }
 
   return truncatePreview(content)
