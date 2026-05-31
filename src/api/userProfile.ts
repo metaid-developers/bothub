@@ -1,5 +1,7 @@
 import { getNormalizedMetaSocketBaseUrl } from '@/api/config'
 
+const DEFAULT_METAID_AVATAR_CONTENT_BASE = 'https://manapi.metaid.io/content'
+
 export interface UserProfile {
   metaid?: string
   globalMetaId?: string
@@ -53,7 +55,7 @@ function pinIdFromMetafileAvatar(avatar: string): string | undefined {
 }
 
 function avatarThumbnailUrl(pinId: string): string {
-  return `${getNormalizedMetaSocketBaseUrl()}/api/v1/users/avatar/accelerate/${encodeURIComponent(pinId)}?process=thumbnail`
+  return `${DEFAULT_METAID_AVATAR_CONTENT_BASE}/${encodeURIComponent(pinId)}`
 }
 
 function isMetaSocketRelativeAvatarPath(avatar: string): boolean {
@@ -139,6 +141,7 @@ function avatarNeedsAddressFallback(profile: UserProfile): boolean {
   const avatarUrl = profile.avatarUrl?.trim().toLowerCase()
   if (!avatarUrl) return true
   if (/\/content\/?$/.test(avatarUrl)) return true
+  if (avatarUrl.includes('manapi.metaid.io/content/')) return true
   if (avatarUrl.includes('/users/avatar/accelerate/')) return true
   if (avatarUrl.includes('file.metaid.io/metafile-indexer/content/')) return true
   if (avatarUrl.includes('file.metaid.io/metafile-indexer/api/v1/files/content/')) return true

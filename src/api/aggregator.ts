@@ -3,9 +3,16 @@ import type {
   ApiEnvelope,
   GetServiceDetailParams,
   ListServicesParams,
+  ProviderInfo,
   SkillServiceDetailData,
+  SkillServiceListItem,
   SkillServiceListData,
 } from '@/api/aggregator.types'
+import {
+  fetchUserProfileByGlobalMetaId,
+  normalizeAvatarUrl,
+  type UserProfile,
+} from '@/api/userProfile'
 import mockDetailEnvelope from '@/mocks/aggregator/detail.json'
 import mockListEnvelope from '@/mocks/aggregator/list.json'
 
@@ -57,6 +64,92 @@ function buildDetailQuery(params: GetServiceDetailParams = {}): string {
   return qs ? `?${qs}` : ''
 }
 
+function cleanString(value: string | null | undefined): string | undefined {
+  const trimmed = value?.trim()
+  return trimmed || undefined
+}
+
+function providerLookupKey(item: SkillServiceListItem | ProviderInfo): string | undefined {
+  return (
+    cleanString('providerGlobalMetaId' in item ? item.providerGlobalMetaId : item.globalMetaId) ??
+    cleanString('providerAddress' in item ? item.providerAddress : item.address) ??
+    cleanString('providerMetaId' in item ? item.providerMetaId : item.metaid)
+  )
+}
+
+async function fetchProviderProfile(key: string): Promise<UserProfile | null> {
+  try {
+    return await fetchUserProfileByGlobalMetaId(key)
+  } catch {
+    return null
+  }
+}
+
+function hydrateListItem(
+  item: SkillServiceListItem,
+  profile: UserProfile | null | undefined,
+): SkillServiceListItem {
+  return {
+    ...item,
+    providerName: cleanString(profile?.name) ?? item.providerName,
+    providerAvatar:
+      cleanString(profile?.avatarUrl) ??
+      normalizeAvatarUrl(cleanString(item.providerAvatar)) ??
+      item.providerAvatar,
+    providerChatPubkey: cleanString(profile?.chatPubkey) ?? item.providerChatPubkey,
+  }
+}
+
+async function hydrateListData(data: SkillServiceListData): Promise<SkillServiceListData> {
+  const keys = Array.from(
+    new Set(
+      data.list
+        .map((item) => providerLookupKey(item))
+        .filter((key): key is string => Boolean(key)),
+    ),
+  )
+  if (keys.length === 0) return data
+
+  const profiles = new Map(
+    await Promise.all(keys.map(async (key) => [key, await fetchProviderProfile(key)] as const)),
+  )
+
+  return {
+    ...data,
+    list: data.list.map((item) => hydrateListItem(item, profiles.get(providerLookupKey(item) ?? ''))),
+  }
+}
+
+function hydrateProvider(
+  provider: ProviderInfo,
+  profile: UserProfile | null | undefined,
+): ProviderInfo {
+  return {
+    ...provider,
+    name: cleanString(profile?.name) ?? provider.name,
+    avatar:
+      cleanString(profile?.avatarUrl) ??
+      normalizeAvatarUrl(cleanString(provider.avatar)) ??
+      provider.avatar,
+    chatPubkey: cleanString(profile?.chatPubkey) ?? provider.chatPubkey,
+  }
+}
+
+async function hydrateDetailData(data: SkillServiceDetailData): Promise<SkillServiceDetailData> {
+  const key = providerLookupKey(data.provider)
+  if (!key) {
+    return {
+      ...data,
+      provider: hydrateProvider(data.provider, null),
+    }
+  }
+  const profile = await fetchProviderProfile(key)
+  return {
+    ...data,
+    provider: hydrateProvider(data.provider, profile),
+  }
+}
+
 export async function listServices(
   params: ListServicesParams = {},
 ): Promise<SkillServiceListData> {
@@ -68,7 +161,7 @@ export async function listServices(
   const url = `${baseUrl}/api/bot-hub/skill-service/list${buildListQuery(params)}`
   const response = await fetch(url)
   const envelope = (await response.json()) as ApiEnvelope<SkillServiceListData>
-  return unwrapEnvelope(envelope)
+  return hydrateListData(unwrapEnvelope(envelope))
 }
 
 export async function getServiceDetail(
@@ -84,5 +177,5 @@ export async function getServiceDetail(
   const url = `${baseUrl}/api/bot-hub/skill-service/detail/${encodedId}${buildDetailQuery(params)}`
   const response = await fetch(url)
   const envelope = (await response.json()) as ApiEnvelope<SkillServiceDetailData>
-  return unwrapEnvelope(envelope)
+  return hydrateDetailData(unwrapEnvelope(envelope))
 }

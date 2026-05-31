@@ -75,7 +75,6 @@ describe('aggregator client', () => {
       const { listServices } = await loadAggregator()
       const data = await listServices({ size: 20, sortBy: 'rating' })
 
-      expect(fetchMock).toHaveBeenCalledOnce()
       expect(fetchMock.mock.calls[0][0]).toBe(
         'https://api.test/api/bot-hub/skill-service/list?size=20&sortBy=rating',
       )
@@ -93,7 +92,6 @@ describe('aggregator client', () => {
       const { listServices } = await loadAggregator()
       await listServices({ size: 3, chainName: 'mvc', sortBy: 'updated', order: 'desc' })
 
-      expect(fetchMock).toHaveBeenCalledOnce()
       expect(fetchMock.mock.calls[0][0]).toBe(
         '/meta-socket/api/bot-hub/skill-service/list?size=3&chainName=mvc&sortBy=updated&order=desc',
       )
@@ -108,12 +106,108 @@ describe('aggregator client', () => {
       const { getServiceDetail } = await loadAggregator()
       const data = await getServiceDetail('fixture-pin-001', { idType: 'currentPinId' })
 
-      expect(fetchMock).toHaveBeenCalledOnce()
       expect(fetchMock.mock.calls[0][0]).toBe(
         'https://api.test/api/bot-hub/skill-service/detail/fixture-pin-001?idType=currentPinId',
       )
       expect(data.service.id).toBe('fixture-pin-001')
       expect(data.provider.name).toBe('Fixture Bot')
+    })
+
+    it('hydrates service list provider fields from live profile data', async () => {
+      const avatarPin = `${'a'.repeat(64)}i0`
+      const fetchMock = vi.fn(async (url: string) => {
+        if (url.startsWith('https://api.test/api/bot-hub/skill-service/list')) {
+          return {
+            json: async () => ({
+              ...listFixture,
+              data: {
+                ...listFixture.data,
+                list: [
+                  {
+                    ...listFixture.data.list[0],
+                    providerName: 'Stale List Name',
+                    providerAvatar: 'https://manapi.metaid.io/content/stale-avatar',
+                    providerChatPubkey: null,
+                  },
+                ],
+              },
+            }),
+          }
+        }
+        if (url === 'https://api.test/api/info/globalmetaid/global-fixture-001') {
+          return {
+            ok: true,
+            json: async () => ({
+              code: 1,
+              data: {
+                name: 'Fresh Profile Name',
+                avatar: `/content/${avatarPin}`,
+                chatpubkey: '04fresh-chat-key',
+              },
+            }),
+          }
+        }
+        throw new Error(`unexpected URL ${url}`)
+      })
+      vi.stubGlobal('fetch', fetchMock)
+
+      const { listServices } = await loadAggregator()
+      const data = await listServices()
+
+      expect(fetchMock).toHaveBeenCalledWith(
+        'https://api.test/api/info/globalmetaid/global-fixture-001',
+      )
+      expect(data.list[0]).toMatchObject({
+        providerName: 'Fresh Profile Name',
+        providerAvatar: `https://manapi.metaid.io/content/${avatarPin}`,
+        providerChatPubkey: '04fresh-chat-key',
+      })
+    })
+
+    it('hydrates service detail provider fields from live profile data', async () => {
+      const avatarPin = `${'b'.repeat(64)}i0`
+      const fetchMock = vi.fn(async (url: string) => {
+        if (url.startsWith('https://api.test/api/bot-hub/skill-service/detail/')) {
+          return {
+            json: async () => ({
+              ...detailFixture,
+              data: {
+                ...detailFixture.data,
+                provider: {
+                  ...detailFixture.data.provider,
+                  name: 'Stale Detail Name',
+                  avatar: 'https://manapi.metaid.io/content/stale-detail-avatar',
+                  chatPubkey: null,
+                },
+              },
+            }),
+          }
+        }
+        if (url === 'https://api.test/api/info/globalmetaid/global-fixture-001') {
+          return {
+            ok: true,
+            json: async () => ({
+              code: 1,
+              data: {
+                name: 'Fresh Detail Name',
+                avatar: `/content/${avatarPin}`,
+                chatpubkey: '04fresh-detail-chat-key',
+              },
+            }),
+          }
+        }
+        throw new Error(`unexpected URL ${url}`)
+      })
+      vi.stubGlobal('fetch', fetchMock)
+
+      const { getServiceDetail } = await loadAggregator()
+      const data = await getServiceDetail('fixture-pin-001')
+
+      expect(data.provider).toMatchObject({
+        name: 'Fresh Detail Name',
+        avatar: `https://manapi.metaid.io/content/${avatarPin}`,
+        chatPubkey: '04fresh-detail-chat-key',
+      })
     })
 
     it('throws AggregatorError for 40400 envelope', async () => {

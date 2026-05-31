@@ -7,8 +7,8 @@ async function loadUserProfile() {
 describe('user profile API client', () => {
   const avatarPin = `${'a'.repeat(64)}i0`
   const fallbackAvatarPin = `${'b'.repeat(64)}i0`
-  const expectedAvatarThumbnail = `/meta-socket/api/v1/users/avatar/accelerate/${avatarPin}?process=thumbnail`
-  const expectedFallbackAvatarThumbnail = `/meta-socket/api/v1/users/avatar/accelerate/${fallbackAvatarPin}?process=thumbnail`
+  const expectedAvatarContent = `https://manapi.metaid.io/content/${avatarPin}`
+  const expectedFallbackAvatarContent = `https://manapi.metaid.io/content/${fallbackAvatarPin}`
 
   beforeEach(() => {
     vi.stubEnv('VITE_META_SOCKET_BASE_URL', '/meta-socket/')
@@ -84,9 +84,9 @@ describe('user profile API client', () => {
   })
 
   it.each([
-    [`metafile://${avatarPin}.png`, expectedAvatarThumbnail],
-    [`/content/${avatarPin}`, expectedAvatarThumbnail],
-    [`/files/content/${avatarPin}`, expectedAvatarThumbnail],
+    [`metafile://${avatarPin}.png`, expectedAvatarContent],
+    [`/content/${avatarPin}`, expectedAvatarContent],
+    [`/files/content/${avatarPin}`, expectedAvatarContent],
     ['https://cdn.example/avatar.png', 'https://cdn.example/avatar.png'],
   ])('normalizes avatar URL %s', async (avatar, expectedAvatarUrl) => {
     vi.stubGlobal(
@@ -110,9 +110,9 @@ describe('user profile API client', () => {
     expect(profile.avatarUrl).toBe(expectedAvatarUrl)
   })
 
-  it('normalizes delivery avatar URL variants to local accelerated thumbnails', async () => {
+  it('normalizes delivery avatar URL variants to MetaID content URLs', async () => {
     const pinId = `${'c'.repeat(64)}i0`
-    const expected = `/meta-socket/api/v1/users/avatar/accelerate/${pinId}?process=thumbnail`
+    const expected = `https://manapi.metaid.io/content/${pinId}`
 
     const { normalizeAvatarUrl } = await loadUserProfile()
 
@@ -158,7 +158,7 @@ describe('user profile API client', () => {
       const { fetchUserProfileByGlobalMetaId } = await loadUserProfile()
       const profile = await fetchUserProfileByGlobalMetaId('global-avatar-id')
 
-      expect(profile.avatarUrl).toBe(expectedAvatarThumbnail)
+      expect(profile.avatarUrl).toBe(expectedAvatarContent)
     },
   )
 
@@ -220,11 +220,11 @@ describe('user profile API client', () => {
     expect(fetchMock).toHaveBeenCalledWith('/meta-socket/api/info/address/1ProviderAddress')
     expect(profile).toMatchObject({
       name: 'Address Bot',
-      avatarUrl: expectedAvatarThumbnail,
+      avatarUrl: expectedAvatarContent,
     })
   })
 
-  it('merges address profile fields when the globalMetaId avatar normalizes to the avatar accelerate endpoint', async () => {
+  it('merges address profile fields when the globalMetaId avatar normalizes to a content URL', async () => {
     const fetchMock = vi.fn(async (url: string) => {
       if (url === '/meta-socket/api/info/address/1AccelerateAddress') {
         return {
@@ -263,7 +263,7 @@ describe('user profile API client', () => {
     expect(fetchMock).toHaveBeenCalledWith('/meta-socket/api/info/address/1AccelerateAddress')
     expect(profile).toMatchObject({
       name: 'Address Profile',
-      avatarUrl: expectedFallbackAvatarThumbnail,
+      avatarUrl: expectedFallbackAvatarContent,
       chatPubkey: '04address',
     })
   })
@@ -300,7 +300,7 @@ describe('user profile API client', () => {
     const profile = await fetchUserProfileByGlobalMetaId('global-file-metaid-fallback')
 
     expect(fetchMock).toHaveBeenCalledWith('/meta-socket/api/info/address/1FileMetaidAddress')
-    expect(profile.avatarUrl).toBe(expectedFallbackAvatarThumbnail)
+    expect(profile.avatarUrl).toBe(expectedFallbackAvatarContent)
   })
 
   it('keeps the globalMetaId profile when address fallback returns a non-json 404 response', async () => {

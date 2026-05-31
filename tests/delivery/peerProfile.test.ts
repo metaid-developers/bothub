@@ -8,8 +8,7 @@ import {
 
 describe('peerProfile', () => {
   const avatarPin = `${'a'.repeat(64)}i0`
-  const expectedAvatarUrl =
-    `/meta-socket/api/v1/users/avatar/accelerate/${avatarPin}?process=thumbnail`
+  const expectedAvatarUrl = `https://manapi.metaid.io/content/${avatarPin}`
 
   beforeEach(() => {
     vi.stubEnv('VITE_META_SOCKET_BASE_URL', '/meta-socket/')
