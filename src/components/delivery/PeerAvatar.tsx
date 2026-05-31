@@ -21,7 +21,7 @@ export function PeerAvatar({
   size = 'sm',
 }: PeerAvatarProps) {
   const [imageFailed, setImageFailed] = useState(false)
-  const label = `${peerDisplayName({ name, globalMetaId })} avatar`
+  const label = `${peerDisplayName({ name, globalMetaId })} 头像`
   const initial = peerDisplayName({ name, globalMetaId }).charAt(0).toUpperCase() || '?'
   const imageUrl = avatarUrl?.trim()
 

@@ -18,7 +18,7 @@ describe('SessionHeader', () => {
 
     expect(screen.getByText('Provider Bot')).toBeInTheDocument()
     expect(screen.getByText('idq1ab…mnop')).toBeInTheDocument()
-    expect(screen.getByRole('img', { name: 'Provider Bot avatar' })).toHaveAttribute(
+    expect(screen.getByRole('img', { name: 'Provider Bot 头像' })).toHaveAttribute(
       'src',
       'https://cdn.example/provider.png',
     )
@@ -37,7 +37,7 @@ describe('SessionHeader', () => {
       />,
     )
 
-    expect(screen.getByLabelText('idq1ab…mnop avatar')).toHaveTextContent('I')
+    expect(screen.getByLabelText('idq1ab…mnop 头像')).toHaveTextContent('I')
   })
 
   it('keeps the empty selected state useful', () => {

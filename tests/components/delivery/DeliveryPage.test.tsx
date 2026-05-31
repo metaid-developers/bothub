@@ -199,8 +199,8 @@ describe('DeliveryPage layout', () => {
 
     expect(fetchUserProfileByGlobalMetaId).toHaveBeenCalledWith(peerGlobalMetaId)
     expect(await screen.findAllByText('余生请多指教')).toHaveLength(3)
-    expect(screen.getAllByRole('img', { name: '余生请多指教 avatar' })).toHaveLength(3)
-    expect(screen.queryByLabelText('idq133…uv2n avatar')).not.toBeInTheDocument()
+    expect(screen.getAllByRole('img', { name: '余生请多指教 头像' })).toHaveLength(3)
+    expect(screen.queryByLabelText('idq133…uv2n 头像')).not.toBeInTheDocument()
   })
 
   it('hydrates the selected peer profile and retries decrypting failed ciphertext', async () => {
@@ -357,10 +357,10 @@ describe('DeliveryPage layout', () => {
     expect(await within(orderList).findByText('Provider Alpha')).toBeInTheDocument()
     expect(await within(orderList).findByText('Provider Beta')).toBeInTheDocument()
     expect(
-      within(orderList).getByRole('img', { name: 'Provider Alpha avatar' }),
+      within(orderList).getByRole('img', { name: 'Provider Alpha 头像' }),
     ).toBeInTheDocument()
     expect(
-      within(orderList).getByRole('img', { name: 'Provider Beta avatar' }),
+      within(orderList).getByRole('img', { name: 'Provider Beta 头像' }),
     ).toBeInTheDocument()
   })
 
@@ -400,7 +400,7 @@ describe('DeliveryPage layout', () => {
     const sessionList = screen.getByRole('list', { name: '我的请求' })
     expect(await within(sessionList).findByText('Visible Plain Provider')).toBeInTheDocument()
     expect(
-      within(sessionList).getByRole('img', { name: 'Visible Plain Provider avatar' }),
+      within(sessionList).getByRole('img', { name: 'Visible Plain Provider 头像' }),
     ).toBeInTheDocument()
     expect(retryDecryptPeerMessages).not.toHaveBeenCalled()
 

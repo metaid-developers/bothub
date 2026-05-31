@@ -46,11 +46,11 @@ function OrderBubble({
         )}
       >
         <p className="text-xs font-semibold uppercase tracking-wide opacity-80">
-          Order
+          请求
         </p>
         <p className="mt-1 font-medium">{order.displaySummary}</p>
         {priceLabel ? (
-          <p className="mt-1 text-xs opacity-90">Price: {priceLabel}</p>
+          <p className="mt-1 text-xs opacity-90">费用：{priceLabel}</p>
         ) : null}
         {order.rawRequest ? (
           <div className="mt-2">
@@ -59,7 +59,7 @@ function OrderBubble({
               onClick={() => setPromptOpen((open) => !open)}
               className="text-xs underline opacity-90"
             >
-              {promptOpen ? 'Hide prompt' : 'Show prompt'}
+              {promptOpen ? '收起原始需求' : '查看原始需求'}
             </button>
             {promptOpen ? (
               <pre className="mt-2 max-h-48 overflow-auto whitespace-pre-wrap break-words rounded border border-white/20 bg-black/10 p-2 text-xs">
@@ -70,7 +70,7 @@ function OrderBubble({
         ) : null}
         {message.decryptError ? (
           <p className="mt-1 text-xs opacity-70">
-            Order broadcast issue recorded; showing saved order details.
+            请求发送异常已记录，正在显示已保存的请求详情。
           </p>
         ) : null}
       </div>
@@ -128,7 +128,7 @@ function SystemBubble({ message }: { message: DeliveryMessage }) {
       <p className="max-w-[min(100%,32rem)] rounded-full border border-hub-border bg-hub-surface2/80 px-3 py-1 text-center text-xs text-hub-muted">
         {message.decryptError
           ? t('delivery.decryptFailedDefault')
-          : message.content || 'System message'}
+          : message.content || '系统消息'}
       </p>
     </div>
   )
@@ -257,7 +257,7 @@ export function MessageBubble({ message, selfGlobalMetaId }: MessageBubbleProps)
   }
   if (variant === 'status') {
     const protocol = parseDeliveryProtocol(message.content)
-    return <TimelineEvent label="Order status update" body={protocol.displayText} />
+    return <TimelineEvent label="交付状态更新" body={protocol.displayText} />
   }
   if (variant === 'delivery') {
     return <DeliveryBubble message={message} />
@@ -266,15 +266,15 @@ export function MessageBubble({ message, selfGlobalMetaId }: MessageBubbleProps)
     const protocol = parseDeliveryProtocol(message.content)
     return (
       <TimelineEvent
-        label="Order completed"
-        body={protocol.displayText || 'Order completed'}
+        label="订单已完成"
+        body={protocol.displayText || '订单已完成'}
         tone="success"
       />
     )
   }
   if (variant === 'rating_reserved') {
     const protocol = parseDeliveryProtocol(message.content)
-    return <TimelineEvent label="Rating reserved" body={protocol.displayText} />
+    return <TimelineEvent label="评价待开放" body={protocol.displayText} />
   }
   if (message.decryptError) {
     return <DecryptFailedBubble message={message} />
