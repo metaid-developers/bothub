@@ -635,4 +635,13 @@ describe('DeliveryPage layout', () => {
 
     await waitFor(() => expect(fetchUserProfileByGlobalMetaId).toHaveBeenCalledTimes(2))
   })
+
+  it('uses buyer-facing delivery copy instead of implementation copy', () => {
+    renderDeliveryPage()
+
+    expect(screen.getByRole('heading', { name: '我的交付' })).toBeInTheDocument()
+    expect(
+      screen.queryByText(/simplemsg|Socket.IO|meta-socket|chat key|ciphertext/i),
+    ).not.toBeInTheDocument()
+  })
 })

@@ -5,8 +5,11 @@ import {
   putOrder,
   putSession,
   putAsset,
+  getOrdersForWallet,
+  getSessionsForWallet,
 } from '@/delivery/db'
 import { loadDeliveryWorkspaceRecords } from '@/delivery/workspaceRecovery'
+import { buildDeliveryWorkspace, selectWorkspaceOrder } from '@/delivery/workspace'
 import type {
   BuyerOrder,
   DeliveryAssetRecord,
@@ -144,5 +147,87 @@ describe('delivery workspace recovery', () => {
   it('returns empty records for empty wallet id', async () => {
     const records = await loadDeliveryWorkspaceRecords('')
     expect(records).toEqual({ orders: [], sessions: [], assetsBySession: {} })
+  })
+
+  it('shows order-only request in workspace after login', async () => {
+    await putOrder(order())
+    const records = await loadDeliveryWorkspaceRecords(SELF)
+
+    const workspace = buildDeliveryWorkspace({
+      walletGlobalMetaId: SELF,
+      orders: records.orders,
+      sessions: records.sessions,
+      byPeer: {},
+      assetsBySession: records.assetsBySession,
+    })
+
+    expect(workspace.orders).toHaveLength(1)
+    expect(workspace.orders[0]).toMatchObject({
+      providerName: 'Render Bot',
+      serviceLabel: 'Image Render',
+      requestSummary: 'Make a product image',
+      source: 'order',
+    })
+  })
+
+  it('delivered asset in IndexedDB is visible when no live socket message arrives', async () => {
+    const sessionId = `${SELF}:${PROVIDER}:order-1`
+    await putSession(session({ serviceLabel: 'Image Render' }))
+    await putAsset(asset({ filename: 'image.png' }))
+    const records = await loadDeliveryWorkspaceRecords(SELF)
+
+    const workspace = buildDeliveryWorkspace({
+      walletGlobalMetaId: SELF,
+      orders: records.orders,
+      sessions: records.sessions,
+      byPeer: {},
+      assetsBySession: records.assetsBySession,
+    })
+
+    expect(workspace.orders).toHaveLength(1)
+    expect(workspace.orders[0]?.assetCount).toBe(1)
+    expect(workspace.orders[0]?.assets[0]?.filename).toBe('image.png')
+  })
+
+  it('selected order id is recoverable after page reload', async () => {
+    const order1 = order({ orderReference: 'order-1' })
+    const order2 = order({
+      id: `${SELF}:${PROVIDER}:order-2`,
+      orderReference: 'order-2',
+      serviceName: 'Video Render',
+      displaySummary: 'Make a video',
+    })
+    await putOrder(order1)
+    await putOrder(order2)
+    const records = await loadDeliveryWorkspaceRecords(SELF)
+
+    const workspace = buildDeliveryWorkspace({
+      walletGlobalMetaId: SELF,
+      orders: records.orders,
+      sessions: records.sessions,
+      byPeer: {},
+      assetsBySession: records.assetsBySession,
+    })
+
+    const selected = selectWorkspaceOrder(workspace, `${SELF}:${PROVIDER}:order-2`)
+    expect(selected).not.toBeNull()
+    expect(selected?.serviceLabel).toBe('Video Render')
+    expect(selected?.orderCorrelationId).toBe('order-2')
+  })
+
+  it('cached orders are visible when history sync fails', async () => {
+    await putOrder(order({ serviceName: 'Cached Service' }))
+    const records = await loadDeliveryWorkspaceRecords(SELF)
+
+    const workspace = buildDeliveryWorkspace({
+      walletGlobalMetaId: SELF,
+      orders: records.orders,
+      sessions: [],
+      byPeer: {},
+      assetsBySession: {},
+    })
+
+    expect(workspace.orders).toHaveLength(1)
+    expect(workspace.orders[0]?.serviceLabel).toBe('Cached Service')
   })
 })
