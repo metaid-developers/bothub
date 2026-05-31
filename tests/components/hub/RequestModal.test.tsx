@@ -581,6 +581,57 @@ describe('RequestModal', () => {
     )
   })
 
+  it('does not offer Delivery recovery when a paid failed order cannot be saved locally', async () => {
+    vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+    const partial: PreparedPayAndRequest = {
+      service: { ...service, price: '1' },
+      provider,
+      prompt: 'Paid fortune',
+      payment: {
+        paymentTxid: 'paid-txid-1',
+        paymentCommitTxid: '',
+        orderReference: '',
+      },
+      orderPayload: '[ORDER] Paid fortune\ntxid: paid-txid-1',
+      encryptedContent: 'ciphertext',
+      simplemsgBody: '{"content":"ciphertext"}',
+      sessionKey: 'idqprovider:paid-txid-1',
+      displaySummary: 'Paid fortune',
+    }
+    persistFailedToSendOrder.mockRejectedValueOnce(new Error('IndexedDB unavailable'))
+    executePayAndRequest.mockRejectedValue(
+      new PayAndRequestBroadcastError('Order pin broadcast failed', partial),
+    )
+
+    render(
+      <MemoryRouter>
+        <RequestModal
+          open
+          onClose={vi.fn()}
+          service={{ ...service, price: '1' }}
+          provider={provider}
+          wallet={wallet}
+        />
+      </MemoryRouter>,
+    )
+
+    fireEvent.change(screen.getByLabelText(/describe what you need/i), {
+      target: { value: 'Paid fortune' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Review' }))
+    fireEvent.click(screen.getByRole('button', { name: /confirm & pay/i }))
+
+    expect(
+      await screen.findByText(/recovery record could not be saved locally/i),
+    ).toHaveTextContent('Payment txid: paid-txid-1')
+    expect(screen.queryByRole('button', { name: /open delivery/i })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Recovery not saved' })).toBeDisabled()
+    expect(console.warn).toHaveBeenCalledWith(
+      'Failed order could not be saved locally.',
+      expect.any(Error),
+    )
+  })
+
   it('uses free-order recovery wording when a free order broadcast fails', async () => {
     const partial: PreparedPayAndRequest = {
       service,

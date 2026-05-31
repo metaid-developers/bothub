@@ -45,6 +45,7 @@ export function RequestModal({ open, onClose, service, provider, wallet }: Reque
   const [step, setStep] = useState<RequestModalStep>('prompt')
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [recoverableDeliveryPath, setRecoverableDeliveryPath] = useState<string | null>(null)
+  const [retryDisabled, setRetryDisabled] = useState(false)
 
   const price = useMemo(() => formatPrice(service.price, service.currency), [service])
   const providerName = provider.name?.trim() || 'Unknown Bot'
@@ -56,12 +57,14 @@ export function RequestModal({ open, onClose, service, provider, wallet }: Reque
     setStep('prompt')
     setErrorMessage(null)
     setRecoverableDeliveryPath(null)
+    setRetryDisabled(false)
     onClose()
   }, [onClose])
 
   const handleConfirm = async () => {
     setErrorMessage(null)
     setRecoverableDeliveryPath(null)
+    setRetryDisabled(false)
     if (!wallet?.globalMetaId?.trim()) {
       setErrorMessage('Connect your Metalet wallet before sending a request.')
       setStep('error')
@@ -114,7 +117,8 @@ export function RequestModal({ open, onClose, service, provider, wallet }: Reque
       resetAndClose()
     } catch (err) {
       if (err instanceof PayAndRequestBroadcastError) {
-        let deliveryPath = buildDeliverySessionPath(err.partial.sessionKey)
+        let deliveryPath: string | null = null
+        let savedForRecovery = false
         try {
           const persisted = await persistFailedToSendOrder({
             wallet,
@@ -124,6 +128,7 @@ export function RequestModal({ open, onClose, service, provider, wallet }: Reque
             partial: err.partial,
           })
           deliveryPath = buildDeliveryOrderPath(persisted.order.id)
+          savedForRecovery = true
           try {
             await useMessageStore.getState().hydrateFromDb(wallet.globalMetaId)
           } catch (hydrateError) {
@@ -133,9 +138,15 @@ export function RequestModal({ open, onClose, service, provider, wallet }: Reque
           console.warn('Failed order could not be saved locally.', persistError)
         }
         setRecoverableDeliveryPath(deliveryPath)
-        const message = err.partial.payment.paymentTxid
-          ? 'Payment succeeded but the order message failed. The paid request was saved in Delivery for recovery.'
-          : 'The free order message failed. The request was saved in Delivery for recovery.'
+        const paidTxid = err.partial.payment.paymentTxid.trim()
+        setRetryDisabled(Boolean(paidTxid) && !savedForRecovery)
+        const message = savedForRecovery
+          ? paidTxid
+            ? 'Payment succeeded but the order message failed. The paid request was saved in Delivery for recovery.'
+            : 'The free order message failed. The request was saved in Delivery for recovery.'
+          : paidTxid
+            ? `Payment succeeded but the order message failed, and the recovery record could not be saved locally. Payment txid: ${paidTxid}`
+            : 'The free order message failed and could not be saved in Delivery. You can try again.'
         setErrorMessage(
           message,
         )
@@ -303,10 +314,14 @@ export function RequestModal({ open, onClose, service, provider, wallet }: Reque
                 <button
                   type="button"
                   onClick={() => setStep('confirm')}
-                  disabled={Boolean(recoverableDeliveryPath)}
+                  disabled={Boolean(recoverableDeliveryPath) || retryDisabled}
                   className="rounded-lg bg-hub-accent px-4 py-2 text-sm font-semibold text-hub-bg"
                 >
-                  {recoverableDeliveryPath ? 'Retry saved in Delivery' : 'Try again'}
+                  {recoverableDeliveryPath
+                    ? 'Retry saved in Delivery'
+                    : retryDisabled
+                      ? 'Recovery not saved'
+                      : 'Try again'}
                 </button>
                 {recoverableDeliveryPath ? (
                   <button
