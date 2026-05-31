@@ -1,9 +1,12 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useCallback } from 'react'
 import { clsx } from 'clsx'
 import type { ParsedDeliveryAsset } from '@/delivery/assetParser'
+import type { DeliveryAssetRecord } from '@/delivery/domain'
 import { AssetPreviewCard } from '@/components/delivery/AssetPreviewCard'
 import { AssetPreviewDialog } from '@/components/delivery/AssetPreviewDialog'
 import { t } from '@/i18n'
+
+type Asset = DeliveryAssetRecord | ParsedDeliveryAsset
 
 type AssetKind = 'image' | 'video' | 'audio' | 'document' | 'archive' | 'other'
 type FilterKind = 'all' | AssetKind
@@ -54,7 +57,7 @@ export function DeliveryAssetLibrary({ assets }: DeliveryAssetLibraryProps) {
       setCopyError('复制失败，请手动打开链接。')
       return
     }
-    const text = assets.map((a) => a.downloadUrl).join('\n')
+    const text = assets.map((a: Asset) => a.downloadUrl).join('\n')
     try {
       await navigator.clipboard.writeText(text)
       setCopyError(null)
@@ -63,18 +66,23 @@ export function DeliveryAssetLibrary({ assets }: DeliveryAssetLibraryProps) {
     }
   }
 
-  async function copySingleLink(asset: ParsedDeliveryAsset) {
+  const handlePreview = useCallback(
+    (a: Asset) => setPreviewAsset(a as ParsedDeliveryAsset),
+    [],
+  )
+
+  const handleCopyLink = useCallback(async (a: Asset) => {
     if (!navigator.clipboard) {
       setCopyError('复制失败，请手动打开链接。')
       return
     }
     try {
-      await navigator.clipboard.writeText(asset.downloadUrl)
+      await navigator.clipboard.writeText(a.downloadUrl)
       setCopyError(null)
     } catch {
       setCopyError('复制失败，请手动打开链接。')
     }
-  }
+  }, [])
 
   if (assets.length === 0) {
     return (
@@ -139,8 +147,8 @@ export function DeliveryAssetLibrary({ assets }: DeliveryAssetLibraryProps) {
               key={`${asset.uri}-${index}`}
               asset={asset}
               mode="compact"
-              onPreview={setPreviewAsset}
-              onCopyLink={copySingleLink}
+              onPreview={handlePreview}
+              onCopyLink={handleCopyLink}
             />
           ))}
         </div>

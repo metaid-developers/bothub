@@ -57,7 +57,7 @@ interface AssetPreviewCardProps {
   asset: Asset
   mode?: 'compact' | 'full'
   onPreview?: (asset: Asset) => void
-  onCopyLink?: (asset: Asset) => void
+  onCopyLink?: (asset: Asset) => void | Promise<void>
 }
 
 export function AssetPreviewCard({
@@ -85,7 +85,10 @@ export function AssetPreviewCard({
   }
 
   return (
-    <article aria-label={asset.filename} className="overflow-hidden rounded-card border border-hub-border bg-hub-surface2/80">
+    <article aria-label={asset.filename} className={clsx(
+      'overflow-hidden rounded-card border border-hub-border bg-hub-surface2/80',
+      mode === 'compact' && 'max-w-full',
+    )}>
       <div className="flex aspect-[16/9] items-center justify-center overflow-hidden bg-black/25">
         {asset.kind === 'image' && !previewFailed ? (
           <img
