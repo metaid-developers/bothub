@@ -4,6 +4,7 @@ import {
   syncKnownPrivateChatHistory,
 } from '@/delivery/deliverySync'
 import { useMessageStore } from '@/delivery/messageStore'
+import { useDeliverySyncStatusStore } from '@/delivery/syncStatusStore'
 import { useSocket } from '@/ws/useSocket'
 import { useWallet } from '@/wallet/useWallet'
 
@@ -41,23 +42,39 @@ export function WalletHydrator({ children }: { children: ReactNode }) {
     if (status === 'connected' && lifecycleIdentity && gmid) {
       let cancelled = false
 
+      useDeliverySyncStatusStore.getState().startHydrating(gmid)
+
       void (async () => {
         try {
           await hydrateDeliveryForWallet(lifecycleIdentity)
         } catch (error) {
           console.warn('Could not load saved delivery sessions.', error)
+          if (!cancelled) {
+            useDeliverySyncStatusStore.getState().failSync(error)
+          }
         }
         if (cancelled) return
 
         connectSocket(lifecycleIdentity)
+
+        useDeliverySyncStatusStore.getState().startSyncing()
+
         void syncKnownPrivateChatHistory(lifecycleIdentity)
           .then((summary) => {
+            if (!cancelled) {
+              useDeliverySyncStatusStore.getState().finishSync({
+                failedPeerCount: summary.failedPeers.length,
+              })
+            }
             if (summary.failedPeers.length > 0) {
               console.warn('Could not sync some private chat history peers.', summary.failedPeers)
             }
           })
           .catch((error) => {
             console.warn('Could not sync private chat history.', error)
+            if (!cancelled) {
+              useDeliverySyncStatusStore.getState().failSync(error)
+            }
           })
       })()
 
@@ -65,10 +82,12 @@ export function WalletHydrator({ children }: { children: ReactNode }) {
         cancelled = true
         disconnectSocket()
         useMessageStore.getState().setSelectedSession(null)
+        useDeliverySyncStatusStore.getState().reset()
       }
     }
     disconnectSocket()
     useMessageStore.getState().setSelectedSession(null)
+    useDeliverySyncStatusStore.getState().reset()
   }, [connectSocket, disconnectSocket, lifecycleIdentity, status])
 
   return children
