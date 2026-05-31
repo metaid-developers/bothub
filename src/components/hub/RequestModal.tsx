@@ -99,8 +99,12 @@ export function RequestModal({ open, onClose, service, provider, wallet }: Reque
       let deliveryPath = buildDeliverySessionPath(result.sessionKey)
       try {
         const persisted = await persistPendingOrder({ wallet, service, provider, prompt, result })
-        await useMessageStore.getState().hydrateFromDb(wallet.globalMetaId)
         deliveryPath = buildDeliveryOrderPath(persisted.order.id)
+        try {
+          await useMessageStore.getState().hydrateFromDb(wallet.globalMetaId)
+        } catch (hydrateError) {
+          console.warn('Order was saved locally but could not hydrate Delivery.', hydrateError)
+        }
       } catch (persistError) {
         console.warn('Order was sent but could not be saved locally.', persistError)
       }
@@ -119,8 +123,12 @@ export function RequestModal({ open, onClose, service, provider, wallet }: Reque
             prompt,
             partial: err.partial,
           })
-          await useMessageStore.getState().hydrateFromDb(wallet.globalMetaId)
           deliveryPath = buildDeliveryOrderPath(persisted.order.id)
+          try {
+            await useMessageStore.getState().hydrateFromDb(wallet.globalMetaId)
+          } catch (hydrateError) {
+            console.warn('Failed order was saved locally but could not hydrate Delivery.', hydrateError)
+          }
         } catch (persistError) {
           console.warn('Failed order could not be saved locally.', persistError)
         }

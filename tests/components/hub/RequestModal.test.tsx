@@ -405,6 +405,42 @@ describe('RequestModal', () => {
     )
   })
 
+  it('keeps order navigation when hydration fails after pending persistence succeeds', async () => {
+    vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+    vi.mocked(useMessageStore.getState().hydrateFromDb).mockRejectedValueOnce(
+      new Error('hydrate failed'),
+    )
+
+    render(
+      <MemoryRouter>
+        <RequestModal
+          open
+          onClose={vi.fn()}
+          service={service}
+          provider={provider}
+          wallet={wallet}
+        />
+      </MemoryRouter>,
+    )
+
+    fireEvent.change(screen.getByLabelText(/describe what you need/i), {
+      target: { value: 'Tell me my fortune' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Review' }))
+    fireEvent.click(screen.getByRole('button', { name: /confirm & pay/i }))
+
+    await waitFor(() =>
+      expect(navigate).toHaveBeenCalledWith(
+        '/delivery?order=idqbuyer%3Aidqprovider%3Aorder-ref-1',
+      ),
+    )
+
+    expect(console.warn).toHaveBeenCalledWith(
+      'Order was saved locally but could not hydrate Delivery.',
+      expect.any(Error),
+    )
+  })
+
   it('shows a connect-required message before attempting payment when wallet is missing', async () => {
     render(
       <MemoryRouter>
@@ -483,6 +519,65 @@ describe('RequestModal', () => {
     fireEvent.click(screen.getByRole('button', { name: /open delivery/i }))
     expect(navigate).toHaveBeenCalledWith(
       '/delivery?order=idqbuyer%3Aidqprovider%3Apaid-txid-1',
+    )
+  })
+
+  it('keeps recoverable order navigation when hydration fails after failed-order persistence succeeds', async () => {
+    vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+    const partial: PreparedPayAndRequest = {
+      service: { ...service, price: '1' },
+      provider,
+      prompt: 'Paid fortune',
+      payment: {
+        paymentTxid: 'paid-txid-1',
+        paymentCommitTxid: '',
+        orderReference: '',
+      },
+      orderPayload: '[ORDER] Paid fortune\ntxid: paid-txid-1',
+      encryptedContent: 'ciphertext',
+      simplemsgBody: '{"content":"ciphertext"}',
+      sessionKey: 'idqprovider:paid-txid-1',
+      displaySummary: 'Paid fortune',
+    }
+    persistFailedToSendOrder.mockResolvedValueOnce({
+      order: { id: 'idqbuyer:idqprovider:paid-txid-1' },
+    })
+    vi.mocked(useMessageStore.getState().hydrateFromDb).mockRejectedValueOnce(
+      new Error('hydrate failed'),
+    )
+    executePayAndRequest.mockRejectedValue(
+      new PayAndRequestBroadcastError('Order pin broadcast failed', partial),
+    )
+
+    render(
+      <MemoryRouter>
+        <RequestModal
+          open
+          onClose={vi.fn()}
+          service={{ ...service, price: '1' }}
+          provider={provider}
+          wallet={wallet}
+        />
+      </MemoryRouter>,
+    )
+
+    fireEvent.change(screen.getByLabelText(/describe what you need/i), {
+      target: { value: 'Paid fortune' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Review' }))
+    fireEvent.click(screen.getByRole('button', { name: /confirm & pay/i }))
+
+    expect(
+      await screen.findByText(/payment succeeded but the order message failed/i),
+    ).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: /open delivery/i }))
+
+    expect(navigate).toHaveBeenCalledWith(
+      '/delivery?order=idqbuyer%3Aidqprovider%3Apaid-txid-1',
+    )
+    expect(console.warn).toHaveBeenCalledWith(
+      'Failed order was saved locally but could not hydrate Delivery.',
+      expect.any(Error),
     )
   })
 
