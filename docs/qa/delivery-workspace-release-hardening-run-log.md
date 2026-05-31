@@ -108,3 +108,88 @@ A meta-socket issue was created at:
 ```
 
 Task 4 is ready for controller review as a docs/evidence-only pass. It does not mark real meta-socket acceptance as passed.
+
+## Task 5 Order Flow Hardening
+
+Task 5 checked free and paid checkout behavior from the order flow through the Hub request modal.
+
+- Date checked: 2026-05-31 22:23 CST / 2026-05-31 14:23 UTC
+- Bothub base revision: `7a3682d`
+- Task state: uncommitted worker diff for controller review
+
+### Automated Coverage Added Or Confirmed
+
+The Task 5 pass added or tightened tests proving:
+
+- Free orders do not call `metalet.transfer`.
+- Free orders call `metalet.ecdh`.
+- Free orders call `metalet.createPin` at `/protocols/simplemsg`.
+- Free order results expose `orderReference`, `sessionKey`, `orderPayload`, and `displaySummary`.
+- Paid native orders call transfer before broadcast.
+- Paid native transfer uses the expected chain, currency, address, and atomic amount.
+- Paid native `paymentTxid` remains the order correlation id.
+- Paid transfer success plus broadcast failure exposes a `PayAndRequestBroadcastError.partial` with local recovery data.
+- RequestModal pending persistence navigates successful free and paid orders to an order-centered `?order=` Delivery URL.
+- RequestModal failed broadcast recovery calls `persistFailedToSendOrder` for paid and free failures.
+- RequestModal no longer shows the raw `Payment succeeded but...` paid recovery copy.
+
+The first Task 5 test run intentionally failed after adding the stricter tests:
+
+```text
+Test Files  2 failed | 54 passed (56)
+Tests       6 failed | 406 passed (412)
+```
+
+The failures were the expected red tests for missing provider-key preflight, paid MRC20 unsupported-state copy, and raw paid broadcast recovery copy.
+
+After the minimal implementation pass, the same command passed:
+
+```bash
+pnpm test -- tests/order/flow.test.ts tests/components/hub/RequestModal.test.tsx
+```
+
+```text
+Test Files  56 passed (56)
+Tests       412 passed (412)
+```
+
+### Implementation Notes
+
+Task 5 changed checkout behavior only where tests proved a gap:
+
+- RequestModal blocks checkout before wallet/payment prompts when the provider has no chat public key.
+- RequestModal blocks paid MRC20 checkout before wallet/payment prompts with explicit buyer-facing copy.
+- Paid broadcast recovery copy now says the payment went through and avoids the raw `Payment succeeded but...` phrase.
+- The order-flow MRC20 unsupported error uses the same buyer-facing copy as the modal.
+
+### Manual Chrome And Metalet Attempt
+
+Manual Chrome + Metalet order execution was blocked externally and was not faked.
+
+Reason: Task 4 already proved that no real service list/detail payload was available:
+
+- local `127.0.0.1:18091` was not listening
+- `META_SOCKET_BASE_URL=http://127.0.0.1:18091 pnpm smoke:meta-socket` failed on `/healthz`
+- public `https://api.idchat.io` returned `502 Bad Gateway`
+- mock-disabled Vite showed `Could not load services`
+
+Because there was no real service to select, this Task 5 pass did not click through a Chrome + Metalet free or paid order. The existing meta-socket issue remains the active external blocker:
+
+```text
+/Users/tusm/Documents/MetaID_Projects/meta-socket/issues/2026-05-31-bothub-aggregator-readiness.md
+```
+
+No new meta-socket issue was created because the order-flow manual blocker is the same aggregator readiness outage already recorded in Task 4.
+
+### Task 5 Verification Commands
+
+Run before handing this Task 5 pass back for controller review:
+
+| Command | Result | Notes |
+| --- | --- | --- |
+| `pnpm test -- tests/order/flow.test.ts tests/components/hub/RequestModal.test.tsx` | passed | 56 test files / 412 tests passed. Existing React Router, FocusTrap, profile-offline, and act warnings were observed. |
+| `pnpm build` | passed | TypeScript build and Vite production build completed. Vite reported the existing large-chunk warning for the app bundle. |
+| `pnpm lint` | passed | ESLint completed with `--max-warnings 0`. |
+| `git diff --check` | passed | No whitespace errors in the Bothub diff. |
+
+Task 5 verification completed at 2026-05-31 22:25 CST / 2026-05-31 14:25 UTC.

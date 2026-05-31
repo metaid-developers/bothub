@@ -193,7 +193,7 @@ export async function executeServicePayment(
       throw new PayAndRequestError('MRC20 asset id is missing for this service', 'payment_failed')
     }
     throw new PayAndRequestError(
-      'MRC20 paid checkout is not supported by the current Metalet transfer API.',
+      'MRC20 checkout is not available in BotHub yet. Choose a native paid or free service.',
       'payment_failed',
     )
   }

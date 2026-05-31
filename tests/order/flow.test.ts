@@ -221,6 +221,20 @@ describe('executePayAndRequest', () => {
     })
 
     expect(transfer).not.toHaveBeenCalled()
+    expect(ecdh).toHaveBeenCalledWith({ externalPubKey: provider.chatPubkey })
+    expect(createPin).toHaveBeenCalledOnce()
+    const pinArgs = createPin.mock.calls[0][0] as {
+      dataList: Array<{ metaidData: { path: string; body: string } }>
+    }
+    expect(pinArgs.dataList[0].metaidData.path).toBe('/protocols/simplemsg')
+    const body = JSON.parse(pinArgs.dataList[0].metaidData.body) as {
+      to: string
+      encrypt: string
+      content: string
+    }
+    expect(body.to).toBe(provider.globalMetaId)
+    expect(body.encrypt).toBe('ecdh')
+    expect(body.content).toBeTruthy()
     expect(result.paymentTxid).toBe('')
     expect(result.paymentCommitTxid).toBe('')
     expect(result.orderReference).toBe(generateRandomHex(32))
@@ -447,6 +461,30 @@ describe('executePayAndRequest', () => {
     expect(transfer).not.toHaveBeenCalled()
   })
 
+  it('fails preflight before transfer or broadcast when provider chat key is missing', async () => {
+    const transfer = vi.fn()
+    const ecdh = vi.fn()
+    const createPin = vi.fn()
+
+    await expect(
+      executePayAndRequest({
+        service: paidService,
+        provider: { ...provider, chatPubkey: null },
+        prompt: 'Need this service.',
+        wallet,
+        metalet: {
+          transfer,
+          ecdh,
+          createPin,
+        },
+      }),
+    ).rejects.toMatchObject({ code: 'missing_provider_key' } satisfies Partial<PayAndRequestError>)
+
+    expect(transfer).not.toHaveBeenCalled()
+    expect(ecdh).not.toHaveBeenCalled()
+    expect(createPin).not.toHaveBeenCalled()
+  })
+
   it('blocks paid MRC20 checkout with a clear unsupported-state error before transfer', async () => {
     const transfer = vi.fn()
     await expect(
@@ -471,7 +509,7 @@ describe('executePayAndRequest', () => {
       }),
     ).rejects.toMatchObject({
       code: 'payment_failed',
-      message: expect.stringMatching(/MRC20 paid checkout is not supported/i),
+      message: 'MRC20 checkout is not available in BotHub yet. Choose a native paid or free service.',
     } satisfies Partial<PayAndRequestError>)
 
     expect(transfer).not.toHaveBeenCalled()
@@ -495,12 +533,19 @@ describe('executePayAndRequest', () => {
     ).rejects.toMatchObject({
       code: 'broadcast_failed',
       partial: {
+        service: paidService,
+        provider,
+        prompt: 'Paid request that should be recoverable.',
         payment: {
           paymentTxid,
           paymentCommitTxid: '',
           orderReference: '',
         },
         sessionKey: `${provider.globalMetaId}:${paymentTxid}`,
+        orderPayload: expect.stringContaining(`txid: ${paymentTxid}`),
+        encryptedContent: expect.any(String),
+        simplemsgBody: expect.stringContaining('"content"'),
+        displaySummary: 'Paid request that should be recoverable.',
       },
     })
   })

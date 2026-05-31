@@ -464,6 +464,70 @@ describe('RequestModal', () => {
     expect(executePayAndRequest).not.toHaveBeenCalled()
   })
 
+  it('blocks checkout before wallet or payment prompts when the provider chat key is missing', async () => {
+    render(
+      <MemoryRouter>
+        <RequestModal
+          open
+          onClose={vi.fn()}
+          service={{ ...service, price: '1' }}
+          provider={{ ...provider, chatPubkey: null }}
+          wallet={wallet}
+        />
+      </MemoryRouter>,
+    )
+
+    fireEvent.change(screen.getByLabelText(/describe what you need/i), {
+      target: { value: 'Paid fortune' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Review' }))
+    fireEvent.click(screen.getByRole('button', { name: /confirm & pay/i }))
+
+    expect(
+      await screen.findByText(/provider cannot receive encrypted orders/i),
+    ).toBeInTheDocument()
+    expect(metalet.ensureReady).not.toHaveBeenCalled()
+    expect(executePayAndRequest).not.toHaveBeenCalled()
+    expect(persistPendingOrder).not.toHaveBeenCalled()
+  })
+
+  it('blocks paid MRC20 checkout with buyer-facing copy before wallet or payment prompts', async () => {
+    render(
+      <MemoryRouter>
+        <RequestModal
+          open
+          onClose={vi.fn()}
+          service={{
+            ...service,
+            price: '1',
+            currency: 'MRC20',
+            settlementKind: 'mrc20',
+            paymentChain: 'btc',
+            mrc20Ticker: 'DEMO',
+            mrc20Id: 'mrc20-genesis-id-demo',
+          }}
+          provider={provider}
+          wallet={wallet}
+        />
+      </MemoryRouter>,
+    )
+
+    fireEvent.change(screen.getByLabelText(/describe what you need/i), {
+      target: { value: 'MRC20 fortune' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Review' }))
+    fireEvent.click(screen.getByRole('button', { name: /confirm & pay/i }))
+
+    expect(
+      await screen.findByText(
+        'MRC20 checkout is not available in BotHub yet. Choose a native paid or free service.',
+      ),
+    ).toBeInTheDocument()
+    expect(metalet.ensureReady).not.toHaveBeenCalled()
+    expect(executePayAndRequest).not.toHaveBeenCalled()
+    expect(persistPendingOrder).not.toHaveBeenCalled()
+  })
+
   it('persists a recoverable failed_to_send row when payment succeeds but broadcast fails', async () => {
     const partial: PreparedPayAndRequest = {
       service: { ...service, price: '1' },
@@ -506,8 +570,11 @@ describe('RequestModal', () => {
     fireEvent.click(screen.getByRole('button', { name: /confirm & pay/i }))
 
     expect(
-      await screen.findByText(/payment succeeded but the order message failed/i),
+      await screen.findByText(/your payment went through, but the order message was not sent/i),
     ).toBeInTheDocument()
+    expect(
+      screen.queryByText(/payment succeeded but the order message failed/i),
+    ).not.toBeInTheDocument()
     expect(persistFailedToSendOrder).toHaveBeenCalledWith({
       wallet,
       service: { ...service, price: '1' },
@@ -568,7 +635,7 @@ describe('RequestModal', () => {
     fireEvent.click(screen.getByRole('button', { name: /confirm & pay/i }))
 
     expect(
-      await screen.findByText(/payment succeeded but the order message failed/i),
+      await screen.findByText(/your payment went through, but the order message was not sent/i),
     ).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: /open delivery/i }))
 
@@ -623,7 +690,7 @@ describe('RequestModal', () => {
 
     expect(
       await screen.findByText(/recovery record could not be saved locally/i),
-    ).toHaveTextContent('Payment txid: paid-txid-1')
+    ).toHaveTextContent('Payment reference: paid-txid-1')
     expect(screen.queryByRole('button', { name: /open delivery/i })).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Recovery not saved' })).toBeDisabled()
     expect(console.warn).toHaveBeenCalledWith(

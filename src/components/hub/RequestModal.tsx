@@ -13,6 +13,7 @@ import {
   buildDeliveryOrderPath,
   buildDeliverySessionPath,
   executePayAndRequest,
+  isFreeServicePrice,
   PayAndRequestBroadcastError,
   PayAndRequestError,
 } from '@/order/flow'
@@ -38,6 +39,9 @@ export interface RequestModalProps {
   provider: ProviderInfo
   wallet: WalletIdentity | null
 }
+
+const MRC20_CHECKOUT_UNSUPPORTED_MESSAGE =
+  'MRC20 checkout is not available in BotHub yet. Choose a native paid or free service.'
 
 export function RequestModal({ open, onClose, service, provider, wallet }: RequestModalProps) {
   const navigate = useNavigate()
@@ -70,7 +74,19 @@ export function RequestModal({ open, onClose, service, provider, wallet }: Reque
       setStep('error')
       return
     }
-    const isFree = service.price === '0'
+    if (!provider.chatPubkey?.trim()) {
+      setErrorMessage(
+        'This provider cannot receive encrypted orders right now. Try another service or check back later.',
+      )
+      setStep('error')
+      return
+    }
+    const isFree = isFreeServicePrice(service.price)
+    if (!isFree && service.settlementKind === 'mrc20') {
+      setErrorMessage(MRC20_CHECKOUT_UNSUPPORTED_MESSAGE)
+      setStep('error')
+      return
+    }
     try {
       setStep('checking_wallet')
       await metalet.ensureReady(wallet.globalMetaId)
@@ -142,10 +158,10 @@ export function RequestModal({ open, onClose, service, provider, wallet }: Reque
         setRetryDisabled(Boolean(paidTxid) && !savedForRecovery)
         const message = savedForRecovery
           ? paidTxid
-            ? 'Payment succeeded but the order message failed. The paid request was saved in Delivery for recovery.'
+            ? 'Your payment went through, but the order message was not sent. The paid request was saved in Delivery for recovery.'
             : 'The free order message failed. The request was saved in Delivery for recovery.'
           : paidTxid
-            ? `Payment succeeded but the order message failed, and the recovery record could not be saved locally. Payment txid: ${paidTxid}`
+            ? `Your payment went through, but the order message was not sent and the recovery record could not be saved locally. Payment reference: ${paidTxid}`
             : 'The free order message failed and could not be saved in Delivery. You can try again.'
         setErrorMessage(
           message,
