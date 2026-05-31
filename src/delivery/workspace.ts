@@ -305,6 +305,47 @@ export function buildDeliveryWorkspace(input: {
     })
   }
 
+  if (orderMap.size === 0) {
+    for (const [peerGlobalMetaId, peerMessages] of Object.entries(input.byPeer)) {
+      const sessionKey = buildSessionKey(peerGlobalMetaId, null)
+      const messages = peerMessages
+      const sessionId = buildSessionId({
+        walletGlobalMetaId,
+        providerGlobalMetaId: peerGlobalMetaId,
+        orderCorrelationId: null,
+      })
+      const storedAssets = input.assetsBySession[sessionId] ?? []
+      const assets = deliveryAssetsForSession(messages, storedAssets)
+
+      const peerName = messages[messages.length - 1]?.peerName || undefined
+      const peerAvatarUrl = messages[messages.length - 1]?.peerAvatarUrl || undefined
+      const peerChatPubkey = messages[messages.length - 1]?.peerChatPubkey || undefined
+
+      orderMap.set(sessionId, {
+        id: sessionId,
+        sessionId,
+        sessionKey,
+        providerGlobalMetaId: peerGlobalMetaId.trim(),
+        providerChatPubkey: peerChatPubkey,
+        providerName: peerName,
+        providerAvatarUrl: peerAvatarUrl,
+        serviceLabel: '',
+        requestSummary: 'Delivery request',
+        orderCorrelationId: null,
+        status: deriveWorkspaceStatus(messages, walletGlobalMetaId),
+        assetCount: assets.length,
+        messageCount: messages.length,
+        unreadCount: 0,
+        createdAt: messages[0]?.timestamp ?? 0,
+        updatedAt: messages[messages.length - 1]?.timestamp ?? 0,
+        lastActivityAt: messages[messages.length - 1]?.timestamp ?? 0,
+        messages,
+        assets,
+        source: 'session',
+      })
+    }
+  }
+
   const workspaceOrders = sortWorkspaceOrders(Array.from(orderMap.values()))
 
   const activeCount = workspaceOrders.filter(

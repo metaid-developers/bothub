@@ -109,16 +109,16 @@ describe('DeliveryPage layout', () => {
     vi.unstubAllGlobals()
   })
 
-  it('orders the mobile workspace as sessions, header, timeline, assets, then composer', () => {
+  it('orders the mobile workspace as orders, header, timeline, assets, then composer', () => {
     renderDeliveryPage()
 
-    const sessions = screen.getByRole('heading', { name: 'Sessions' })
+    const orders = screen.getByRole('heading', { name: '我的请求' })
     const header = screen.getByRole('status', { name: 'No delivery session selected' })
     const timeline = screen.getByText('Select a session to view messages')
     const assets = screen.getByRole('heading', { name: 'Delivered assets' })
     const composer = screen.getByRole('textbox', { name: 'Message provider' })
 
-    expectBefore(sessions, header)
+    expectBefore(orders, header)
     expectBefore(header, timeline)
     expectBefore(timeline, assets)
     expectBefore(assets, composer)
@@ -270,7 +270,7 @@ describe('DeliveryPage layout', () => {
     await waitFor(() =>
       expect(fetchUserProfileByGlobalMetaId).toHaveBeenCalledWith(peerGlobalMetaId),
     )
-    expect(await screen.findByText('Disconnected Provider')).toBeInTheDocument()
+    expect(await screen.findAllByText('Disconnected Provider')).toBeDefined()
     expect(retryDecryptPeerMessages).not.toHaveBeenCalled()
 
     mocks.walletState.status = 'connected'
@@ -352,14 +352,14 @@ describe('DeliveryPage layout', () => {
     })
     expect(fetchUserProfileByGlobalMetaId).not.toHaveBeenCalledWith('idqselected-complete')
     expect(fetchUserProfileByGlobalMetaId).toHaveBeenCalledTimes(2)
-    const sessionList = screen.getByRole('list', { name: 'Sessions' })
-    expect(await within(sessionList).findByText('Provider Alpha')).toBeInTheDocument()
-    expect(await within(sessionList).findByText('Provider Beta')).toBeInTheDocument()
+    const orderList = screen.getByRole('list', { name: '我的请求' })
+    expect(await within(orderList).findByText('Provider Alpha')).toBeInTheDocument()
+    expect(await within(orderList).findByText('Provider Beta')).toBeInTheDocument()
     expect(
-      within(sessionList).getByRole('img', { name: 'Provider Alpha avatar' }),
+      within(orderList).getByRole('img', { name: 'Provider Alpha avatar' }),
     ).toBeInTheDocument()
     expect(
-      within(sessionList).getByRole('img', { name: 'Provider Beta avatar' }),
+      within(orderList).getByRole('img', { name: 'Provider Beta avatar' }),
     ).toBeInTheDocument()
   })
 
@@ -396,7 +396,7 @@ describe('DeliveryPage layout', () => {
     await waitFor(() =>
       expect(fetchUserProfileByGlobalMetaId).toHaveBeenCalledWith(peerGlobalMetaId),
     )
-    const sessionList = screen.getByRole('list', { name: 'Sessions' })
+    const sessionList = screen.getByRole('list', { name: '我的请求' })
     expect(await within(sessionList).findByText('Visible Plain Provider')).toBeInTheDocument()
     expect(
       within(sessionList).getByRole('img', { name: 'Visible Plain Provider avatar' }),
@@ -574,7 +574,8 @@ describe('DeliveryPage layout', () => {
 
     await waitFor(() => expect(fetchUserProfileByGlobalMetaId).toHaveBeenCalledWith(nextPeer))
     expect(fetchUserProfileByGlobalMetaId).toHaveBeenCalledTimes(2)
-    expect(await screen.findByText('Next Missing Provider')).toBeInTheDocument()
+    const orderList = screen.getByRole('list', { name: '我的请求' })
+    expect(await within(orderList).findByText('Next Missing Provider')).toBeInTheDocument()
   })
 
   it('does not repeatedly refetch an empty profile in the same mounted page session', async () => {

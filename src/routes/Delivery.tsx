@@ -4,25 +4,32 @@ import { fetchUserProfileByGlobalMetaId, type UserProfile } from '@/api/userProf
 import { WsErrorBanner } from '@/components/common/WsErrorBanner'
 import { DeliveredAssetsPanel } from '@/components/delivery/DeliveredAssetsPanel'
 import { DeliveryComposer } from '@/components/delivery/DeliveryComposer'
+import { DeliveryOrderList } from '@/components/delivery/DeliveryOrderList'
 import { MessageList } from '@/components/delivery/MessageList'
 import { SessionHeader } from '@/components/delivery/SessionHeader'
-import { SessionsList } from '@/components/delivery/SessionsList'
 import { getOrdersForWallet } from '@/delivery/db'
 import { retryDecryptPeerMessages } from '@/delivery/decryptRetry'
-import { buildSessionId } from '@/delivery/domain'
-import type { BuyerOrder } from '@/delivery/domain'
+import { buildSessionId, type BuyerOrder } from '@/delivery/domain'
 import { useMessageStore } from '@/delivery/messageStore'
-import { enrichDeliverySessions } from '@/delivery/sessionDisplay'
 import {
-  buildGroupedSessionList,
-  messagesForSession as resolveMessagesForSession,
   parseSessionKey,
   resolveProviderChatPubkey,
 } from '@/delivery/sessionGrouping'
+import { useDeliverySyncStatusStore } from '@/delivery/syncStatusStore'
 import { t } from '@/i18n'
 import { useWallet } from '@/wallet/useWallet'
-import { useSocket } from '@/ws/useSocket'
+import {
+  buildDeliveryWorkspace,
+  selectWorkspaceOrder,
+  type WorkspaceOrder,
+} from '@/delivery/workspace'
+import {
+  loadDeliveryWorkspaceRecords,
+  type DeliveryWorkspaceRecords,
+} from '@/delivery/workspaceRecovery'
+import type { EnrichedDeliverySession } from '@/delivery/sessionDisplay'
 
+const ORDER_PARAM = 'order'
 const SESSION_PARAM = 'session'
 
 function hasDisplayProfile(input: {
@@ -32,21 +39,42 @@ function hasDisplayProfile(input: {
   return Boolean(input.peerName?.trim() && input.peerAvatarUrl?.trim())
 }
 
-function mergeSessionProfileFallback<
-  T extends {
-    peerGlobalMetaId: string
-    peerName?: string
-    peerAvatarUrl?: string
-    providerChatPubkey?: string
-  },
->(session: T, profile: UserProfile | undefined): T {
-  if (!profile) return session
+function workspaceOrderToComposerSession(
+  order: WorkspaceOrder,
+  profile?: UserProfile,
+): EnrichedDeliverySession {
+  const messages = order.messages
+  const providerChatPubkey =
+    order.providerChatPubkey?.trim() || profile?.chatPubkey?.trim() || undefined
+  const providerName = order.providerName?.trim() || profile?.name?.trim() || undefined
+  const providerAvatarUrl =
+    order.providerAvatarUrl?.trim() || profile?.avatarUrl?.trim() || undefined
   return {
-    ...session,
-    providerChatPubkey:
-      session.providerChatPubkey?.trim() || profile.chatPubkey?.trim() || undefined,
-    peerName: session.peerName?.trim() || profile.name?.trim() || undefined,
-    peerAvatarUrl: session.peerAvatarUrl?.trim() || profile.avatarUrl?.trim() || undefined,
+    sessionKey: order.sessionKey,
+    peerGlobalMetaId: order.providerGlobalMetaId,
+    providerChatPubkey,
+    peerName: providerName,
+    peerAvatarUrl: providerAvatarUrl,
+    orderCorrelationId: order.orderCorrelationId,
+    serviceLabel: order.serviceLabel,
+    lastMessage: messages[messages.length - 1] ?? {
+      id: '',
+      peerGlobalMetaId: order.providerGlobalMetaId,
+      fromGlobalMetaId: order.providerGlobalMetaId,
+      toGlobalMetaId: '',
+      content: '',
+      rawContent: '',
+      encryption: 'plain',
+      contentType: 'text/plain',
+      timestamp: order.lastActivityAt,
+    },
+    messageCount: order.messageCount,
+    status: order.status === 'waiting'
+      ? 'pending'
+      : order.status === 'failed_to_send'
+        ? 'failed'
+        : (order.status as 'active' | 'delivering' | 'delivered' | 'completed' | 'failed'),
+    assetCount: order.assetCount,
   }
 }
 
@@ -55,7 +83,6 @@ export function DeliveryPage() {
   const walletStatus = useWallet((s) => s.status)
   const identity = useWallet((s) => s.identity)
   const walletConnected = walletStatus === 'connected' && identity != null
-  const wsConnecting = useSocket((s) => s.status === 'connecting')
   const selfGlobalMetaId = identity?.globalMetaId ?? ''
   const [orders, setOrders] = useState<BuyerOrder[]>([])
   const [providerProfiles, setProviderProfiles] = useState<Record<string, UserProfile>>({})
@@ -65,10 +92,16 @@ export function DeliveryPage() {
   const providerProfileRetryRef = useRef<Set<string>>(new Set())
 
   const byPeer = useMessageStore((s) => s.byPeer)
-  const assetsBySession = useMessageStore((s) => s.assetsBySession)
-  const selectedSessionFromStore = useMessageStore((s) => s.selectedSessionKey)
-  const setSelectedSession = useMessageStore((s) => s.setSelectedSession)
+  const storedAssetsBySession = useMessageStore((s) => s.assetsBySession)
   const hydrateFromDb = useMessageStore((s) => s.hydrateFromDb)
+  const syncStatus = useDeliverySyncStatusStore((s) => s.status)
+  const syncFailedPeerCount = useDeliverySyncStatusStore((s) => s.failedPeerCount)
+
+  const [workspaceRecords, setWorkspaceRecords] = useState<DeliveryWorkspaceRecords>({
+    orders: [],
+    sessions: [],
+    assetsBySession: {},
+  })
 
   useEffect(() => {
     if (!selfGlobalMetaId) return
@@ -76,46 +109,74 @@ export function DeliveryPage() {
       console.warn('Could not load saved delivery sessions.', error)
     })
     if (typeof indexedDB !== 'undefined') {
-      void getOrdersForWallet(selfGlobalMetaId)
-        .then(setOrders)
+      void Promise.all([
+        getOrdersForWallet(selfGlobalMetaId),
+        loadDeliveryWorkspaceRecords(selfGlobalMetaId),
+      ])
+        .then(([loadedOrders, records]) => {
+          setOrders(loadedOrders)
+          setWorkspaceRecords(records)
+        })
         .catch((error) => {
           console.warn('Could not load saved delivery orders.', error)
         })
     }
   }, [hydrateFromDb, selfGlobalMetaId])
 
-  const sessions = useMemo(
-    () => buildGroupedSessionList(byPeer, selfGlobalMetaId),
-    [byPeer, selfGlobalMetaId],
-  )
+  const mergedAssetsBySession = useMemo(() => {
+    const merged: Record<string, ReturnType<typeof useMessageStore.getState>['assetsBySession'][string]> = {}
+    for (const [key, assets] of Object.entries(workspaceRecords.assetsBySession)) {
+      merged[key] = assets
+    }
+    for (const [key, assets] of Object.entries(storedAssetsBySession)) {
+      merged[key] = assets
+    }
+    return merged
+  }, [storedAssetsBySession, workspaceRecords.assetsBySession])
 
-  const enrichedSessions = useMemo(
-    () => enrichDeliverySessions(sessions, byPeer, selfGlobalMetaId),
-    [byPeer, sessions, selfGlobalMetaId],
-  )
-
-  const sessionFromUrl = searchParams.get(SESSION_PARAM)?.trim() || null
-  const selectedSession =
-    sessionFromUrl || selectedSessionFromStore || enrichedSessions[0]?.sessionKey || null
-
-  const displaySessions = useMemo(
+  const workspace = useMemo(
     () =>
-      enrichedSessions.map((session) =>
-        mergeSessionProfileFallback(session, providerProfiles[session.peerGlobalMetaId]),
-      ),
-    [enrichedSessions, providerProfiles],
+      buildDeliveryWorkspace({
+        walletGlobalMetaId: selfGlobalMetaId,
+        orders,
+        sessions: workspaceRecords.sessions,
+        byPeer,
+        assetsBySession: mergedAssetsBySession,
+      }),
+    [selfGlobalMetaId, orders, workspaceRecords.sessions, byPeer, mergedAssetsBySession],
   )
 
-  const selectedSessionDetails =
-    displaySessions.find((session) => session.sessionKey === selectedSession) ?? null
+  const orderFromUrl = searchParams.get(ORDER_PARAM)?.trim() || null
+  const sessionFromUrl = searchParams.get(SESSION_PARAM)?.trim() || null
+
+  const resolvedSelectedId = useMemo(() => {
+    if (orderFromUrl) return orderFromUrl
+    if (sessionFromUrl) {
+      const { peerGlobalMetaId, orderCorrelationId } = parseSessionKey(sessionFromUrl)
+      return buildSessionId({
+        walletGlobalMetaId: selfGlobalMetaId,
+        providerGlobalMetaId: peerGlobalMetaId,
+        orderCorrelationId,
+      })
+    }
+    return workspace.orders[0]?.id || null
+  }, [orderFromUrl, sessionFromUrl, workspace.orders, selfGlobalMetaId])
+
+  const selectedOrder = selectWorkspaceOrder(workspace, resolvedSelectedId)
+
+  const workspaceOrdersWithProfiles = useMemo(
+    () =>
+      workspace.orders.map((order) =>
+        mergeWorkspaceOrderProfile(order, providerProfiles[order.providerGlobalMetaId]),
+      ),
+    [workspace.orders, providerProfiles],
+  )
 
   const messages = useMemo(
-    () =>
-      selectedSession && selfGlobalMetaId
-        ? resolveMessagesForSession(byPeer, selectedSession, selfGlobalMetaId)
-        : [],
-    [byPeer, selectedSession, selfGlobalMetaId],
+    () => selectedOrder?.messages ?? [],
+    [selectedOrder],
   )
+
   const messagesWithProfileFallback = useMemo(
     () =>
       messages.map((message) => {
@@ -130,41 +191,6 @@ export function DeliveryPage() {
       }),
     [messages, providerProfiles],
   )
-  const storedAssets = useMemo(() => {
-    if (!selectedSession || !selfGlobalMetaId) return []
-    const { peerGlobalMetaId, orderCorrelationId } = parseSessionKey(selectedSession)
-    const sessionId = buildSessionId({
-      walletGlobalMetaId: selfGlobalMetaId,
-      providerGlobalMetaId: peerGlobalMetaId,
-      orderCorrelationId,
-    })
-    return assetsBySession[sessionId] ?? []
-  }, [assetsBySession, selectedSession, selfGlobalMetaId])
-
-  const selectedProviderProfile = selectedSessionDetails?.peerGlobalMetaId
-    ? providerProfiles[selectedSessionDetails.peerGlobalMetaId]
-    : undefined
-  const selectedProviderChatPubkey = useMemo(
-    () =>
-      resolveProviderChatPubkey({
-        session: selectedSessionDetails,
-        orders,
-        messages: messagesWithProfileFallback,
-        providerProfile: selectedProviderProfile,
-      }),
-    [messagesWithProfileFallback, orders, selectedProviderProfile, selectedSessionDetails],
-  )
-  const selectedSessionWithResolvedKey = useMemo(
-    () =>
-      selectedSessionDetails
-        ? {
-            ...selectedSessionDetails,
-            providerChatPubkey:
-              selectedProviderChatPubkey || selectedSessionDetails.providerChatPubkey,
-          }
-        : null,
-    [selectedProviderChatPubkey, selectedSessionDetails],
-  )
 
   const selectedHasDecryptGap = useMemo(
     () =>
@@ -176,6 +202,43 @@ export function DeliveryPage() {
       ),
     [messages],
   )
+
+  const selectedProviderChatPubkey = useMemo(
+    () =>
+      resolveProviderChatPubkey({
+        session: selectedOrder
+          ? {
+              peerGlobalMetaId: selectedOrder.providerGlobalMetaId,
+              providerChatPubkey: selectedOrder.providerChatPubkey,
+              orderCorrelationId: selectedOrder.orderCorrelationId,
+            }
+          : null,
+        orders: orders.map((order) => ({
+          providerGlobalMetaId: order.providerGlobalMetaId,
+          providerChatPubkey: order.providerChatPubkey,
+          orderCorrelationId: order.orderReference,
+          paymentTxid: order.paymentTxid,
+          orderReference: order.orderReference,
+        })),
+        messages,
+        providerProfile: selectedOrder?.providerGlobalMetaId
+          ? providerProfiles[selectedOrder.providerGlobalMetaId]
+          : undefined,
+      }),
+    [messages, orders, providerProfiles, selectedOrder],
+  )
+
+  const composerSession = useMemo(() => {
+    if (!selectedOrder) return null
+    const profile = providerProfiles[selectedOrder.providerGlobalMetaId]
+    return workspaceOrderToComposerSession(
+      {
+        ...selectedOrder,
+        providerChatPubkey: selectedProviderChatPubkey || selectedOrder.providerChatPubkey,
+      },
+      profile,
+    )
+  }, [selectedOrder, selectedProviderChatPubkey, providerProfiles])
 
   const retryDecryptWithProviderProfile = useCallback(
     (peerGlobalMetaId: string, profile: UserProfile): void => {
@@ -254,11 +317,14 @@ export function DeliveryPage() {
   )
 
   useEffect(() => {
-    if (!selectedSessionDetails) return
-    const providerGlobalMetaId = selectedSessionDetails.peerGlobalMetaId
+    if (!selectedOrder) return
+    const providerGlobalMetaId = selectedOrder.providerGlobalMetaId
     if (providerProfiles[providerGlobalMetaId]) return
     const needsChatKey = !selectedProviderChatPubkey
-    const needsDisplayProfile = !hasDisplayProfile(selectedSessionDetails)
+    const needsDisplayProfile = !hasDisplayProfile({
+      peerName: selectedOrder.providerName,
+      peerAvatarUrl: selectedOrder.providerAvatarUrl,
+    })
     if (!needsChatKey && !needsDisplayProfile && !selectedHasDecryptGap) return
     void fetchProviderProfile(providerGlobalMetaId, { retryDecrypt: selectedHasDecryptGap })
   }, [
@@ -266,20 +332,20 @@ export function DeliveryPage() {
     providerProfiles,
     selectedProviderChatPubkey,
     selectedHasDecryptGap,
-    selectedSessionDetails,
+    selectedOrder,
   ])
 
   useEffect(() => {
-    if (!selectedSessionDetails || !selectedProviderProfile || !selectedHasDecryptGap) return
-    retryDecryptWithProviderProfile(
-      selectedSessionDetails.peerGlobalMetaId,
-      selectedProviderProfile,
-    )
+    if (!selectedOrder || !selectedProviderChatPubkey || !selectedHasDecryptGap) return
+    const profile = providerProfiles[selectedOrder.providerGlobalMetaId]
+    if (!profile) return
+    retryDecryptWithProviderProfile(selectedOrder.providerGlobalMetaId, profile)
   }, [
     retryDecryptWithProviderProfile,
     selectedHasDecryptGap,
-    selectedProviderProfile,
-    selectedSessionDetails,
+    selectedProviderChatPubkey,
+    selectedOrder,
+    providerProfiles,
   ])
 
   useEffect(() => {
@@ -287,8 +353,8 @@ export function DeliveryPage() {
     const seenProviderPeers = new Set<string>()
     const missingProviderPeers: string[] = []
 
-    for (const session of displaySessions) {
-      const providerGlobalMetaId = session.peerGlobalMetaId.trim()
+    for (const workspaceOrder of workspace.orders) {
+      const providerGlobalMetaId = workspaceOrder.providerGlobalMetaId.trim()
       if (
         !providerGlobalMetaId ||
         seenProviderPeers.has(providerGlobalMetaId) ||
@@ -299,8 +365,11 @@ export function DeliveryPage() {
         continue
       }
 
-      const missingDisplayProfile = !hasDisplayProfile(session)
-      const missingChatKey = !session.providerChatPubkey?.trim()
+      const missingDisplayProfile = !hasDisplayProfile({
+        peerName: workspaceOrder.providerName,
+        peerAvatarUrl: workspaceOrder.providerAvatarUrl,
+      })
+      const missingChatKey = !workspaceOrder.providerChatPubkey?.trim()
       if (!missingDisplayProfile && !missingChatKey) continue
 
       seenProviderPeers.add(providerGlobalMetaId)
@@ -311,21 +380,21 @@ export function DeliveryPage() {
     for (const providerGlobalMetaId of missingProviderPeers) {
       void fetchProviderProfile(providerGlobalMetaId)
     }
-  }, [displaySessions, fetchProviderProfile, providerProfiles, walletConnected])
+  }, [workspace.orders, fetchProviderProfile, providerProfiles, walletConnected])
 
-  const selectSession = useCallback(
-    (sessionKey: string) => {
-      setSelectedSession(sessionKey)
+  const selectOrder = useCallback(
+    (orderId: string) => {
       setSearchParams(
         (prev) => {
           const next = new URLSearchParams(prev)
-          next.set(SESSION_PARAM, sessionKey)
+          next.set(ORDER_PARAM, orderId)
+          next.delete(SESSION_PARAM)
           return next
         },
         { replace: true },
       )
     },
-    [setSearchParams, setSelectedSession],
+    [setSearchParams],
   )
 
   return (
@@ -341,25 +410,35 @@ export function DeliveryPage() {
 
       <div className="grid min-h-[560px] overflow-hidden rounded-card border border-hub-border bg-hub-surface/30 md:grid-cols-[minmax(220px,280px)_minmax(0,1fr)_minmax(220px,280px)] md:grid-rows-[minmax(0,1fr)_auto]">
         <aside
-          aria-label={t('delivery.sessions')}
+          aria-label={t('delivery.workspace.orders')}
           className="border-b border-hub-border p-3 md:row-span-2 md:border-b-0 md:border-r"
         >
           <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-hub-muted">
-            {t('delivery.sessions')}
+            {t('delivery.workspace.orders')}
           </h2>
-          <SessionsList
-            sessions={displaySessions}
-            selectedSessionKey={selectedSession}
-            onSelectSession={selectSession}
+          <DeliveryOrderList
+            orders={workspaceOrdersWithProfiles}
+            selectedOrderId={resolvedSelectedId}
             walletConnected={walletConnected}
-            loading={walletConnected && wsConnecting && enrichedSessions.length === 0}
+            syncStatus={syncStatus}
+            failedPeerCount={syncFailedPeerCount}
+            onSelectOrder={selectOrder}
           />
         </aside>
 
         <div className="flex min-w-0 flex-col md:col-start-2 md:row-start-1">
-          <SessionHeader session={selectedSessionWithResolvedKey} />
+          <SessionHeader
+            session={
+              selectedOrder
+                ? workspaceOrderToComposerSession(
+                    selectedOrder,
+                    providerProfiles[selectedOrder.providerGlobalMetaId],
+                  )
+                : null
+            }
+          />
           <MessageList
-            sessionKey={selectedSession}
+            sessionKey={selectedOrder?.sessionKey ?? null}
             messages={messagesWithProfileFallback}
             selfGlobalMetaId={selfGlobalMetaId}
           />
@@ -367,21 +446,25 @@ export function DeliveryPage() {
 
         <DeliveredAssetsPanel
           messages={messagesWithProfileFallback}
-          storedAssets={storedAssets}
+          storedAssets={
+            selectedOrder
+              ? mergedAssetsBySession[selectedOrder.sessionId] ?? []
+              : []
+          }
           className="md:col-start-3 md:row-span-2 md:row-start-1"
         />
         <DeliveryComposer
           wallet={walletConnected ? identity : null}
-          session={selectedSessionWithResolvedKey}
+          session={composerSession}
           providerChatPubkey={selectedProviderChatPubkey}
           providerKeyLoading={Boolean(
-            selectedSessionDetails?.peerGlobalMetaId &&
-            providerProfileLoading[selectedSessionDetails.peerGlobalMetaId],
+            selectedOrder?.providerGlobalMetaId &&
+            providerProfileLoading[selectedOrder.providerGlobalMetaId],
           )}
           onFetchProviderKey={
-            selectedSessionDetails
+            selectedOrder
               ? () => {
-                  void fetchProviderProfile(selectedSessionDetails.peerGlobalMetaId, {
+                  void fetchProviderProfile(selectedOrder.providerGlobalMetaId, {
                     force: true,
                     retryDecrypt: selectedHasDecryptGap,
                   })
@@ -392,4 +475,19 @@ export function DeliveryPage() {
       </div>
     </section>
   )
+}
+
+function mergeWorkspaceOrderProfile(
+  order: WorkspaceOrder,
+  profile: UserProfile | undefined,
+): WorkspaceOrder {
+  if (!profile) return order
+  return {
+    ...order,
+    providerChatPubkey:
+      order.providerChatPubkey?.trim() || profile.chatPubkey?.trim() || undefined,
+    providerName: order.providerName?.trim() || profile.name?.trim() || undefined,
+    providerAvatarUrl:
+      order.providerAvatarUrl?.trim() || profile.avatarUrl?.trim() || undefined,
+  }
 }
