@@ -99,7 +99,7 @@ export function DeliveryAssetLibrary({ assets }: DeliveryAssetLibraryProps) {
         <div className="flex flex-col items-center justify-center py-8 text-center">
           <p className="text-sm font-semibold text-white">还没有收到成果</p>
           <p className="mt-1 max-w-xs text-xs text-hub-muted">
-            Provider 完成交付后，图片、视频、音频和附件会显示在这里。
+            服务方完成交付后，图片、视频、音频和附件会显示在这里。
           </p>
         </div>
       </aside>

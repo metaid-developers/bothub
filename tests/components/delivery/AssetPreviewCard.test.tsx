@@ -32,7 +32,7 @@ describe('AssetPreviewCard', () => {
     fireEvent.error(image)
 
     expect(image).toHaveAttribute('src', 'https://fallback.example/pin')
-    expect(screen.getByRole('link', { name: /download/i })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: '下载' })).toBeInTheDocument()
   })
 
   it('resets failed image preview state when rerendered with a new asset', () => {
@@ -43,7 +43,7 @@ describe('AssetPreviewCard', () => {
     const image = screen.getByRole('img', { name: 'pin.png' })
     fireEvent.error(image)
     fireEvent.error(image)
-    expect(screen.getByText('Preview unavailable')).toBeInTheDocument()
+    expect(screen.getByText('暂时无法预览')).toBeInTheDocument()
 
     rerender(
       <AssetPreviewCard
@@ -64,7 +64,7 @@ describe('AssetPreviewCard', () => {
       'src',
       'https://accelerate.example/next',
     )
-    expect(screen.queryByText('Preview unavailable')).not.toBeInTheDocument()
+    expect(screen.queryByText('暂时无法预览')).not.toBeInTheDocument()
   })
 
   it('renders video assets as controlled inline video', () => {
@@ -110,12 +110,12 @@ describe('AssetPreviewCard', () => {
       'src',
       'https://fallback.example/clip',
     )
-    expect(screen.getByRole('link', { name: /download/i })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: '下载' })).toBeInTheDocument()
 
     fireEvent.error(container.querySelector('video source') as Element)
 
-    expect(screen.getByText('Preview unavailable')).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: /download/i })).toBeInTheDocument()
+    expect(screen.getByText('暂时无法预览')).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: '下载' })).toBeInTheDocument()
   })
 
   it('renders audio assets as controlled inline audio', () => {
@@ -160,12 +160,12 @@ describe('AssetPreviewCard', () => {
       'src',
       'https://fallback.example/voice',
     )
-    expect(screen.getByRole('link', { name: /download/i })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: '下载' })).toBeInTheDocument()
 
     fireEvent.error(container.querySelector('audio source') as Element)
 
-    expect(screen.getByText('Preview unavailable')).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: /download/i })).toBeInTheDocument()
+    expect(screen.getByText('暂时无法预览')).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: '下载' })).toBeInTheDocument()
   })
 
   it('renders document assets as download-focused cards without inline media', () => {
@@ -187,7 +187,7 @@ describe('AssetPreviewCard', () => {
   it('keeps download links stable and safe for every asset', () => {
     render(<AssetPreviewCard asset={asset()} />)
 
-    const link = screen.getByRole('link', { name: /download/i })
+    const link = screen.getByRole('link', { name: '下载' })
     expect(link).toHaveAttribute('href', 'https://download.example/pin')
     expect(link).toHaveAttribute('target', '_blank')
     expect(link).toHaveAttribute('rel', expect.stringContaining('noopener'))

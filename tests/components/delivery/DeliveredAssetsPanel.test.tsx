@@ -22,7 +22,7 @@ describe('DeliveredAssetsPanel', () => {
   it('shows an empty state before assets are delivered', () => {
     render(<DeliveredAssetsPanel messages={[]} />)
 
-    expect(screen.getByText('No delivered assets yet.')).toBeInTheDocument()
+    expect(screen.getByText('还没有收到成果')).toBeInTheDocument()
   })
 
   it('groups delivered assets by kind and renders preview cards once per asset', () => {
@@ -37,16 +37,16 @@ describe('DeliveredAssetsPanel', () => {
       />,
     )
 
-    const panel = screen.getByRole('complementary', { name: 'Delivered assets' })
-    expect(within(panel).getByText('4 assets')).toBeInTheDocument()
-    expect(within(panel).getByText('image 1')).toBeInTheDocument()
-    expect(within(panel).getByText('video 1')).toBeInTheDocument()
-    expect(within(panel).getByText('audio 1')).toBeInTheDocument()
-    expect(within(panel).getByText('document 1')).toBeInTheDocument()
+    const panel = screen.getByRole('complementary', { name: '交付成果' })
+    expect(within(panel).getByText('4 个成果')).toBeInTheDocument()
+    expect(within(panel).getByText('图片 1')).toBeInTheDocument()
+    expect(within(panel).getByText('视频 1')).toBeInTheDocument()
+    expect(within(panel).getByText('音频 1')).toBeInTheDocument()
+    expect(within(panel).getByText('文档 1')).toBeInTheDocument()
     expect(within(panel).getByRole('img', { name: 'image.png' })).toBeInTheDocument()
     expect(panel.querySelector('video')).toBeInTheDocument()
     expect(panel.querySelector('audio')).toBeInTheDocument()
-    expect(within(panel).getAllByRole('link', { name: /download/i })).toHaveLength(4)
+    expect(within(panel).getAllByRole('link', { name: '下载' })).toHaveLength(4)
   })
 
   it('hydrates stored assets for a selected session without live messages', () => {
@@ -75,8 +75,8 @@ describe('DeliveredAssetsPanel', () => {
 
     render(<DeliveredAssetsPanel messages={[]} storedAssets={storedAssets} />)
 
-    const panel = screen.getByRole('complementary', { name: 'Delivered assets' })
-    expect(within(panel).getByText('1 asset')).toBeInTheDocument()
+    const panel = screen.getByRole('complementary', { name: '交付成果' })
+    expect(within(panel).getByText('1 个成果')).toBeInTheDocument()
     expect(within(panel).getByRole('img', { name: 'persisted.png' })).toBeInTheDocument()
   })
 })

@@ -40,9 +40,9 @@ describe('MessageBubble', () => {
       />,
     )
 
-    expect(screen.getByRole('article', { name: 'Delivery result' })).toBeInTheDocument()
+    expect(screen.getByRole('article', { name: '交付成果' })).toBeInTheDocument()
     expect(screen.getByText('Ready metafile://pin1.png metafile://pin2.pdf')).toBeInTheDocument()
-    expect(screen.getByText('2 assets attached')).toBeInTheDocument()
+    expect(screen.getByText('2 个成果')).toBeInTheDocument()
   })
 
   it('shows incoming peer name and avatar beside regular private chat text', () => {
@@ -85,7 +85,7 @@ describe('MessageBubble', () => {
     )
 
     expect(screen.getByText('Done')).toBeInTheDocument()
-    expect(screen.getByText('1 asset attached')).toBeInTheDocument()
+    expect(screen.getByText('1 个成果')).toBeInTheDocument()
     expect(screen.queryByText(/"assets"/)).not.toBeInTheDocument()
   })
 
@@ -98,7 +98,7 @@ describe('MessageBubble', () => {
     )
 
     expect(screen.getByRole('img', { name: 'pin.png' })).toBeInTheDocument()
-    expect(screen.getAllByRole('link', { name: /download/i })).toHaveLength(1)
+    expect(screen.getAllByRole('link', { name: '下载' })).toHaveLength(1)
   })
 
   it('renders completion and rating-reserved messages with distinct accessible labels', () => {
@@ -152,14 +152,19 @@ describe('MessageBubble', () => {
     )
 
     expect(screen.getByText('这条交付记录暂时无法显示，已保留原始记录')).toBeInTheDocument()
-    expect(screen.getByText('Pin: pin-decrypt-failed')).toBeInTheDocument()
-    expect(screen.getByText('Tx: tx-decrypt-failed')).toBeInTheDocument()
+    expect(screen.queryByText('Pin: pin-decrypt-failed')).not.toBeInTheDocument()
+    expect(screen.queryByText('Tx: tx-decrypt-failed')).not.toBeInTheDocument()
     expect(screen.queryByText('encrypted-ciphertext')).not.toBeInTheDocument()
     expect(screen.queryByText(/ciphertext|Unable to decrypt/i)).not.toBeInTheDocument()
     expect(screen.queryByText(/connect wallet|pay/i)).not.toBeInTheDocument()
 
-    fireEvent.click(screen.getByRole('button', { name: '技术详情' }))
+    const detailsButton = screen.getByRole('button', { name: '技术详情' })
+    expect(detailsButton).toHaveAttribute('aria-expanded', 'false')
+    fireEvent.click(detailsButton)
 
+    expect(detailsButton).toHaveAttribute('aria-expanded', 'true')
+    expect(screen.getByText('Pin: pin-decrypt-failed')).toBeInTheDocument()
+    expect(screen.getByText('Tx: tx-decrypt-failed')).toBeInTheDocument()
     expect(screen.getByText('missing peer key')).toBeInTheDocument()
     expect(screen.getByText('encrypted-ciphertext')).toBeInTheDocument()
   })

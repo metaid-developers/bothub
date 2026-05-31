@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useId, useState } from 'react'
 import { clsx } from 'clsx'
 import { MessageBubble } from '@/components/delivery/MessageBubble'
 import type { DeliveryMessage } from '@/delivery/messageStore'
@@ -30,6 +30,7 @@ export function DeliveryStatusTimeline({
   selfGlobalMetaId,
 }: DeliveryStatusTimelineProps) {
   const [showDetails, setShowDetails] = useState(false)
+  const detailsId = useId()
 
   if (!order) {
     return (
@@ -96,10 +97,12 @@ export function DeliveryStatusTimeline({
             <p className="text-amber-300/90">有消息暂时无法解密，已保留原始记录。</p>
             <button
               type="button"
+              aria-controls={detailsId}
+              aria-expanded={showDetails}
               onClick={() => setShowDetails(!showDetails)}
               className="mt-1 text-hub-accent underline-offset-2 hover:underline"
             >
-              查看技术细节
+              {t('delivery.technicalDetails')}
             </button>
           </div>
         )}
@@ -110,7 +113,7 @@ export function DeliveryStatusTimeline({
           <summary className="cursor-pointer px-4 py-2 text-xs font-semibold text-hub-muted">
             {t('delivery.workspace.messages')}
           </summary>
-          <div className="space-y-0.5 pb-2">
+          <div id={detailsId} className="space-y-0.5 pb-2">
             {(!showDetails
               ? messages.filter((m) => !m.decryptError)
               : messages

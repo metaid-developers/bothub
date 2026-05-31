@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useId, useState } from 'react'
 import { clsx } from 'clsx'
 import type { DeliveryMessage } from '@/delivery/messageStore'
 import { getMessageVariant } from '@/delivery/messageDisplay'
@@ -136,6 +136,7 @@ function SystemBubble({ message }: { message: DeliveryMessage }) {
 
 function DecryptFailedBubble({ message }: { message: DeliveryMessage }) {
   const [detailsOpen, setDetailsOpen] = useState(false)
+  const detailsId = useId()
   const copyValue = (value: string | undefined) => {
     if (!value?.trim()) return
     void navigator.clipboard?.writeText(value.trim()).catch(() => undefined)
@@ -145,35 +146,37 @@ function DecryptFailedBubble({ message }: { message: DeliveryMessage }) {
     <div className="flex justify-start">
       <article className="max-w-[min(100%,32rem)] rounded-card border border-amber-400/30 bg-hub-surface2 px-3 py-2 text-sm leading-relaxed text-white">
         <p className="font-medium">{t('delivery.decryptFailedDefault')}</p>
-        <div className="mt-2 flex flex-wrap gap-2 text-xs text-hub-muted">
-          {message.pinId ? (
-            <button
-              type="button"
-              onClick={() => copyValue(message.pinId)}
-              className="rounded-full border border-hub-border px-2 py-1 hover:border-hub-muted"
-            >
-              Pin: {message.pinId}
-            </button>
-          ) : null}
-          {message.txId ? (
-            <button
-              type="button"
-              onClick={() => copyValue(message.txId)}
-              className="rounded-full border border-hub-border px-2 py-1 hover:border-hub-muted"
-            >
-              Tx: {message.txId}
-            </button>
-          ) : null}
-        </div>
         <button
           type="button"
+          aria-controls={detailsId}
+          aria-expanded={detailsOpen}
           onClick={() => setDetailsOpen((open) => !open)}
           className="mt-2 text-xs text-hub-accent underline"
         >
           {t('delivery.technicalDetails')}
         </button>
         {detailsOpen ? (
-          <div className="mt-2 space-y-2 text-xs text-hub-muted">
+          <div id={detailsId} className="mt-2 space-y-2 text-xs text-hub-muted">
+            <div className="flex flex-wrap gap-2">
+              {message.pinId ? (
+                <button
+                  type="button"
+                  onClick={() => copyValue(message.pinId)}
+                  className="rounded-full border border-hub-border px-2 py-1 hover:border-hub-muted"
+                >
+                  Pin: {message.pinId}
+                </button>
+              ) : null}
+              {message.txId ? (
+                <button
+                  type="button"
+                  onClick={() => copyValue(message.txId)}
+                  className="rounded-full border border-hub-border px-2 py-1 hover:border-hub-muted"
+                >
+                  Tx: {message.txId}
+                </button>
+              ) : null}
+            </div>
             {message.decryptError ? (
               <p className="whitespace-pre-wrap break-words">{message.decryptError}</p>
             ) : null}
@@ -221,17 +224,17 @@ function DeliveryBubble({ message }: { message: DeliveryMessage }) {
   return (
     <div className="flex justify-start">
       <article
-        aria-label="Delivery result"
+        aria-label="交付成果"
         className="max-w-[min(100%,32rem)] rounded-card border border-hub-accent/40 bg-hub-surface2 px-3 py-2 text-sm leading-relaxed text-white"
       >
         <p className="text-xs font-semibold uppercase tracking-wide text-hub-accent">
-          Delivery
+          交付成果
         </p>
         <p className="mt-1 whitespace-pre-wrap break-words">
-          {protocol.displayText || 'Delivery received'}
+          {protocol.displayText || '已收到交付'}
         </p>
         <p className="mt-2 text-xs text-hub-muted">
-          {assets.length} asset{assets.length === 1 ? '' : 's'} attached
+          {assets.length} 个成果
         </p>
         {assets.length > 0 ? (
           <div className="mt-2 grid max-w-full grid-cols-2 gap-2">

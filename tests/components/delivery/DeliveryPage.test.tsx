@@ -632,7 +632,7 @@ describe('DeliveryPage layout', () => {
     renderDeliveryPage(`/delivery?session=${peerGlobalMetaId}`)
 
     await waitFor(() => expect(fetchUserProfileByGlobalMetaId).toHaveBeenCalledTimes(1))
-    fireEvent.click(screen.getByRole('button', { name: '技术详情' }))
+    fireEvent.click(screen.getByRole('button', { name: '同步资料技术详情' }))
     fireEvent.click(screen.getByRole('button', { name: '重试同步资料' }))
 
     await waitFor(() => expect(fetchUserProfileByGlobalMetaId).toHaveBeenCalledTimes(2))

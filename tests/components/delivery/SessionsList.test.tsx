@@ -33,8 +33,8 @@ describe('SessionsList', () => {
       />,
     )
 
-    expect(screen.getByText('Delivered')).toBeInTheDocument()
-    expect(screen.getByText('2 assets')).toBeInTheDocument()
+    expect(screen.getByText('已交付')).toBeInTheDocument()
+    expect(screen.getByText('2 个成果')).toBeInTheDocument()
   })
 
   it('displays peer name and avatar when profile media is available', () => {
