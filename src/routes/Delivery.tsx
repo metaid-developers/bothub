@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { fetchUserProfileByGlobalMetaId, type UserProfile } from '@/api/userProfile'
 import { WsErrorBanner } from '@/components/common/WsErrorBanner'
-import { DeliveredAssetsPanel } from '@/components/delivery/DeliveredAssetsPanel'
+import { DeliveryAssetLibrary } from '@/components/delivery/DeliveryAssetLibrary'
 import { DeliveryComposer } from '@/components/delivery/DeliveryComposer'
 import { DeliveryOrderList } from '@/components/delivery/DeliveryOrderList'
 import { DeliveryStatusTimeline } from '@/components/delivery/DeliveryStatusTimeline'
@@ -397,6 +397,28 @@ export function DeliveryPage() {
     [setSearchParams],
   )
 
+  const selectedOrderWithProfile = useMemo(() => {
+    if (!selectedOrder) return null
+    const profile = providerProfiles[selectedOrder.providerGlobalMetaId]
+    if (!profile) return selectedOrder
+    return {
+      ...selectedOrder,
+      providerChatPubkey:
+        selectedOrder.providerChatPubkey?.trim() || profile.chatPubkey?.trim() || undefined,
+      providerName: selectedOrder.providerName?.trim() || profile.name?.trim() || undefined,
+      providerAvatarUrl:
+        selectedOrder.providerAvatarUrl?.trim() || profile.avatarUrl?.trim() || undefined,
+    }
+  }, [selectedOrder, providerProfiles])
+
+  const orderForTimeline = useMemo(() => {
+    if (!selectedOrder) return null
+    return {
+      ...selectedOrder,
+      messages: messagesWithProfileFallback,
+    }
+  }, [selectedOrder, messagesWithProfileFallback])
+
   return (
     <section aria-labelledby="delivery-heading" className="space-y-4">
       <div>
@@ -427,21 +449,19 @@ export function DeliveryPage() {
         </aside>
 
         <div className="flex min-w-0 flex-col md:col-start-2 md:row-start-1">
-          <DeliveryWorkspaceHeader order={selectedOrder} />
+          <DeliveryWorkspaceHeader order={selectedOrderWithProfile} />
           <DeliveryStatusTimeline
-            order={selectedOrder}
+            order={orderForTimeline}
             selfGlobalMetaId={selfGlobalMetaId}
           />
         </div>
 
-        <DeliveredAssetsPanel
-          messages={messagesWithProfileFallback}
-          storedAssets={
+        <DeliveryAssetLibrary
+          assets={
             selectedOrder
-              ? mergedAssetsBySession[selectedOrder.sessionId] ?? []
+              ? selectedOrder.assets
               : []
           }
-          className="md:col-start-3 md:row-span-2 md:row-start-1"
         />
         <DeliveryComposer
           wallet={walletConnected ? identity : null}

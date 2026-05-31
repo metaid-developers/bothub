@@ -53,7 +53,19 @@ function DownloadLink({ asset }: { asset: Asset }) {
   )
 }
 
-export function AssetPreviewCard({ asset }: { asset: Asset }) {
+interface AssetPreviewCardProps {
+  asset: Asset
+  mode?: 'compact' | 'full'
+  onPreview?: (asset: Asset) => void
+  onCopyLink?: (asset: Asset) => void
+}
+
+export function AssetPreviewCard({
+  asset,
+  mode = 'full',
+  onPreview,
+  onCopyLink,
+}: AssetPreviewCardProps) {
   const previewUrl = previewSource(asset)
   const fallbackUrl = fallbackSource(asset)
   const [mediaSrc, setMediaSrc] = useState(() => previewUrl)
@@ -73,7 +85,7 @@ export function AssetPreviewCard({ asset }: { asset: Asset }) {
   }
 
   return (
-    <article className="overflow-hidden rounded-card border border-hub-border bg-hub-surface2/80">
+    <article aria-label={asset.filename} className="overflow-hidden rounded-card border border-hub-border bg-hub-surface2/80">
       <div className="flex aspect-[16/9] items-center justify-center overflow-hidden bg-black/25">
         {asset.kind === 'image' && !previewFailed ? (
           <img
@@ -127,7 +139,29 @@ export function AssetPreviewCard({ asset }: { asset: Asset }) {
       </div>
       <div className="flex items-center justify-between gap-2 px-2.5 py-2">
         <AssetMetadata asset={asset} />
-        <DownloadLink asset={asset} />
+        <div className="flex items-center gap-1">
+          {onPreview && (
+            <button
+              type="button"
+              aria-label={`预览 ${asset.filename}`}
+              onClick={() => onPreview(asset)}
+              className="shrink-0 text-xs text-hub-accent hover:underline"
+            >
+              预览
+            </button>
+          )}
+          {onCopyLink && (
+            <button
+              type="button"
+              aria-label="复制链接"
+              onClick={() => onCopyLink(asset)}
+              className="shrink-0 text-xs text-hub-accent hover:underline"
+            >
+              复制链接
+            </button>
+          )}
+          <DownloadLink asset={asset} />
+        </div>
       </div>
     </article>
   )
