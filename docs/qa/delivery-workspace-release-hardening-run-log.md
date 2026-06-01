@@ -564,3 +564,93 @@ is still not complete because the user-approved Metalet `CreatePin` attempt did
 not produce an observable Dan Mercier private-chat history row through
 meta-socket, and Bothub saved the request as a recovery record instead of a
 confirmed sent order.
+
+## CreatePin Diagnostic And Final Live Follow-Up
+
+The controller added temporary-development diagnostics around the Metalet
+`createPin` boundary and re-ran the live free-order flow after meta-socket's
+real MVC indexer was restored.
+
+- Date checked: 2026-06-01 17:38 CST
+- Bothub branch: `codex/delivery-workspace-release-hardening`
+- Dev server: `http://127.0.0.1:5177/`
+- Dev env: `VITE_META_SOCKET_BASE_URL=/meta-socket`,
+  `VITE_USE_AGGREGATOR_MOCK=false`, `VITE_USE_WS_MOCK=false`
+- Local meta-socket: `http://127.0.0.1:18091`
+
+### CreatePin Diagnostic Hardening
+
+Implementation changes:
+
+- `src/order/createPinDiagnostics.ts` records sanitized development-only
+  diagnostics for the `metalet.createPin` handoff.
+- `src/order/payAndRequestStages.ts` records rejected, lost-response,
+  failure-envelope, indeterminate-success, and success-pin phases.
+- `src/components/hub/RequestModal.tsx` shows the sanitized diagnostic payload
+  only behind a development-only `CreatePin diagnostic` details control after a
+  recoverable broadcast failure.
+
+Sensitive request/message material is redacted to type and length metadata
+before being stored in `sessionStorage` or exposed on
+`window.__bothubLastCreatePinDiagnostic`.
+
+Focused verification:
+
+| Command | Result | Notes |
+| --- | --- | --- |
+| `pnpm test -- tests/order/createPinDiagnostics.test.ts` | failed first, then passed | The initial red run failed because the diagnostic module did not exist yet. |
+| `pnpm test -- tests/order/createPinDiagnostics.test.ts tests/order/flow.test.ts` | failed first, then passed | The second red run proved the order flow did not yet record createPin failures. |
+| `pnpm test -- tests/order/createPinDiagnostics.test.ts tests/order/flow.test.ts tests/components/hub/RequestModal.test.tsx` | passed | 57 test files / 431 tests passed after the UI diagnostic panel was implemented. |
+| `pnpm build` | passed | TypeScript build and Vite production build completed with the existing large-chunk warning. |
+| `pnpm lint` | passed | ESLint completed with `--max-warnings 0`. |
+
+### Real Free Order Retry
+
+The free order flow was retried in Chrome with the real Metalet wallet after
+the diagnostics were added.
+
+| Check | Result | Evidence |
+| --- | --- | --- |
+| Wallet connect | passed | Chrome showed `SunnyFung` / `idq1zf...kgv0`. |
+| Service detail | passed | `Free Ecommerce Store Blueprint` loaded from local meta-socket with `0 SPACE`, native MVC settlement, payment address `12FxJzsxhQ5snAieJ5MPo9x9bhAZ2e3ejc`, and provider chat key. |
+| Metalet createPin prompt | reached | Wallet displayed one MVC `/protocols/simplemsg` createPin, broadcast `Yes`, and cost `1,175 sats` / `0.00001175 SPACE`; the user explicitly confirmed the final wallet click. |
+| Bothub post-confirm state | passed | Bothub navigated to `/delivery?order=idq1zfazvxaq69uw6txe3ewce30ewyhy9a7mzykgv0%3A12FxJzsxhQ5snAieJ5MPo9x9bhAZ2e3ejc%3A02ac4091512dfc67492adb590b00db1eee575969a7d9a3042ae6d4b3d44e4ffa`, showed status `等待接单`, timeline `请求已发送`, and the free request record. |
+| RPC transaction lookup | passed | MVC RPC `getrawtransaction` found tx `f49060769beb4644338e31577301390fd5827d372a60fdac763ad96db206fd75`; decoded OP_RETURN path was `/protocols/simplemsg`. |
+| Mempool status | pending confirmation | MVC RPC `getmempoolentry` still returned the tx at block height `175627` with fee `0.00001175`. No confirmations were present at the latest check. |
+| meta-socket private-chat visibility | pending confirmation/indexing | `private-chat-list` for buyer/provider still returned `total: 0`, `list: null`; meta-socket logs showed indexing through block `175625` while the RPC tip and mempool entry were at `175627`. |
+
+This supersedes the earlier failed free-order retry. The latest frontend path is
+accepted through buyer order creation. Provider-side visibility is not yet
+proven because the transaction is still unconfirmed and the local meta-socket
+instance has `META_SOCKET_ZMQ_ENABLED=false`, so it does not index mempool
+events.
+
+### Paid Native Safe-Step
+
+The first real paid service reachable from the local list was tested only up to
+the safe next step.
+
+| Check | Result | Evidence |
+| --- | --- | --- |
+| Service selected | passed | `紫微斗数算命 v2` / `metabot-ziwei-fortune-v2`, provider `BOT-009`, service id `09d5b9dc05b816d0d6f0641d03f8d42235cb162f9f76e3329805a0c4ca376669i0`. |
+| Review step | passed | The modal showed provider `BOT-009` and price `0.01 SPACE`. |
+| Safe-step payment handoff | blocked externally | Clicking `Confirm & pay` stopped before wallet transfer with `Service payment address is missing`. |
+| Detail payload | blocked externally | The service detail has `price: "0.01"` and `currency: "SPACE"`, but empty `settlementKind`, `paymentChain`, and `paymentAddress`; `provider.chatPubkey` is present. |
+
+A meta-socket issue was filed at:
+
+```text
+/Users/tusm/Documents/MetaID_Projects/meta-socket/issues/2026-06-01-bothub-paid-service-payment-metadata-gap.md
+```
+
+### Current Release Implication
+
+Bothub's frontend release-hardening work is code-complete for this plan's
+frontend scope, including the latest createPin diagnostic safety net. Strict
+live release acceptance still has two external runtime conditions:
+
+1. The paid native service detail needs valid settlement metadata before a safe
+   wallet transfer confirmation can be reached.
+2. The free order's provider-side visibility should be rechecked after MVC
+   confirmation and meta-socket block indexing catch up. If unconfirmed
+   provider visibility is required, meta-socket would need mempool/ZMQ support.

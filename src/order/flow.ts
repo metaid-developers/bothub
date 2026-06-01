@@ -9,6 +9,7 @@ export {
   prepareEncryptedOrderMessage,
   validatePayAndRequestInput,
 } from './payAndRequestStages'
+export { getLastCreatePinDiagnostic } from './createPinDiagnostics'
 
 export type {
   ExecutePayAndRequestInput,

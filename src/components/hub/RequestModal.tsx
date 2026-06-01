@@ -13,6 +13,7 @@ import {
   buildDeliveryOrderPath,
   buildDeliverySessionPath,
   executePayAndRequest,
+  getLastCreatePinDiagnostic,
   isFreeServicePrice,
   PayAndRequestBroadcastError,
   PayAndRequestError,
@@ -50,6 +51,7 @@ export function RequestModal({ open, onClose, service, provider, wallet }: Reque
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [recoverableDeliveryPath, setRecoverableDeliveryPath] = useState<string | null>(null)
   const [retryDisabled, setRetryDisabled] = useState(false)
+  const [createPinDiagnosticJson, setCreatePinDiagnosticJson] = useState<string | null>(null)
 
   const price = useMemo(() => formatPrice(service.price, service.currency), [service])
   const providerName = provider.name?.trim() || 'Unknown Bot'
@@ -62,6 +64,7 @@ export function RequestModal({ open, onClose, service, provider, wallet }: Reque
     setErrorMessage(null)
     setRecoverableDeliveryPath(null)
     setRetryDisabled(false)
+    setCreatePinDiagnosticJson(null)
     onClose()
   }, [onClose])
 
@@ -69,6 +72,7 @@ export function RequestModal({ open, onClose, service, provider, wallet }: Reque
     setErrorMessage(null)
     setRecoverableDeliveryPath(null)
     setRetryDisabled(false)
+    setCreatePinDiagnosticJson(null)
     if (!wallet?.globalMetaId?.trim()) {
       setErrorMessage('Connect your Metalet wallet before sending a request.')
       setStep('error')
@@ -133,6 +137,8 @@ export function RequestModal({ open, onClose, service, provider, wallet }: Reque
       resetAndClose()
     } catch (err) {
       if (err instanceof PayAndRequestBroadcastError) {
+        const diagnostic = import.meta.env.DEV ? getLastCreatePinDiagnostic() : null
+        setCreatePinDiagnosticJson(diagnostic ? JSON.stringify(diagnostic, null, 2) : null)
         let deliveryPath: string | null = null
         let savedForRecovery = false
         try {
@@ -319,6 +325,16 @@ export function RequestModal({ open, onClose, service, provider, wallet }: Reque
               <p className="rounded-lg border border-red-500/40 bg-red-950/30 px-3 py-2 text-sm text-red-200">
                 {errorMessage}
               </p>
+              {createPinDiagnosticJson ? (
+                <details className="rounded-lg border border-hub-border bg-hub-surface2/70 px-3 py-2 text-xs text-hub-muted">
+                  <summary className="cursor-pointer text-hub-accent">
+                    CreatePin diagnostic
+                  </summary>
+                  <pre className="mt-2 max-h-48 overflow-auto whitespace-pre-wrap break-words">
+                    {createPinDiagnosticJson}
+                  </pre>
+                </details>
+              ) : null}
               <div className="flex justify-end gap-2">
                 <button
                   type="button"

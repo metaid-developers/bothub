@@ -1,8 +1,8 @@
 # Delivery Workspace V1 Acceptance Notes
 
 **Date:** 2026-06-01
-**Dev URL:** http://localhost:5177/
-**Bothub revision checked:** `96675d3`
+**Dev URL:** http://127.0.0.1:5177/
+**Bothub revision checked:** `codex/delivery-workspace-release-hardening`
 **Dev env:** `VITE_META_SOCKET_BASE_URL=/meta-socket`, `VITE_USE_AGGREGATOR_MOCK=false`, `VITE_USE_WS_MOCK=false`
 **Local meta-socket:** http://127.0.0.1:18091
 **Public idchat chat API:** https://api.idchat.io/chat-api/
@@ -11,10 +11,11 @@
 
 | Check | Status | Evidence |
 | --- | --- | --- |
-| Unit/component suite | passed | Final Task 9 gate `pnpm test`: 56 files / 427 tests passed on 2026-06-01. Existing React Router, FocusTrap, profile-offline, and act warnings remain. |
-| Production build | passed | Final Task 9 gate `pnpm build` completed. Vite reported the existing large-chunk warning for `dist/assets/index-DS6QwvM7.js`. |
-| Lint | passed | Final Task 9 gate `pnpm lint` completed with `--max-warnings 0`. |
-| Whitespace | passed | Final Task 9 gate `git diff --check` completed with no whitespace errors. |
+| Unit/component suite | passed | Latest hardening gate `pnpm test`: 57 files / 431 tests passed on 2026-06-01. Existing React Router, FocusTrap, profile-offline, and act warnings remain. |
+| Production build | passed | Latest hardening gate `pnpm build` completed. Vite reported the existing large-chunk warning. |
+| Lint | passed | Latest hardening gate `pnpm lint` completed with `--max-warnings 0`. |
+| Whitespace | passed | Latest hardening gate `git diff --check` completed with no whitespace errors. |
+| Local meta-socket smoke | passed | `META_SOCKET_BASE_URL=http://127.0.0.1:18091 pnpm smoke:meta-socket` passed with skill-service list/detail, Socket.IO heartbeat, private-chat homes, and empty-history compatibility checks. |
 
 ## Seeded/Local Cache Acceptance
 
@@ -31,45 +32,50 @@
 
 | Check | Status | Evidence |
 | --- | --- | --- |
-| Local meta-socket health | passed | Endpoint correction check on 2026-06-01: `curl http://127.0.0.1:18091/healthz` returned HTTP 200 with `service: meta-socket`, `status: ok`, and `version: dev`. |
-| Local service list | blocked | `curl http://127.0.0.1:18091/api/bot-hub/skill-service/list?size=3&chainName=mvc&sortBy=updated&order=desc` returned `code: 0` but an empty `data.list`; `META_SOCKET_BASE_URL=http://127.0.0.1:18091 pnpm smoke:meta-socket` therefore failed with `skill-service list returned an empty list`. Meta-socket follow-up `f29a3e6` confirms this is runtime/data readiness: the launchd service uses `META_SOCKET_BLOCK_INDEX_ENABLED=false` and a temporary empty Pebble dir. |
-| Public idchat chat API | passed | `curl https://api.idchat.io/chat-api/`, `/chat-api/health`, and `/chat-api/status` returned HTTP 200; the root payload identifies `service: group-chat`. |
-| Public BotHub service list | blocked | `https://api.idchat.io/api/bot-hub/skill-service/list?...` still returned `HTTP/1.1 502 Bad Gateway`; `https://api.idchat.io/chat-api/api/bot-hub/skill-service/list?...` and `https://api.idchat.io/chat-api/bot-hub/skill-service/list?...` returned 404, so the idchat `/chat-api/` prefix does not expose the BotHub aggregator route. |
-| Public smoke script | blocked | `META_SOCKET_BASE_URL=https://api.idchat.io/chat-api pnpm smoke:meta-socket` failed at `/chat-api/healthz` with HTTP 404; the smoke script targets native meta-socket `/healthz` and `/api/bot-hub/*` endpoints. |
-| Mock-disabled service list in browser | blocked | Current terminal checks show no usable live service list: local returns an empty list, and public BotHub aggregator paths return 502/404. No mock service names were used as live evidence. |
-| Live service detail | blocked | Not reachable because no live service id is available from the current local/public service lists. |
-| Live Pay & Request modal | blocked | Not reachable because no live service detail can be selected with mocks disabled. |
+| Local meta-socket health | passed | `curl http://127.0.0.1:18091/healthz` returned a healthy `meta-socket` envelope. |
+| Local service list | passed | The restored MVC indexer returns real skill-service rows. A `size=10` list check returned paid service `metabot-ziwei-fortune-v2` plus multiple free services with native MVC metadata. |
+| Local service detail | partially passed | Free service detail includes provider chat key and native MVC payment metadata. Paid service `metabot-ziwei-fortune-v2` includes provider chat key and `0.01 SPACE`, but its settlement fields are empty. |
+| Public idchat chat API | passed | Current quick check: `https://api.idchat.io/chat-api/` returned HTTP 200 and identifies `service: group-chat`. |
+| Public BotHub service list | blocked | Current quick check: `https://api.idchat.io/api/bot-hub/skill-service/list?...` returned HTTP 502, and `https://api.idchat.io/chat-api/api/bot-hub/skill-service/list?...` returned HTTP 404. Bothub should keep targeting native meta-socket `/api/bot-hub/*` routes, not `/chat-api/`. |
+| Mock-disabled browser service list | passed locally | Chrome at `http://127.0.0.1:5177/` loaded real services from local meta-socket with mocks disabled. |
+| Private-chat empty-history shape | passed | meta-socket returns `data.list: null` for an empty private-chat history; Bothub now normalizes this as an empty list and the smoke script treats it as compatible. |
 
 ## Chrome + Metalet Acceptance
 
 | Check | Status | Evidence |
 | --- | --- | --- |
-| Connect real Metalet wallet | blocked | Chrome opened `http://localhost:5177/`, but `window.metaidwallet`, `window.metalet`, and `window.ethereum` were absent; clicking `连接钱包` showed `Metalet wallet extension is not installed`. Screenshots: `/tmp/bothub-task9-chrome-service-blocked.png`, `/tmp/bothub-task9-chrome-wallet-blocked.png`. |
-| Real free order run | blocked | No live free service could be selected: local BotHub service list returned an empty list, public BotHub aggregator paths returned 502/404, and the Chrome profile lacked Metalet injection. |
-| Real paid native order run | blocked | No paid service could be selected because live service list/detail is unavailable, and real Chrome wallet connection is blocked by missing Metalet injection. |
+| Connect real Metalet wallet | passed | Chrome connected the real Metalet identity `SunnyFung` / `idq1zf...kgv0`. |
+| Real free order run | passed for buyer send | The user-approved Metalet `CreatePin` confirmation wrote tx `f49060769beb4644338e31577301390fd5827d372a60fdac763ad96db206fd75`; Bothub navigated to `/delivery?order=...02ac4091512dfc67492adb590b00db1eee575969a7d9a3042ae6d4b3d44e4ffa`, showed `等待接单`, `请求已发送`, and the free request record. |
+| Free order provider visibility | pending confirmation/indexing | MVC RPC still reported the tx in mempool at block height `175627` with fee `0.00001175`; local meta-socket logs showed indexing through block `175625`, and private-chat history still returned `total: 0`, `list: null`. |
+| Real paid native order safe-step | blocked externally | `紫微斗数算命 v2` review reached provider `BOT-009` and price `0.01 SPACE`, then stopped before wallet transfer with `Service payment address is missing` because the paid service detail has empty `settlementKind`, `paymentChain`, and `paymentAddress`. |
 | Controlled final asset run | passed | In-app Playwright restored `Task 9 Controlled Delivery` from IndexedDB with a controlled wallet shim, one real image metafile pin, and video/audio/document/archive fallback records; UI showed 5 assets, preview/open/download/fallback controls, copy-one/copy-all buttons, and recovered after refresh. Screenshots: `/tmp/bothub-task9-controlled-assets.png`, `/tmp/bothub-task9-preview-dialog.png`, `/tmp/bothub-task9-copy-controls.png`, `/tmp/bothub-task9-refresh-recovery.png`. |
 
 ## Active Blockers
 
-1. Local meta-socket is listening and healthy, but its BotHub skill-service list currently returns an empty list.
-2. Meta-socket maintainers confirmed the local empty list is not a Bothub frontend bug or a new meta-socket handler bug; the current local launchd service is not indexing real `/protocols/skill-service` data.
-3. Public `https://api.idchat.io/chat-api/` is healthy for idchat group-chat endpoints, but it does not expose BotHub `/api/bot-hub/*` aggregation paths.
-4. The Chrome profile reachable to Codex does not expose Metalet on `localhost:5177`, so real wallet prompts cannot be accepted in this run.
-5. Real Chrome + Metalet order acceptance needs a healthy live service list/detail payload before any wallet prompts or payments should be attempted.
+1. Paid native live acceptance is blocked by meta-socket/service data: paid service `metabot-ziwei-fortune-v2` returns `price: "0.01"` and `currency: "SPACE"` but empty `settlementKind`, `paymentChain`, and `paymentAddress`.
+2. Free order provider-side visibility is not yet proven. The buyer send succeeded and the transaction is visible to MVC RPC, but it was still in mempool at the latest check and local meta-socket had not indexed the containing block.
+3. Public `https://api.idchat.io/chat-api/` is healthy for idchat group/private chat, but public BotHub native `/api/bot-hub/*` routes are still not a usable production base URL.
 
-## Related Issue
+## Related Issues
 
-The active external blocker and maintainer triage are tracked in:
+The active external blockers and prior maintainer triage are tracked in:
 
 ```text
+/Users/tusm/Documents/MetaID_Projects/meta-socket/issues/2026-06-01-bothub-paid-service-payment-metadata-gap.md
 /Users/tusm/Documents/MetaID_Projects/meta-socket/issues/2026-06-01-bothub-skill-service-availability-gap.md
 /Users/tusm/Documents/MetaID_Projects/meta-socket/issues/2026-05-31-bothub-aggregator-readiness.md
 /Users/tusm/Documents/MetaID_Projects/meta-socket/issues/issues-fixed-logs.md
 ```
 
-Meta-socket commit `f29a3e6 docs: record bothub skill-service availability gap`
-records the maintainer conclusion: no code change is recommended solely for the
-empty-list symptom; the remaining backend action is to run an acceptance or
-production meta-socket instance with MVC block indexing enabled and real RPC
-credentials, or publish a documented base URL where native `/api/bot-hub/*`
-routes are healthy and backed by indexed `/protocols/skill-service` data.
+## Release Readiness Conclusion
+
+Bothub's frontend implementation for the delivery workspace release-hardening
+plan is complete for the current scope: buyer-facing copy, order-focused
+navigation, local recovery, asset preview/download, real local meta-socket
+loading, free-order buyer send, and sanitized `createPin` diagnostics are all
+covered.
+
+Strict production release remains conditional on backend/runtime readiness:
+paid services need valid settlement metadata, and the free order should be
+rechecked after MVC confirmation and meta-socket block indexing catch up. No
+Bothub backend was added.

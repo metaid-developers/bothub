@@ -124,6 +124,7 @@ describe('RequestModal', () => {
 
   afterEach(() => {
     vi.restoreAllMocks()
+    delete window.__bothubLastCreatePinDiagnostic
   })
 
   it('persists the pending order and hydrates before navigating to Delivery', async () => {
@@ -752,5 +753,68 @@ describe('RequestModal', () => {
       prompt: 'Free fortune',
       partial,
     })
+  })
+
+  it('shows sanitized createPin diagnostics behind dev-only details after a recoverable broadcast failure', async () => {
+    const partial: PreparedPayAndRequest = {
+      service,
+      provider,
+      prompt: 'Free diagnostic',
+      payment: {
+        paymentTxid: '',
+        paymentCommitTxid: '',
+        orderReference: 'free-order-ref-2',
+      },
+      orderPayload: '[ORDER] Free diagnostic\norder id: free-order-ref-2',
+      encryptedContent: 'ciphertext',
+      simplemsgBody: '{"content":"ciphertext"}',
+      sessionKey: 'idqprovider:free-order-ref-2',
+      displaySummary: 'Free diagnostic',
+    }
+    window.__bothubLastCreatePinDiagnostic = {
+      at: '2026-06-01T00:00:00.000Z',
+      phase: 'failure_envelope',
+      serviceId: service.id,
+      serviceName: service.serviceName,
+      providerGlobalMetaId: provider.globalMetaId,
+      providerName: provider.name ?? '',
+      paymentTxid: '',
+      orderReference: 'free-order-ref-2',
+      sessionKey: 'idqprovider:free-order-ref-2',
+      resolvedPinId: '',
+      failureMessage: 'user canceled',
+      errorName: '',
+      errorMessage: '',
+      txidCandidates: [],
+      resultShape: { type: 'object', keys: ['error'] },
+    }
+    executePayAndRequest.mockRejectedValue(
+      new PayAndRequestBroadcastError('Order pin broadcast failed', partial),
+    )
+
+    render(
+      <MemoryRouter>
+        <RequestModal
+          open
+          onClose={vi.fn()}
+          service={service}
+          provider={provider}
+          wallet={wallet}
+        />
+      </MemoryRouter>,
+    )
+
+    fireEvent.change(screen.getByLabelText(/describe what you need/i), {
+      target: { value: 'Free diagnostic' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Review' }))
+    fireEvent.click(screen.getByRole('button', { name: /confirm & pay/i }))
+
+    fireEvent.click(await screen.findByText('CreatePin diagnostic'))
+
+    expect(screen.getByText(/failure_envelope/)).toBeInTheDocument()
+    expect(screen.getByText(/user canceled/)).toBeInTheDocument()
+    expect(screen.queryByText(/ciphertext/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/\[ORDER\]/)).not.toBeInTheDocument()
   })
 })

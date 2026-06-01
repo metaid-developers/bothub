@@ -12,6 +12,8 @@ import {
   CREATE_PIN_WALLET_RESPONSE_TIMEOUT_MS,
   ECDH_WALLET_RESPONSE_TIMEOUT_MS,
 } from '@/order/walletTimeout'
+import { getLastCreatePinDiagnostic } from '@/order/createPinDiagnostics'
+import { clearTestSessionStorage } from '../setup'
 
 const provider: ProviderInfo = {
   metaid: 'provider-metaid',
@@ -551,6 +553,7 @@ describe('executePayAndRequest', () => {
   })
 
   it('throws a broadcast error with a free order reference when createPin fails', async () => {
+    clearTestSessionStorage()
     vi.spyOn(crypto, 'getRandomValues').mockImplementation((array) => {
       if (array instanceof Uint8Array) {
         array.fill(0x0b)
@@ -581,6 +584,12 @@ describe('executePayAndRequest', () => {
         },
         sessionKey: `${provider.globalMetaId}:${expectedOrderReference}`,
       },
+    })
+    expect(getLastCreatePinDiagnostic()).toMatchObject({
+      phase: 'rejected',
+      providerGlobalMetaId: provider.globalMetaId,
+      orderReference: expectedOrderReference,
+      errorMessage: 'network down',
     })
   })
 
