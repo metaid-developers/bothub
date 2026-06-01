@@ -2,7 +2,7 @@
 
 **Date:** 2026-06-01
 **Dev URL:** http://localhost:5177/
-**Bothub revision:** `09eefb3`
+**Bothub revision checked:** `96675d3`
 **Dev env:** `VITE_META_SOCKET_BASE_URL=/meta-socket`, `VITE_USE_AGGREGATOR_MOCK=false`, `VITE_USE_WS_MOCK=false`
 **Local meta-socket:** http://127.0.0.1:18091
 **Public meta-socket:** https://api.idchat.io
@@ -11,10 +11,10 @@
 
 | Check | Status | Evidence |
 | --- | --- | --- |
-| Unit/component suite | passed | `pnpm test`: 56 files / 427 tests passed on 2026-06-01. Existing React Router, FocusTrap, profile-offline, and act warnings remain. |
-| Production build | passed | `pnpm build` completed. Vite reported the existing large-chunk warning for `dist/assets/index-DS6QwvM7.js`. |
-| Lint | passed | `pnpm lint` completed with `--max-warnings 0`. |
-| Whitespace | passed | `git diff --check` completed with no whitespace errors. |
+| Unit/component suite | passed | Final Task 9 gate `pnpm test`: 56 files / 427 tests passed on 2026-06-01. Existing React Router, FocusTrap, profile-offline, and act warnings remain. |
+| Production build | passed | Final Task 9 gate `pnpm build` completed. Vite reported the existing large-chunk warning for `dist/assets/index-DS6QwvM7.js`. |
+| Lint | passed | Final Task 9 gate `pnpm lint` completed with `--max-warnings 0`. |
+| Whitespace | passed | Final Task 9 gate `git diff --check` completed with no whitespace errors. |
 
 ## Seeded/Local Cache Acceptance
 
@@ -43,16 +43,17 @@
 
 | Check | Status | Evidence |
 | --- | --- | --- |
-| Connect real Metalet wallet | not run | Reserved for Task 9 independent Chrome + Metalet acceptance. |
-| Real free order run | blocked | Dependent on live service list/detail availability; current meta-socket checks are blocked. |
-| Real paid native order run | blocked | Dependent on live service list/detail availability; current meta-socket checks are blocked. |
-| Real provider-delivered asset run | blocked | Dependent on a live provider order; controlled real-metafile local-cache acceptance passed above. |
+| Connect real Metalet wallet | blocked | Chrome opened `http://localhost:5177/`, but `window.metaidwallet`, `window.metalet`, and `window.ethereum` were absent; clicking `连接钱包` showed `Metalet wallet extension is not installed`. Screenshots: `/tmp/bothub-task9-chrome-service-blocked.png`, `/tmp/bothub-task9-chrome-wallet-blocked.png`. |
+| Real free order run | blocked | No live free service could be selected: Chrome showed `Could not load services` and `Unexpected end of JSON input`; public service list returned `HTTP/1.1 502 Bad Gateway`. |
+| Real paid native order run | blocked | No paid service could be selected because live service list/detail is unavailable, and real Chrome wallet connection is blocked by missing Metalet injection. |
+| Controlled final asset run | passed | In-app Playwright restored `Task 9 Controlled Delivery` from IndexedDB with a controlled wallet shim, one real image metafile pin, and video/audio/document/archive fallback records; UI showed 5 assets, preview/open/download/fallback controls, copy-one/copy-all buttons, and recovered after refresh. Screenshots: `/tmp/bothub-task9-controlled-assets.png`, `/tmp/bothub-task9-preview-dialog.png`, `/tmp/bothub-task9-copy-controls.png`, `/tmp/bothub-task9-refresh-recovery.png`. |
 
 ## Active Blockers
 
 1. Local meta-socket is not listening on `127.0.0.1:18091`.
 2. Public `https://api.idchat.io` currently returns `502 Bad Gateway`.
-3. Real Chrome + Metalet order acceptance needs a healthy live service list/detail payload before any wallet prompts or payments should be attempted.
+3. The Chrome profile reachable to Codex does not expose Metalet on `localhost:5177`, so real wallet prompts cannot be accepted in this run.
+4. Real Chrome + Metalet order acceptance needs a healthy live service list/detail payload before any wallet prompts or payments should be attempted.
 
 ## Related Issue
 

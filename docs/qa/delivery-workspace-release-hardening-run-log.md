@@ -396,3 +396,56 @@ Run before handing this Task 6 pass back for controller review:
 | `pnpm build` | passed | TypeScript build and Vite production build completed. Vite reported the existing large-chunk warning for the app bundle. |
 | `pnpm lint` | passed | ESLint completed with `--max-warnings 0`. |
 | `git diff --check` | passed | No whitespace errors in the Bothub diff. |
+
+## Task 9 Independent Chrome + Metalet Final Acceptance
+
+Task 9 attempted final acceptance on the current mock-disabled dev server. The planned independent subagent could not be opened because the thread limit was already reached, and closing one stale subagent hung; the controller completed the acceptance steps directly rather than waiting on the stuck cleanup operation.
+
+- Date checked: 2026-06-01 09:51 CST / 2026-06-01 01:51 UTC
+- Bothub base revision: `96675d3`
+- Dev server: `http://localhost:5177/`
+- Dev env: `VITE_META_SOCKET_BASE_URL=/meta-socket`, `VITE_USE_AGGREGATOR_MOCK=false`, `VITE_USE_WS_MOCK=false`
+- Existing external blocker: `/Users/tusm/Documents/MetaID_Projects/meta-socket/issues/2026-05-31-bothub-aggregator-readiness.md`
+
+### Task 9 Service And Wallet Evidence
+
+| Check | Result | Evidence |
+| --- | --- | --- |
+| Dev server | passed | `curl -I http://localhost:5177/delivery` returned `HTTP/1.1 200 OK`. |
+| Local meta-socket health | blocked | `curl -m 8 http://127.0.0.1:18091/healthz` failed with connection refused. |
+| Public meta-socket health | blocked | `curl -m 12 https://api.idchat.io/healthz` returned `HTTP/1.1 502 Bad Gateway` from nginx. |
+| Public service list | blocked | `curl -m 12 https://api.idchat.io/api/bot-hub/skill-service/list?size=3&chainName=mvc&sortBy=updated&order=desc` returned `HTTP/1.1 502 Bad Gateway`. |
+| Chrome service list | blocked | Chrome at `http://localhost:5177/` showed `Could not load services` and `Unexpected end of JSON input`. Screenshot: `/tmp/bothub-task9-chrome-service-blocked.png`. |
+| Chrome Metalet injection | blocked | Chrome page probe found no `window.metaidwallet`, `window.metalet`, or `window.ethereum`; clicking `连接钱包` showed `Metalet wallet extension is not installed`. Screenshot: `/tmp/bothub-task9-chrome-wallet-blocked.png`. |
+
+### Task 9 Order Flow Status
+
+| Flow | Result | Evidence |
+| --- | --- | --- |
+| Real free order | blocked | No live free service could be selected because service list/detail loading is blocked by the meta-socket 502 response. Wallet connection was also blocked by missing Metalet injection in Chrome. |
+| Real paid native order | blocked | No paid service could be selected because service list/detail loading is blocked. No payment prompt was attempted because Chrome did not expose Metalet and no amount/receiver could be inspected from a real service detail. |
+| Meta-socket issue handling | passed | No new meta-socket issue was created because Task 9 observed the same aggregator readiness outage already tracked by the existing issue. |
+
+### Task 9 Controlled Asset Acceptance
+
+Because real provider ordering is blocked, Task 9 used the allowed controlled real-metafile asset path. In-app Playwright seeded one connected wallet, one delivered order, one delivery message, and five local asset records. The image asset used the real metafile pin `b081b32c2891f0e2b2b8dccc22b3256ebf54957aaa43053f712d90646f377ed6i0`; video/audio/document/archive records used controlled extension-specific metafile records to verify fallback/open/download UI.
+
+| Check | Result | Evidence |
+| --- | --- | --- |
+| Restored delivered order | passed | `/delivery?task9=1` showed `Task 9 Controlled Delivery`, `Task 9 Provider`, `已交付`, and `5 个成果`. Screenshot: `/tmp/bothub-task9-controlled-assets.png`. |
+| Image preview/open/download | passed | UI exposed preview/open/download for the real image pin; opening preview showed a dialog with `打开` and `下载`. Screenshot: `/tmp/bothub-task9-preview-dialog.png`. |
+| Video/audio fallback | passed | UI showed video and audio records with `预览暂不可用，可打开文件`, plus open/download actions. |
+| Document/archive open/download | passed | UI showed document and archive records with fallback copy and open/download actions. |
+| Copy one/copy all | passed | Browser clicks on first `复制链接` and `复制全部链接` buttons succeeded; clipboard contents were not read to avoid a browser permission wait. Screenshot: `/tmp/bothub-task9-copy-controls.png`. |
+| Refresh recovery | passed | After reload, the controlled wallet remained connected and the delivered order, `已交付` status, and 5 assets were restored. Screenshot: `/tmp/bothub-task9-refresh-recovery.png`. |
+
+### Task 9 Final Gate
+
+Run after the Task 9 documentation edits:
+
+| Command | Result | Notes |
+| --- | --- | --- |
+| `pnpm test` | passed | 56 test files / 427 tests passed. Existing React Router, FocusTrap, profile-offline, and act warnings were observed. |
+| `pnpm build` | passed | TypeScript build and Vite production build completed. Vite reported the existing large-chunk warning for `dist/assets/index-DS6QwvM7.js`. |
+| `pnpm lint` | passed | ESLint completed with `--max-warnings 0`. |
+| `git diff --check` | passed | No whitespace errors after the Task 9 documentation edits. |
