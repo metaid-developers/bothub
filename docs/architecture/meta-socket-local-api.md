@@ -9,36 +9,31 @@
 - Socket.IO 主路径：`/socket/socket.io`
 - Socket.IO 兼容路径：`/socket.io`
 - 健康检查：`GET http://127.0.0.1:18091/healthz`
-- 本轮同步范围：MVC `170726 -> 175046`
-- 最新核对时间：`2026-05-28 19:22 CST`
-- 最新日志确认：目标块高 `175046` 已完成解析，服务随后继续跟到 `175052`
-- 本地启动方式：`launchctl` 后台服务，label 为 `com.codex.meta-socket.mvc30d.18091`
-- 本地数据目录：`/tmp/meta-socket-mvc-30d-pebble`
-- 日志文件：`/tmp/meta-socket-mvc-30d.err`
+- 当前运行实例：真实 MVC 索引实例，MVC block index 已开启
+- 最新核对时间：`2026-06-02 00:28 CST`
+- 本地启动方式：`launchctl` 后台服务，label 为 `com.metaid.meta-socket.mvc30d.18091`
+- 二进制：`/Users/tusm/.local/bin/meta-socket`
+- 本地数据目录：`/Users/tusm/.local/var/meta-socket/mvc-30d-pebble`
 
 停止本机服务：
 
 ```bash
-launchctl remove com.codex.meta-socket.mvc30d.18091
+launchctl remove com.metaid.meta-socket.mvc30d.18091
 ```
 
-注意：块 `174983` 曾出现一次 `CatchPins error`，原因是某个 transaction output script 超过当前解析器限制。因此 30 天数据整体可用于 Bothub 联调，但该块的数据可能缺失。
+当前 `GET /healthz` 返回 `code=0`、`status=ok`，`GET /api/bot-hub/skill-service/list?size=3&chainName=mvc&sortBy=updated&order=desc` 返回 `count=3`。
 
 ## 2. Bothub 本地环境配置
 
-Bothub 当前配置读取 `VITE_META_SOCKET_BASE_URL`。联调真实本地数据时建议在 `.env.local` 使用：
+Bothub 当前配置读取 `VITE_META_SOCKET_BASE_URL`。本地/private beta 推荐在 `.env.local` 使用同源 Vite proxy：
 
 ```dotenv
-VITE_META_SOCKET_BASE_URL=http://127.0.0.1:18091
+VITE_META_SOCKET_BASE_URL=/meta-socket
 VITE_USE_AGGREGATOR_MOCK=false
 VITE_USE_WS_MOCK=false
 ```
 
-如果浏览器前端从 `http://127.0.0.1:5176` 直接请求 `http://127.0.0.1:18091`，会遇到跨端口 CORS 限制；当前 meta-socket 未对 `OPTIONS` 预检返回 CORS 头。推荐在 Vite dev server 做本地代理，例如把 `/meta-socket` 代理到 `http://127.0.0.1:18091`，前端 env 使用同源路径：
-
-```dotenv
-VITE_META_SOCKET_BASE_URL=/meta-socket
-```
+Vite dev server 已配置把 `/meta-socket` 代理到 `http://127.0.0.1:18091`，避免浏览器跨端口 CORS 预检问题。
 
 代理方向示例：
 
@@ -155,7 +150,7 @@ interface SkillServiceDetailEnvelope {
 }
 ```
 
-## 4. IDChat 兼容 HTTP API
+## 4. meta-socket 兼容 HTTP API
 
 这些接口主要用于验证 meta-socket 对 IDChat 前端兼容面的覆盖情况。因为本轮只同步 30 天数据，较早的 user init、profile、group create 等元数据可能缺失；近期聊天消息、Bothub skill-service 数据已经有真实返回。
 
@@ -220,22 +215,31 @@ GET /api/group-chat/channel-chat-list-by-index
 ### 4.3 私聊
 
 ```http
+GET /api/private-chat/homes/:metaId
+GET /api/private-chat/messages?metaId=&otherMetaId=&cursor=&size=20
+GET /api/private-chat/messages/by-index?metaId=&otherMetaId=&startIndex=0&size=20
+GET /api/private-chat/paths?metaId=
+```
+
+这些 canonical `/api/private-chat/*` 路由是 Bothub 新的默认契约，返回 envelope 和旧兼容路由同形。Bothub 只在 canonical 路由返回 `404` 或 `405` 时 fallback 到下面旧路由：
+
+```http
 GET /api/group-chat/private-chat-list?metaId=&otherMetaId=&cursor=&size=20
 GET /api/group-chat/private-chat-list-by-index?metaId=&otherMetaId=&startIndex=0&size=20
 GET /api/group-chat/private-group-paths?metaId=
 GET /api/group-chat/chat/homes/:metaid
 ```
 
-已验证有真实数据的私聊消息 URL：
+已验证有真实数据的 canonical 会话列表 URL：
 
 ```text
-http://127.0.0.1:18091/api/group-chat/private-chat-list?metaId=1JzFmwf498bXRyFiJTrxikSP7xh9iZ3JrX&otherMetaId=idq160rca8swdygt7hn59em03nqhr96zmjd4yd668z&cursor=&size=5
+http://127.0.0.1:18091/api/private-chat/homes/idq1zfazvxaq69uw6txe3ewce30ewyhy9a7mzykgv0
 ```
 
-已验证有真实数据的会话列表 URL：
+已验证有真实数据的 canonical 私聊消息 URL：
 
 ```text
-http://127.0.0.1:18091/api/group-chat/chat/homes/1JzFmwf498bXRyFiJTrxikSP7xh9iZ3JrX
+http://127.0.0.1:18091/api/private-chat/messages?metaId=idq1zfazvxaq69uw6txe3ewce30ewyhy9a7mzykgv0&otherMetaId=idq14hmv23j5fnlx4ccnmvlyldjd38xjsechzwg9xz&cursor=&size=5
 ```
 
 ### 4.4 社区
@@ -348,8 +352,9 @@ http://127.0.0.1:18091/socket/online/stats
 3. 用 `/api/bot-hub/skill-service/list?size=20&chainName=mvc&sortBy=updated&order=desc` 替换 fixture 列表源。
 4. 用 `/api/bot-hub/skill-service/detail/:serviceId?chainName=mvc` 替换 fixture 详情源。
 5. 修正 Socket.IO 连接方式：`io(baseUrl, { path: '/socket/socket.io', ... })`。
-6. 先验收 Socket 连接、心跳和私聊 `message` envelope；群聊 room 推送作为后续项。
-7. 如果需要完整 IDChat profile 或 group metadata，不要只依赖当前 30 天数据，需要扩大同步起点到更早块高。
+6. 用 canonical `/api/private-chat/homes/:metaId` 和 `/api/private-chat/messages` 读取私聊历史；旧 `/api/group-chat/*` 只保留为兼容 fallback。
+7. 先验收 Socket 连接、心跳和私聊 `message` envelope；群聊 room 推送作为后续项。
+8. 如果需要完整 IDChat profile 或 group metadata，不要只依赖当前 30 天数据，需要扩大同步起点到更早块高。
 
 ## 7. 快速 curl 验证
 
@@ -360,7 +365,9 @@ curl -sS 'http://127.0.0.1:18091/api/bot-hub/skill-service/list?size=2&chainName
 
 curl -sS 'http://127.0.0.1:18091/api/bot-hub/skill-service/detail/de703c3c1bd5e99f1040f1b1c79d18d40027b52855f0050fcadcea6243673a8ei0?chainName=mvc'
 
-curl -sS 'http://127.0.0.1:18091/api/group-chat/group-chat-list-v2?groupId=396809572f936c66979755477b15ae9adfe9fae119bdabb8f3ffb9a362a176d0i0&cursor=&size=2'
+curl -sS 'http://127.0.0.1:18091/api/private-chat/homes/idq1zfazvxaq69uw6txe3ewce30ewyhy9a7mzykgv0'
+
+curl -sS 'http://127.0.0.1:18091/api/private-chat/messages?metaId=idq1zfazvxaq69uw6txe3ewce30ewyhy9a7mzykgv0&otherMetaId=idq14hmv23j5fnlx4ccnmvlyldjd38xjsechzwg9xz&cursor=&size=2'
 
 curl -sS 'http://127.0.0.1:18091/socket/online/stats'
 ```

@@ -17,7 +17,7 @@
 
 ## 架构要点
 
-- **Bot Hub**：只读聚合在线服务 + 用户输入需求 + Metalet「Pay & Request」
+- **Bot Hub**：只读聚合在线服务 + 用户输入需求 + Metalet 支付并发单
 - **Delivery**：登录用户 WebSocket + simplemsg 解密渲染（进度、交付物）
 - **数字成果**：图片、视频、音频、附件是核心体验；后续通过 IndexedDB 保存本地会话/资产索引，便于用户下次登录快速查看历史交付
 - **协议** 对齐 IDBots 订单/私信格式即可；**UI** 三端各自实现，不强求复用
@@ -76,7 +76,8 @@ pnpm lint        # ESLint
 - 设计稿布局：`docs/design/bothub-mockup.png`
 - 聚合 API 未上线前：`VITE_USE_AGGREGATOR_MOCK=true`（默认）使用本地 fixtures
 - WebSocket mock：`VITE_USE_WS_MOCK=true` 时 Delivery 不连真实 Socket.IO
-- 生产/预发 meta-socket：`VITE_META_SOCKET_BASE_URL=https://<meta-socket-host>`，必须由 meta-socket 部署直接提供 `/api/bot-hub/*`、私聊历史路由（当前为 `/api/group-chat/chat/homes/:metaId` 和 `/api/group-chat/private-chat-list`）、`/socket/socket.io`；不要指向 idchat `/chat-api/`。
+- 本地/private beta 推荐：`VITE_META_SOCKET_BASE_URL=/meta-socket`、`VITE_USE_AGGREGATOR_MOCK=false`、`VITE_USE_WS_MOCK=false`，由 Vite proxy 转发到 `http://127.0.0.1:18091`。
+- 生产/预发 meta-socket：`VITE_META_SOCKET_BASE_URL=https://<meta-socket-host>`，必须是 meta-socket 根域名，并直接提供 `/api/bot-hub/*`、canonical `/api/private-chat/*`、`/socket/socket.io`；不要指向 idchat `/chat-api/`。旧 `/api/group-chat/*` 私聊路由只作为兼容 fallback，不是新部署契约。
 - Metafile 交付物读取：`VITE_METAFILE_ACCELERATE_CONTENT_BASE` 默认使用加速内容 API，`VITE_METAFILE_CONTENT_BASE` 作为普通内容 fallback。
 
 ## 当前基线（M8）
