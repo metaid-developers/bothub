@@ -99,6 +99,69 @@ Run before handing this Task 4 pass back for controller review:
 | `git diff --check` | passed | No whitespace errors in the Bothub diff. |
 | `git -C /Users/tusm/Documents/MetaID_Projects/meta-socket diff --check` | passed | No whitespace errors in the meta-socket issue diff. |
 
+## Task 8 Truthful Acceptance Documentation
+
+Task 8 replaced the previous optimistic acceptance checklist with evidence tables that separate automated/local-cache passes from live meta-socket and Chrome + Metalet blockers.
+
+- Date checked: 2026-06-01 08:40 CST / 2026-06-01 00:40 UTC
+- Bothub base revision: `09eefb3`
+- Dev server: `http://localhost:5177/`
+- Dev env: `VITE_META_SOCKET_BASE_URL=/meta-socket`, `VITE_USE_AGGREGATOR_MOCK=false`, `VITE_USE_WS_MOCK=false`
+- Screenshot artifacts were newly generated under `/tmp` for this task and were not committed.
+
+### Automated Gate Evidence
+
+| Command | Result | Notes |
+| --- | --- | --- |
+| `pnpm test` | passed | 56 test files / 427 tests passed. Existing React Router, FocusTrap, profile-offline, and act warnings were observed. |
+| `pnpm build` | passed | TypeScript build and Vite production build completed. Vite reported the existing large-chunk warning for `dist/assets/index-DS6QwvM7.js`. |
+| `pnpm lint` | passed | ESLint completed with `--max-warnings 0`. |
+| `git diff --check` | passed | No whitespace errors before the Task 8 documentation edit. |
+
+### Real Meta-Socket Checks
+
+| Check | Result | Evidence |
+| --- | --- | --- |
+| Local health | blocked | `curl -m 8 http://127.0.0.1:18091/healthz` failed with `Failed to connect to 127.0.0.1 port 18091`. |
+| Public service list | blocked | `curl -m 12 https://api.idchat.io/api/bot-hub/skill-service/list?size=3&chainName=mvc&sortBy=updated&order=desc` returned `HTTP/1.1 502 Bad Gateway` from nginx. |
+| Local smoke | blocked | `META_SOCKET_BASE_URL=http://127.0.0.1:18091 pnpm smoke:meta-socket` failed at `/healthz` with `fetch failed`. |
+| Public smoke | blocked | `META_SOCKET_BASE_URL=https://api.idchat.io pnpm smoke:meta-socket` failed at `/healthz` with HTTP 502. |
+
+### Browser Checks
+
+| Check | Result | Evidence |
+| --- | --- | --- |
+| Mock-disabled service list | blocked | In-app Browser at `http://localhost:5177/` showed `Could not load services` and `Failed to execute 'json' on 'Response': Unexpected end of JSON input`. Screenshot: `/tmp/bothub-task8-desktop.png`. |
+| Service detail | blocked | Not reachable because live service list is unavailable with mocks disabled. |
+| Pay & Request modal | blocked | Not reachable because no live service detail can be selected with mocks disabled. |
+| Delivery empty state | passed | In-app Browser at `/delivery` showed `我的交付`, wallet-gated copy, `还没有收到成果`, and no normal-state technical terms. Screenshot: `/tmp/bothub-task8-delivery-empty.png`. |
+| Delivery with controlled cached order | passed | Playwright seeded one local wallet/order/session/message/asset and reloaded `/delivery`; UI showed `Controlled Asset Delivery`, `Task 8 Provider`, `已交付`, and `1 个成果`. Screenshot: `/tmp/bothub-task8-seeded-order-playwright.png`. |
+| Controlled real asset URL | passed | Seeded delivery used real metafile pin `b081b32c2891f0e2b2b8dccc22b3256ebf54957aaa43053f712d90646f377ed6i0`; UI exposed preview/open/download/copy controls. Screenshot: `/tmp/bothub-task8-seeded-actions-playwright.png`. |
+| Mobile viewport | passed | Playwright at `390x844` showed delivery title, restored service, asset library, and asset actions without normal-state technical terms. Screenshot: `/tmp/bothub-task8-mobile-seeded-playwright.png`. |
+| Desktop viewport | passed | Playwright at `1280x720` showed restored order detail, timeline, message record, and asset library. Screenshot: `/tmp/bothub-task8-seeded-order-playwright.png`. |
+
+### Acceptance Note Update
+
+`docs/superpowers/acceptance/2026-05-31-delivery-workspace-v1.md` now uses four status tables:
+
+1. Automated gates
+2. Seeded/local cache acceptance
+3. Live meta-socket acceptance
+4. Chrome + Metalet acceptance
+
+Blocked rows use `blocked`; future Chrome + Metalet work that was not executed in Task 8 uses `not run`. No blocked item is represented with a checked checkbox.
+
+### Task 8 Final Gate
+
+Run after the acceptance-note and run-log edits:
+
+| Command | Result | Notes |
+| --- | --- | --- |
+| `pnpm test` | passed | 56 test files / 427 tests passed. Existing warning noise was unchanged. |
+| `pnpm build` | passed | TypeScript build and Vite production build completed with the existing large-chunk warning. |
+| `pnpm lint` | passed | ESLint completed with `--max-warnings 0`. |
+| `git diff --check` | passed | First run caught Markdown trailing spaces in the acceptance note; after removing those hard-break spaces, the command passed. |
+
 ## Task 7 Delivery History Reconciliation
 
 Task 7 reconciled historical delivery messages back into product-order rows.
