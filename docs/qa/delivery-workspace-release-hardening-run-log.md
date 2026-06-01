@@ -122,10 +122,10 @@ Task 8 replaced the previous optimistic acceptance checklist with evidence table
 
 | Check | Result | Evidence |
 | --- | --- | --- |
-| Local health | blocked | `curl -m 8 http://127.0.0.1:18091/healthz` failed with `Failed to connect to 127.0.0.1 port 18091`. |
-| Public service list | blocked | `curl -m 12 https://api.idchat.io/api/bot-hub/skill-service/list?size=3&chainName=mvc&sortBy=updated&order=desc` returned `HTTP/1.1 502 Bad Gateway` from nginx. |
-| Local smoke | blocked | `META_SOCKET_BASE_URL=http://127.0.0.1:18091 pnpm smoke:meta-socket` failed at `/healthz` with `fetch failed`. |
-| Public smoke | blocked | `META_SOCKET_BASE_URL=https://api.idchat.io pnpm smoke:meta-socket` failed at `/healthz` with HTTP 502. |
+| Local health | superseded | This Task 8 check failed at the time with connection refused. The endpoint correction follow-up below later verified local `127.0.0.1:18091/healthz` as healthy. |
+| Public service list | blocked | `curl -m 12 https://api.idchat.io/api/bot-hub/skill-service/list?size=3&chainName=mvc&sortBy=updated&order=desc` returned `HTTP/1.1 502 Bad Gateway` from nginx. The endpoint correction follow-up also verified that `/chat-api/` is healthy for group-chat but does not expose this BotHub route. |
+| Local smoke | superseded | This Task 8 check failed at `/healthz`. The endpoint correction follow-up later reached `/healthz`, then failed at the empty BotHub skill-service list. |
+| Public smoke | blocked | `META_SOCKET_BASE_URL=https://api.idchat.io pnpm smoke:meta-socket` failed at `/healthz` with HTTP 502. The endpoint correction follow-up shows `https://api.idchat.io/chat-api` also cannot satisfy this native meta-socket smoke because `/chat-api/healthz` returns 404. |
 
 ### Browser Checks
 
@@ -412,9 +412,9 @@ Task 9 attempted final acceptance on the current mock-disabled dev server. The p
 | Check | Result | Evidence |
 | --- | --- | --- |
 | Dev server | passed | `curl -I http://localhost:5177/delivery` returned `HTTP/1.1 200 OK`. |
-| Local meta-socket health | blocked | `curl -m 8 http://127.0.0.1:18091/healthz` failed with connection refused. |
-| Public meta-socket health | blocked | `curl -m 12 https://api.idchat.io/healthz` returned `HTTP/1.1 502 Bad Gateway` from nginx. |
-| Public service list | blocked | `curl -m 12 https://api.idchat.io/api/bot-hub/skill-service/list?size=3&chainName=mvc&sortBy=updated&order=desc` returned `HTTP/1.1 502 Bad Gateway`. |
+| Local meta-socket health | superseded | This Task 9 check failed with connection refused. The endpoint correction follow-up below later verified local `127.0.0.1:18091/healthz` as healthy. |
+| Public native health | blocked | `curl -m 12 https://api.idchat.io/healthz` returned `HTTP/1.1 502 Bad Gateway` from nginx. The endpoint correction follow-up verified that `/chat-api/health` is the healthy idchat group-chat health route. |
+| Public service list | blocked | `curl -m 12 https://api.idchat.io/api/bot-hub/skill-service/list?size=3&chainName=mvc&sortBy=updated&order=desc` returned `HTTP/1.1 502 Bad Gateway`. The endpoint correction follow-up also verified that `/chat-api/api/bot-hub/...` and `/chat-api/bot-hub/...` return 404. |
 | Chrome service list | blocked | Chrome at `http://localhost:5177/` showed `Could not load services` and `Unexpected end of JSON input`. Screenshot: `/tmp/bothub-task9-chrome-service-blocked.png`. |
 | Chrome Metalet injection | blocked | Chrome page probe found no `window.metaidwallet`, `window.metalet`, or `window.ethereum`; clicking `连接钱包` showed `Metalet wallet extension is not installed`. Screenshot: `/tmp/bothub-task9-chrome-wallet-blocked.png`. |
 
@@ -422,7 +422,7 @@ Task 9 attempted final acceptance on the current mock-disabled dev server. The p
 
 | Flow | Result | Evidence |
 | --- | --- | --- |
-| Real free order | blocked | No live free service could be selected because service list/detail loading is blocked by the meta-socket 502 response. Wallet connection was also blocked by missing Metalet injection in Chrome. |
+| Real free order | blocked | No live free service could be selected because no usable service list/detail payload was available. Endpoint correction later narrowed this to an empty local BotHub list plus public BotHub 502/404 paths. Wallet connection was also blocked by missing Metalet injection in Chrome. |
 | Real paid native order | blocked | No paid service could be selected because service list/detail loading is blocked. No payment prompt was attempted because Chrome did not expose Metalet and no amount/receiver could be inspected from a real service detail. |
 | Meta-socket issue handling | passed | No new meta-socket issue was created because Task 9 observed the same aggregator readiness outage already tracked by the existing issue. |
 
@@ -449,3 +449,29 @@ Run after the Task 9 documentation edits:
 | `pnpm build` | passed | TypeScript build and Vite production build completed. Vite reported the existing large-chunk warning for `dist/assets/index-DS6QwvM7.js`. |
 | `pnpm lint` | passed | ESLint completed with `--max-warnings 0`. |
 | `git diff --check` | passed | No whitespace errors after the Task 9 documentation edits. |
+
+## Endpoint Correction Follow-Up
+
+The initial Task 9 service evidence treated `https://api.idchat.io` without the idchat prefix as the public health surface. A follow-up check on 2026-06-01 10:11 CST / 2026-06-01 02:11 UTC corrected that assumption: the public idchat chat API is available under `https://api.idchat.io/chat-api/`, while the BotHub skill-service aggregator still needs the native meta-socket `/api/bot-hub/*` routes.
+
+### Current Endpoint Evidence
+
+| Check | Result | Evidence |
+| --- | --- | --- |
+| Listener scan | passed | `lsof -nP -iTCP -sTCP:LISTEN \| rg "(18091\|5176\|5177\|vite\|meta-socket)"` showed `meta-sock` listening on `127.0.0.1:18091` and Vite on local dev ports. |
+| Local meta-socket health | passed | `curl -m 8 http://127.0.0.1:18091/healthz` returned HTTP 200 with `service: meta-socket`, `status: ok`, and `version: dev`. |
+| Local BotHub service list | blocked | `curl http://127.0.0.1:18091/api/bot-hub/skill-service/list?size=3&chainName=mvc&sortBy=updated&order=desc` returned `code: 0`, `schemaVersion: botHubSkillService.v1`, and an empty `data.list`. |
+| Local smoke | blocked | `META_SOCKET_BASE_URL=http://127.0.0.1:18091 pnpm smoke:meta-socket` failed with `skill-service list returned an empty list`. |
+| Public idchat chat API root | passed | `curl https://api.idchat.io/chat-api/` returned HTTP 200 and `{"service":"group-chat",...}`. |
+| Public idchat chat API health/status | passed | `curl https://api.idchat.io/chat-api/health` returned `{"service":"group-chat","status":"ok"}`; `/chat-api/status` returned `{"service":"group-chat","stats":{"indexer":"running","initialized":true}}`. |
+| Public root/native health | blocked | `curl https://api.idchat.io/`, `/health`, and `/status` each returned `HTTP/1.1 502 Bad Gateway`. |
+| Public BotHub service list | blocked | `curl https://api.idchat.io/api/bot-hub/skill-service/list?size=3&chainName=mvc&sortBy=updated&order=desc` returned `HTTP/1.1 502 Bad Gateway`. |
+| BotHub under idchat prefix | blocked | `curl https://api.idchat.io/chat-api/api/bot-hub/skill-service/list?...` and `curl https://api.idchat.io/chat-api/bot-hub/skill-service/list?...` returned 404. This matches meta-socket's router: `/chat-api` aliases group/private chat handlers, not the skill-service aggregator. |
+| Public smoke with idchat prefix | blocked | `META_SOCKET_BASE_URL=https://api.idchat.io/chat-api pnpm smoke:meta-socket` failed at `/chat-api/healthz` with HTTP 404. |
+
+### Corrected Status
+
+- Superseded: the earlier "local meta-socket is not listening" conclusion. Local `127.0.0.1:18091` is currently reachable and healthy.
+- Superseded: treating all of `https://api.idchat.io` as down. The `/chat-api/` idchat group-chat surface is healthy.
+- Still blocked for BotHub release acceptance: no current local/public BotHub skill-service list/detail payload is available. Local returns an empty list; public native BotHub paths return 502; BotHub paths under `/chat-api/` return 404.
+- No frontend endpoint change was made in this follow-up because BotHub's aggregator client correctly targets native meta-socket `/api/bot-hub/*`. Pointing `VITE_META_SOCKET_BASE_URL` at `https://api.idchat.io/chat-api` would produce `/chat-api/api/bot-hub/*`, which is not a mounted route.

@@ -5,7 +5,7 @@
 **Bothub revision checked:** `96675d3`
 **Dev env:** `VITE_META_SOCKET_BASE_URL=/meta-socket`, `VITE_USE_AGGREGATOR_MOCK=false`, `VITE_USE_WS_MOCK=false`
 **Local meta-socket:** http://127.0.0.1:18091
-**Public meta-socket:** https://api.idchat.io
+**Public idchat chat API:** https://api.idchat.io/chat-api/
 
 ## Automated Gates
 
@@ -31,12 +31,13 @@
 
 | Check | Status | Evidence |
 | --- | --- | --- |
-| Local meta-socket health | blocked | `curl http://127.0.0.1:18091/healthz` failed with connection refused on 2026-06-01. |
-| Public service list | blocked | `curl https://api.idchat.io/api/bot-hub/skill-service/list?size=3&chainName=mvc&sortBy=updated&order=desc` returned `HTTP/1.1 502 Bad Gateway`. |
-| Public smoke script | blocked | `META_SOCKET_BASE_URL=https://api.idchat.io pnpm smoke:meta-socket` failed at `/healthz` with HTTP 502. |
-| Local smoke script | blocked | `META_SOCKET_BASE_URL=http://127.0.0.1:18091 pnpm smoke:meta-socket` failed at `/healthz` because fetch could not connect. |
-| Mock-disabled service list in browser | blocked | In-app Browser at `/` showed `Could not load services` and `Failed to execute 'json' on 'Response': Unexpected end of JSON input`; no mock service names were used as live evidence. Screenshot: `/tmp/bothub-task8-desktop.png`. |
-| Live service detail | blocked | Not reachable because live service list is unavailable. |
+| Local meta-socket health | passed | Endpoint correction check on 2026-06-01: `curl http://127.0.0.1:18091/healthz` returned HTTP 200 with `service: meta-socket`, `status: ok`, and `version: dev`. |
+| Local service list | blocked | `curl http://127.0.0.1:18091/api/bot-hub/skill-service/list?size=3&chainName=mvc&sortBy=updated&order=desc` returned `code: 0` but an empty `data.list`; `META_SOCKET_BASE_URL=http://127.0.0.1:18091 pnpm smoke:meta-socket` therefore failed with `skill-service list returned an empty list`. |
+| Public idchat chat API | passed | `curl https://api.idchat.io/chat-api/`, `/chat-api/health`, and `/chat-api/status` returned HTTP 200; the root payload identifies `service: group-chat`. |
+| Public BotHub service list | blocked | `https://api.idchat.io/api/bot-hub/skill-service/list?...` still returned `HTTP/1.1 502 Bad Gateway`; `https://api.idchat.io/chat-api/api/bot-hub/skill-service/list?...` and `https://api.idchat.io/chat-api/bot-hub/skill-service/list?...` returned 404, so the idchat `/chat-api/` prefix does not expose the BotHub aggregator route. |
+| Public smoke script | blocked | `META_SOCKET_BASE_URL=https://api.idchat.io/chat-api pnpm smoke:meta-socket` failed at `/chat-api/healthz` with HTTP 404; the smoke script targets native meta-socket `/healthz` and `/api/bot-hub/*` endpoints. |
+| Mock-disabled service list in browser | blocked | Current terminal checks show no usable live service list: local returns an empty list, and public BotHub aggregator paths return 502/404. No mock service names were used as live evidence. |
+| Live service detail | blocked | Not reachable because no live service id is available from the current local/public service lists. |
 | Live Pay & Request modal | blocked | Not reachable because no live service detail can be selected with mocks disabled. |
 
 ## Chrome + Metalet Acceptance
@@ -44,14 +45,14 @@
 | Check | Status | Evidence |
 | --- | --- | --- |
 | Connect real Metalet wallet | blocked | Chrome opened `http://localhost:5177/`, but `window.metaidwallet`, `window.metalet`, and `window.ethereum` were absent; clicking `连接钱包` showed `Metalet wallet extension is not installed`. Screenshots: `/tmp/bothub-task9-chrome-service-blocked.png`, `/tmp/bothub-task9-chrome-wallet-blocked.png`. |
-| Real free order run | blocked | No live free service could be selected: Chrome showed `Could not load services` and `Unexpected end of JSON input`; public service list returned `HTTP/1.1 502 Bad Gateway`. |
+| Real free order run | blocked | No live free service could be selected: local BotHub service list returned an empty list, public BotHub aggregator paths returned 502/404, and the Chrome profile lacked Metalet injection. |
 | Real paid native order run | blocked | No paid service could be selected because live service list/detail is unavailable, and real Chrome wallet connection is blocked by missing Metalet injection. |
 | Controlled final asset run | passed | In-app Playwright restored `Task 9 Controlled Delivery` from IndexedDB with a controlled wallet shim, one real image metafile pin, and video/audio/document/archive fallback records; UI showed 5 assets, preview/open/download/fallback controls, copy-one/copy-all buttons, and recovered after refresh. Screenshots: `/tmp/bothub-task9-controlled-assets.png`, `/tmp/bothub-task9-preview-dialog.png`, `/tmp/bothub-task9-copy-controls.png`, `/tmp/bothub-task9-refresh-recovery.png`. |
 
 ## Active Blockers
 
-1. Local meta-socket is not listening on `127.0.0.1:18091`.
-2. Public `https://api.idchat.io` currently returns `502 Bad Gateway`.
+1. Local meta-socket is listening and healthy, but its BotHub skill-service list currently returns an empty list.
+2. Public `https://api.idchat.io/chat-api/` is healthy for idchat group-chat endpoints, but it does not expose BotHub `/api/bot-hub/*` aggregation paths.
 3. The Chrome profile reachable to Codex does not expose Metalet on `localhost:5177`, so real wallet prompts cannot be accepted in this run.
 4. Real Chrome + Metalet order acceptance needs a healthy live service list/detail payload before any wallet prompts or payments should be attempted.
 
