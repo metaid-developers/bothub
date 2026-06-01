@@ -625,32 +625,61 @@ proven because the transaction is still unconfirmed and the local meta-socket
 instance has `META_SOCKET_ZMQ_ENABLED=false`, so it does not index mempool
 events.
 
-### Paid Native Safe-Step
+### Paid Native Live Order Retry After Meta-Socket Fix
 
-The first real paid service reachable from the local list was tested only up to
-the safe next step.
+After meta-socket fixed the paid service payment metadata gap, the paid native
+order flow was retried in Chrome with the real Metalet wallet.
 
 | Check | Result | Evidence |
 | --- | --- | --- |
-| Service selected | passed | `紫微斗数算命 v2` / `metabot-ziwei-fortune-v2`, provider `BOT-009`, service id `09d5b9dc05b816d0d6f0641d03f8d42235cb162f9f76e3329805a0c4ca376669i0`. |
-| Review step | passed | The modal showed provider `BOT-009` and price `0.01 SPACE`. |
-| Safe-step payment handoff | blocked externally | Clicking `Confirm & pay` stopped before wallet transfer with `Service payment address is missing`. |
-| Detail payload | blocked externally | The service detail has `price: "0.01"` and `currency: "SPACE"`, but empty `settlementKind`, `paymentChain`, and `paymentAddress`; `provider.chatPubkey` is present. |
+| Service detail | passed | `GET /api/bot-hub/skill-service/detail/09d5b9dc05b816d0d6f0641d03f8d42235cb162f9f76e3329805a0c4ca376669i0?chainName=mvc` returned `settlementKind: "native"`, `paymentChain: "mvc"`, `paymentAddress: "125DQu9dBCXksYWg7HnmnmU3TpBNqnMsZF"`, provider `BOT-009`, and `0.01 SPACE`. |
+| Wallet reconnect | passed | Chrome showed the connected real Metalet identity `SunnyFung` / `idq1zf...kgv0`. |
+| Review step | passed | The modal showed provider `BOT-009`, price `0.01 SPACE`, and settlement `Native`. |
+| Metalet transfer prompt | passed | Wallet displayed `SPACE`, amount `0.01000000`, receiver `125D...MsZF`. The user explicitly confirmed the final wallet action. |
+| Payment transaction | passed | Metalet reported tx `be6aba9e7a2e0b2eadb4a9630de7cb8f624865c25031a9dfbcccd29b0925806d`; MVC RPC `getrawtransaction` found vout 0 paying `0.01` to `125DQu9dBCXksYWg7HnmnmU3TpBNqnMsZF`. |
+| Metalet order PIN prompt | passed | Wallet displayed one MVC `/protocols/simplemsg` createPin, broadcast `Yes`, and cost `1,347 sats` / `0.00001347 SPACE`. The user explicitly confirmed this wallet action too. |
+| Order PIN transaction | passed | MVC mempool scan found tx `bef7f0e1bbc693bd3264f7620344c02b72e77c8d27d5303411f9fac55e0f83f0`; decoded vout 1 is `nulldata` with path `/protocols/simplemsg` and body `to: "125DQu9dBCXksYWg7HnmnmU3TpBNqnMsZF"`. |
+| Bothub post-confirm state | passed | Bothub navigated to `/delivery?order=idq1zfazvxaq69uw6txe3ewce30ewyhy9a7mzykgv0%3A125DQu9dBCXksYWg7HnmnmU3TpBNqnMsZF%3Abe6aba9e7a2e0b2eadb4a9630de7cb8f624865c25031a9dfbcccd29b0925806d`, showed status `等待接单`, timeline `请求已发送`, and the paid request record with fee `0.01 SPACE`. |
+| Provider-side visibility | pending confirmation/indexing | Payment tx `be6aba9e...5806d` and order PIN tx `bef7f0e1...83f0` were still in mempool at height `175635`; RPC tip was `175636`; local meta-socket private-chat history for buyer/provider returned `total: 0`, `list: null`; latest observed local indexer log had not yet saved this new private message. |
+
+### AI_Sunny Online Service Acceptance
+
+The user asked to use AI_Sunny's online service because the earlier paid test
+provider might not respond immediately. The AI_Sunny service did respond in
+IDChat, which proved the buyer-to-provider live path. It also exposed a remaining
+meta-socket identity gap that prevents Bothub Delivery from hydrating that
+provider response through local meta-socket APIs.
+
+| Check | Result | Evidence |
+| --- | --- | --- |
+| Service detail | passed | Local detail for `e9a7064693dfdcbea381c8355c3c91c0ba3947abee816287774729c432378e61i0` returned `metabot-metaid-wiki-service`, display name `MetaWeb/MetaID 百科全书`, provider `AI_Sunny`, price `0 SPACE`, native MVC settlement, payment address/provider id `1GrqX7K9jdnUor8hAoAfDx99uFH2tT75Za`, and provider chat public key. |
+| Wallet connect | passed | Chrome showed the connected real Metalet identity `SunnyFung` / `idq1zf...kgv0`. |
+| Review step | passed | The request modal showed provider `AI_Sunny`, price `0 SPACE`, settlement `Native`, and the acceptance prompt. |
+| Buyer send | passed with delayed wallet return | Metalet opened a one-pin MVC `CreatePin` prompt. The first UI wait timed out in Bothub and saved a recovery request, but after the wallet confirmation completed, IDChat showed the buyer order pin `5d429d59f5c984735d897be27f197abff44dc55fc757a8f2d22031241b6179c7i0`. |
+| Provider response | passed externally | IDChat showed AI_Sunny replied with `[ORDER_STATUS:5d429d59f5c984735d897be27f197abff44dc55fc757a8f2d22031241b6179c7] 确认收到你的BotHub订单，正在开始执行。MetaID是基于比特币网络的去中心化身份协议，用于管理和验证数字身份与数据。技能执行可能需要一些时间，请耐心等待最终结果。` |
+| Bothub Delivery state | blocked externally | Chrome showed the order in Delivery with status `等待接单`, timeline `请求已发送` / `服务处理中`, banner `交付记录需要同步`, and the saved request details, but not AI_Sunny's provider reply. |
+| Local identity contract | blocked externally | Local service detail exposes AI_Sunny provider/payment identity as `1GrqX7K9jdnUor8hAoAfDx99uFH2tT75Za`. Local private-chat history for that peer returned older rows but not the order/status pins; local history for IDChat's live peer `idq14hmv23j5fnlx4ccnmvlyldjd38xjsechzwg9xz` returned `total: 0`. Public `https://api.idchat.io/chat-api` for the live peer returned the current order and AI_Sunny reply pins. |
 
 A meta-socket issue was filed at:
 
 ```text
-/Users/tusm/Documents/MetaID_Projects/meta-socket/issues/2026-06-01-bothub-paid-service-payment-metadata-gap.md
+/Users/tusm/Documents/MetaID_Projects/meta-socket/issues/2026-06-01-bothub-ai-sunny-provider-chat-identity-gap.md
 ```
 
 ### Current Release Implication
 
-Bothub's frontend release-hardening work is code-complete for this plan's
-frontend scope, including the latest createPin diagnostic safety net. Strict
-live release acceptance still has two external runtime conditions:
+Bothub's frontend release-hardening work is complete for this plan's frontend
+scope, including the latest createPin diagnostic safety net and real free/paid
+buyer-send paths against the local meta-socket + Metalet runtime. AI_Sunny also
+proved that a live provider can receive and answer a Bothub order, but Delivery
+cannot yet hydrate that answer through the local meta-socket contract. Strict
+live release acceptance still has external runtime conditions:
 
-1. The paid native service detail needs valid settlement metadata before a safe
-   wallet transfer confirmation can be reached.
-2. The free order's provider-side visibility should be rechecked after MVC
+1. Free and paid provider-side visibility should be rechecked after MVC
    confirmation and meta-socket block indexing catch up. If unconfirmed
    provider visibility is required, meta-socket would need mempool/ZMQ support.
+2. AI_Sunny's provider service identity needs to resolve to the canonical
+   private-chat peer used by current IDChat rows, or local private-chat history
+   needs to resolve that alias for Bothub.
+3. Public `https://api.idchat.io/api/bot-hub/*` is still not a usable
+   production BotHub base URL while it returns nginx 502.

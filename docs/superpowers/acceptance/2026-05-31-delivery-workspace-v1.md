@@ -34,7 +34,7 @@
 | --- | --- | --- |
 | Local meta-socket health | passed | `curl http://127.0.0.1:18091/healthz` returned a healthy `meta-socket` envelope. |
 | Local service list | passed | The restored MVC indexer returns real skill-service rows. A `size=10` list check returned paid service `metabot-ziwei-fortune-v2` plus multiple free services with native MVC metadata. |
-| Local service detail | partially passed | Free service detail includes provider chat key and native MVC payment metadata. Paid service `metabot-ziwei-fortune-v2` includes provider chat key and `0.01 SPACE`, but its settlement fields are empty. |
+| Local service detail | passed | Free service detail includes provider chat key and native MVC payment metadata. After the meta-socket payment metadata fix, paid service `metabot-ziwei-fortune-v2` includes provider chat key, `0.01 SPACE`, `settlementKind: "native"`, `paymentChain: "mvc"`, and `paymentAddress: "125DQu9dBCXksYWg7HnmnmU3TpBNqnMsZF"`. |
 | Public idchat chat API | passed | Current quick check: `https://api.idchat.io/chat-api/` returned HTTP 200 and identifies `service: group-chat`. |
 | Public BotHub service list | blocked | Current quick check: `https://api.idchat.io/api/bot-hub/skill-service/list?...` returned HTTP 502, and `https://api.idchat.io/chat-api/api/bot-hub/skill-service/list?...` returned HTTP 404. Bothub should keep targeting native meta-socket `/api/bot-hub/*` routes, not `/chat-api/`. |
 | Mock-disabled browser service list | passed locally | Chrome at `http://127.0.0.1:5177/` loaded real services from local meta-socket with mocks disabled. |
@@ -47,21 +47,25 @@
 | Connect real Metalet wallet | passed | Chrome connected the real Metalet identity `SunnyFung` / `idq1zf...kgv0`. |
 | Real free order run | passed for buyer send | The user-approved Metalet `CreatePin` confirmation wrote tx `f49060769beb4644338e31577301390fd5827d372a60fdac763ad96db206fd75`; Bothub navigated to `/delivery?order=...02ac4091512dfc67492adb590b00db1eee575969a7d9a3042ae6d4b3d44e4ffa`, showed `等待接单`, `请求已发送`, and the free request record. |
 | Free order provider visibility | pending confirmation/indexing | MVC RPC still reported the tx in mempool at block height `175627` with fee `0.00001175`; local meta-socket logs showed indexing through block `175625`, and private-chat history still returned `total: 0`, `list: null`. |
-| Real paid native order safe-step | blocked externally | `紫微斗数算命 v2` review reached provider `BOT-009` and price `0.01 SPACE`, then stopped before wallet transfer with `Service payment address is missing` because the paid service detail has empty `settlementKind`, `paymentChain`, and `paymentAddress`. |
+| Real paid native order run | passed for buyer send | The user-approved Metalet transfer paid `0.01000000 SPACE` to `125DQu9dBCXksYWg7HnmnmU3TpBNqnMsZF` in tx `be6aba9e7a2e0b2eadb4a9630de7cb8f624865c25031a9dfbcccd29b0925806d`; the user-approved order PIN wrote `/protocols/simplemsg` tx `bef7f0e1bbc693bd3264f7620344c02b72e77c8d27d5303411f9fac55e0f83f0`; Bothub navigated to the paid Delivery order, showed `等待接单`, `请求已发送`, and the `0.01 SPACE` request record. |
+| Paid order provider visibility | pending confirmation/indexing | Payment tx `be6aba9e...5806d` and order PIN tx `bef7f0e1...83f0` were still in mempool at height `175635`; RPC tip was `175636`; local meta-socket private-chat history for buyer/provider still returned `total: 0`, `list: null`. |
+| AI_Sunny online provider run | passed externally, blocked in local hydration | A real free order to AI_Sunny service `e9a7064693dfdcbea381c8355c3c91c0ba3947abee816287774729c432378e61i0` produced buyer pin `5d429d59f5c984735d897be27f197abff44dc55fc757a8f2d22031241b6179c7i0`, and IDChat showed AI_Sunny's `[ORDER_STATUS:...]` reply. Bothub Delivery still showed `交付记录需要同步` because local service detail exposes provider id `1Grq...`, while the current IDChat conversation uses peer `idq14hm...`. |
 | Controlled final asset run | passed | In-app Playwright restored `Task 9 Controlled Delivery` from IndexedDB with a controlled wallet shim, one real image metafile pin, and video/audio/document/archive fallback records; UI showed 5 assets, preview/open/download/fallback controls, copy-one/copy-all buttons, and recovered after refresh. Screenshots: `/tmp/bothub-task9-controlled-assets.png`, `/tmp/bothub-task9-preview-dialog.png`, `/tmp/bothub-task9-copy-controls.png`, `/tmp/bothub-task9-refresh-recovery.png`. |
 
 ## Active Blockers
 
-1. Paid native live acceptance is blocked by meta-socket/service data: paid service `metabot-ziwei-fortune-v2` returns `price: "0.01"` and `currency: "SPACE"` but empty `settlementKind`, `paymentChain`, and `paymentAddress`.
-2. Free order provider-side visibility is not yet proven. The buyer send succeeded and the transaction is visible to MVC RPC, but it was still in mempool at the latest check and local meta-socket had not indexed the containing block.
+1. Free and paid provider-side visibility is not yet proven through meta-socket history. Buyer sends succeeded and the transactions are visible to MVC RPC, but the latest paid order txs were still in mempool and local meta-socket had not indexed them into private-chat history.
+2. AI_Sunny proves the provider can receive and answer an order, but Bothub cannot hydrate that answer through local meta-socket because the service-detail provider identity (`1Grq...`) does not map to the current private-chat peer (`idq14hm...`) returned by public IDChat chat-api.
 3. Public `https://api.idchat.io/chat-api/` is healthy for idchat group/private chat, but public BotHub native `/api/bot-hub/*` routes are still not a usable production base URL.
 
 ## Related Issues
 
-The active external blockers and prior maintainer triage are tracked in:
+The resolved backend gap, remaining public-route gap, and prior maintainer
+triage are tracked in:
 
 ```text
 /Users/tusm/Documents/MetaID_Projects/meta-socket/issues/2026-06-01-bothub-paid-service-payment-metadata-gap.md
+/Users/tusm/Documents/MetaID_Projects/meta-socket/issues/2026-06-01-bothub-ai-sunny-provider-chat-identity-gap.md
 /Users/tusm/Documents/MetaID_Projects/meta-socket/issues/2026-06-01-bothub-skill-service-availability-gap.md
 /Users/tusm/Documents/MetaID_Projects/meta-socket/issues/2026-05-31-bothub-aggregator-readiness.md
 /Users/tusm/Documents/MetaID_Projects/meta-socket/issues/issues-fixed-logs.md
@@ -75,7 +79,12 @@ navigation, local recovery, asset preview/download, real local meta-socket
 loading, free-order buyer send, and sanitized `createPin` diagnostics are all
 covered.
 
+The plan is ready for local/private buyer-flow beta against the restored local
+meta-socket runtime: real service loading, wallet connect, free buyer send, paid
+native payment, order PIN broadcast, Delivery recovery, and an external
+AI_Sunny provider response all have live evidence.
+
 Strict production release remains conditional on backend/runtime readiness:
-paid services need valid settlement metadata, and the free order should be
-rechecked after MVC confirmation and meta-socket block indexing catch up. No
-Bothub backend was added.
+public native BotHub routes must be usable, provider-side visibility should be
+available through local meta-socket, and AI_Sunny's service identity needs a
+canonical private-chat peer mapping. No Bothub backend was added.
