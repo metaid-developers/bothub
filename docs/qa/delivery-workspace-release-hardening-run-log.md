@@ -475,3 +475,39 @@ The initial Task 9 service evidence treated `https://api.idchat.io` without the 
 - Superseded: treating all of `https://api.idchat.io` as down. The `/chat-api/` idchat group-chat surface is healthy.
 - Still blocked for BotHub release acceptance: no current local/public BotHub skill-service list/detail payload is available. Local returns an empty list; public native BotHub paths return 502; BotHub paths under `/chat-api/` return 404.
 - No frontend endpoint change was made in this follow-up because BotHub's aggregator client correctly targets native meta-socket `/api/bot-hub/*`. Pointing `VITE_META_SOCKET_BASE_URL` at `https://api.idchat.io/chat-api` would produce `/chat-api/api/bot-hub/*`, which is not a mounted route.
+
+## Meta-Socket Maintainer Follow-Up
+
+Meta-socket maintainers reviewed the current Bothub availability issue and
+recorded the conclusion in meta-socket commit
+`f29a3e6 docs: record bothub skill-service availability gap`.
+
+### Maintainer Conclusion
+
+- The issue is valid as a Bothub release-acceptance blocker.
+- No meta-socket code change is recommended solely for the current empty-list
+  symptom.
+- Local `127.0.0.1:18091` returns the expected `botHubSkillService.v1` JSON
+  envelope, but the launchd service is running with
+  `META_SOCKET_BLOCK_INDEX_ENABLED=false` and a temporary empty Pebble data dir,
+  so it will not index real `/protocols/skill-service` pins.
+- Public `https://api.idchat.io/api/bot-hub/*` still returns nginx 502.
+- Public `https://api.idchat.io/chat-api/` remains the group/private chat
+  compatibility surface; Bothub should not set `META_SOCKET_BASE_URL` to
+  `https://api.idchat.io/chat-api` because that produces unmounted
+  `/chat-api/api/bot-hub/*` paths.
+
+### Current Release Implication
+
+Bothub frontend work remains code-complete for the release-hardening scope, but
+real free/paid order acceptance is still blocked until there is an acceptance or
+production meta-socket instance with MVC block indexing enabled, real RPC
+credentials, and indexed `/protocols/skill-service` data behind native
+`/api/bot-hub/*` routes.
+
+Relevant backend tracking:
+
+```text
+/Users/tusm/Documents/MetaID_Projects/meta-socket/issues/2026-06-01-bothub-skill-service-availability-gap.md
+/Users/tusm/Documents/MetaID_Projects/meta-socket/issues/issues-fixed-logs.md
+```

@@ -32,7 +32,7 @@
 | Check | Status | Evidence |
 | --- | --- | --- |
 | Local meta-socket health | passed | Endpoint correction check on 2026-06-01: `curl http://127.0.0.1:18091/healthz` returned HTTP 200 with `service: meta-socket`, `status: ok`, and `version: dev`. |
-| Local service list | blocked | `curl http://127.0.0.1:18091/api/bot-hub/skill-service/list?size=3&chainName=mvc&sortBy=updated&order=desc` returned `code: 0` but an empty `data.list`; `META_SOCKET_BASE_URL=http://127.0.0.1:18091 pnpm smoke:meta-socket` therefore failed with `skill-service list returned an empty list`. |
+| Local service list | blocked | `curl http://127.0.0.1:18091/api/bot-hub/skill-service/list?size=3&chainName=mvc&sortBy=updated&order=desc` returned `code: 0` but an empty `data.list`; `META_SOCKET_BASE_URL=http://127.0.0.1:18091 pnpm smoke:meta-socket` therefore failed with `skill-service list returned an empty list`. Meta-socket follow-up `f29a3e6` confirms this is runtime/data readiness: the launchd service uses `META_SOCKET_BLOCK_INDEX_ENABLED=false` and a temporary empty Pebble dir. |
 | Public idchat chat API | passed | `curl https://api.idchat.io/chat-api/`, `/chat-api/health`, and `/chat-api/status` returned HTTP 200; the root payload identifies `service: group-chat`. |
 | Public BotHub service list | blocked | `https://api.idchat.io/api/bot-hub/skill-service/list?...` still returned `HTTP/1.1 502 Bad Gateway`; `https://api.idchat.io/chat-api/api/bot-hub/skill-service/list?...` and `https://api.idchat.io/chat-api/bot-hub/skill-service/list?...` returned 404, so the idchat `/chat-api/` prefix does not expose the BotHub aggregator route. |
 | Public smoke script | blocked | `META_SOCKET_BASE_URL=https://api.idchat.io/chat-api pnpm smoke:meta-socket` failed at `/chat-api/healthz` with HTTP 404; the smoke script targets native meta-socket `/healthz` and `/api/bot-hub/*` endpoints. |
@@ -52,14 +52,24 @@
 ## Active Blockers
 
 1. Local meta-socket is listening and healthy, but its BotHub skill-service list currently returns an empty list.
-2. Public `https://api.idchat.io/chat-api/` is healthy for idchat group-chat endpoints, but it does not expose BotHub `/api/bot-hub/*` aggregation paths.
-3. The Chrome profile reachable to Codex does not expose Metalet on `localhost:5177`, so real wallet prompts cannot be accepted in this run.
-4. Real Chrome + Metalet order acceptance needs a healthy live service list/detail payload before any wallet prompts or payments should be attempted.
+2. Meta-socket maintainers confirmed the local empty list is not a Bothub frontend bug or a new meta-socket handler bug; the current local launchd service is not indexing real `/protocols/skill-service` data.
+3. Public `https://api.idchat.io/chat-api/` is healthy for idchat group-chat endpoints, but it does not expose BotHub `/api/bot-hub/*` aggregation paths.
+4. The Chrome profile reachable to Codex does not expose Metalet on `localhost:5177`, so real wallet prompts cannot be accepted in this run.
+5. Real Chrome + Metalet order acceptance needs a healthy live service list/detail payload before any wallet prompts or payments should be attempted.
 
 ## Related Issue
 
-The active external blocker is tracked in:
+The active external blocker and maintainer triage are tracked in:
 
 ```text
+/Users/tusm/Documents/MetaID_Projects/meta-socket/issues/2026-06-01-bothub-skill-service-availability-gap.md
 /Users/tusm/Documents/MetaID_Projects/meta-socket/issues/2026-05-31-bothub-aggregator-readiness.md
+/Users/tusm/Documents/MetaID_Projects/meta-socket/issues/issues-fixed-logs.md
 ```
+
+Meta-socket commit `f29a3e6 docs: record bothub skill-service availability gap`
+records the maintainer conclusion: no code change is recommended solely for the
+empty-list symptom; the remaining backend action is to run an acceptance or
+production meta-socket instance with MVC block indexing enabled and real RPC
+credentials, or publish a documented base URL where native `/api/bot-hub/*`
+routes are healthy and backed by indexed `/protocols/skill-service` data.
