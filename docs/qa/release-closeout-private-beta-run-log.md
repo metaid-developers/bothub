@@ -37,8 +37,17 @@ reachable URL was `http://[::1]:5177/`.
 
 ## Chrome + Metalet Acceptance
 
-Not run in Task 5. This section is reserved for the independent Chrome +
-Metalet buyer-flow acceptance in Task 6.
+Task 6 attempted Chrome + Metalet from the user's Chrome profile.
+
+| Check | Result | Evidence |
+| --- | --- | --- |
+| Codex Chrome Extension connectivity | partially blocked | The first Chrome connection succeeded and opened `http://localhost:5177/`; later, after the Metalet authorization tab opened, Browser automation timed out and a recovery attempt only listed the in-app Browser backend. Extension and native-host checks still passed locally. |
+| Metalet authorization | blocked externally | Clicking `连接钱包` opened a Metalet authorization page at `chrome-extension://lbjapbcmmceacocpimbpbidpgmlmoaao/popup.html#/authorize?...host=localhost%3A5177...`. Browser security policy blocked automation from controlling the extension page, so the user must manually approve it. |
+| Wallet connect result | blocked externally | After waiting, the BotHub page still showed `连接中…`; no connected wallet identity was visible to BotHub during the automated acceptance window. |
+| Free order buyer send | not run | Blocked behind wallet connection. |
+| Paid native order buyer send | not run | Blocked behind wallet connection. |
+| Provider reply / AI_Sunny check | not run | Blocked behind wallet connection and real order creation. |
+| Follow-up composer | not run | Blocked behind wallet connection and selected real order. |
 
 ## Asset Acceptance
 
@@ -61,10 +70,12 @@ to verify fallback cards and actions.
 
 - Strict production readiness is still not passed because no non-local
   meta-socket deployment base URL has been assigned and verified.
-- Chrome + Metalet real free/paid order acceptance is still pending Task 6.
+- Chrome + Metalet real free/paid order acceptance is blocked externally until
+  the Metalet extension authorization can be manually approved and the Codex
+  Chrome Extension backend is available again.
 
 ## Final Readiness Decision
 
-Pending Task 6. After the local gates and Browser/asset checks above, the
-remaining question is real Chrome + Metalet buyer-flow acceptance against local
-meta-socket.
+Local automated, meta-socket, Browser UI, and controlled asset acceptance passed.
+The real Chrome + Metalet buyer-flow acceptance did not complete, so this run
+does not yet prove the full private buyer-flow beta.
