@@ -136,25 +136,40 @@ function buildHistoryQuery(params: PrivateChatHistoryParams): string {
   return search.toString()
 }
 
+async function fetchPrivateChatEnvelope(
+  canonicalPath: string,
+  legacyPath: string,
+): Promise<ApiEnvelope<unknown>> {
+  const baseUrl = getNormalizedMetaSocketBaseUrl()
+  const canonicalResponse = await fetch(`${baseUrl}${canonicalPath}`)
+  if (canonicalResponse.ok || ![404, 405].includes(canonicalResponse.status)) {
+    return (await canonicalResponse.json()) as ApiEnvelope<unknown>
+  }
+
+  const legacyResponse = await fetch(`${baseUrl}${legacyPath}`)
+  return (await legacyResponse.json()) as ApiEnvelope<unknown>
+}
+
 export function resolvePrivateChatMetaId(identity: WalletIdentity): string {
   return identity.mvcAddress || identity.globalMetaId
 }
 
 export async function listPrivateChatHomes(metaId: string): Promise<PrivateChatHome[]> {
-  const baseUrl = getNormalizedMetaSocketBaseUrl()
   const encodedMetaId = encodeURIComponent(metaId)
-  const url = `${baseUrl}/api/group-chat/chat/homes/${encodedMetaId}`
-  const response = await fetch(url)
-  const envelope = (await response.json()) as ApiEnvelope<unknown>
+  const envelope = await fetchPrivateChatEnvelope(
+    `/api/private-chat/homes/${encodedMetaId}`,
+    `/api/group-chat/chat/homes/${encodedMetaId}`,
+  )
   return parseHomes(unwrapPrivateChatEnvelope(envelope))
 }
 
 export async function listPrivateChatHistory(
   params: PrivateChatHistoryParams,
 ): Promise<PrivateChatHistoryPage> {
-  const baseUrl = getNormalizedMetaSocketBaseUrl()
-  const url = `${baseUrl}/api/group-chat/private-chat-list?${buildHistoryQuery(params)}`
-  const response = await fetch(url)
-  const envelope = (await response.json()) as ApiEnvelope<unknown>
+  const query = buildHistoryQuery(params)
+  const envelope = await fetchPrivateChatEnvelope(
+    `/api/private-chat/messages?${query}`,
+    `/api/group-chat/private-chat-list?${query}`,
+  )
   return parseHistoryPage(unwrapPrivateChatEnvelope(envelope))
 }

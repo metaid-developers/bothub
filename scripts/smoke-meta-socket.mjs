@@ -25,7 +25,7 @@ function assert(condition, message) {
   }
 }
 
-async function fetchJson(pathname, label) {
+async function fetchJsonResult(pathname, label) {
   const controller = new AbortController()
   const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS)
   const url = `${baseUrl}${pathname}`
@@ -33,14 +33,53 @@ async function fetchJson(pathname, label) {
   try {
     const response = await fetch(url, { signal: controller.signal })
     if (!response.ok) {
-      throw new Error(`${label} returned HTTP ${response.status}`)
+      const error = new Error(`${label} request failed (${url}): returned HTTP ${response.status}`)
+      error.status = response.status
+      error.url = url
+      throw error
     }
-    return await response.json()
+    return {
+      body: await response.json(),
+      pathname,
+      url,
+    }
   } catch (error) {
+    if (error && typeof error === 'object' && 'status' in error) {
+      throw error
+    }
     const reason = error instanceof Error ? error.message : String(error)
     throw new Error(`${label} request failed (${url}): ${reason}`)
   } finally {
     clearTimeout(timeout)
+  }
+}
+
+async function fetchJson(pathname, label) {
+  const result = await fetchJsonResult(pathname, label)
+  return result.body
+}
+
+async function fetchJsonWithFallback(canonicalPath, legacyPath, label) {
+  try {
+    const result = await fetchJsonResult(canonicalPath, label)
+    return {
+      envelope: result.body,
+      url: result.url,
+      route: canonicalPath,
+      usedFallback: false,
+    }
+  } catch (error) {
+    if (!error || typeof error !== 'object' || ![404, 405].includes(error.status)) {
+      throw error
+    }
+  }
+
+  const fallbackResult = await fetchJsonResult(legacyPath, `${label} legacy fallback`)
+  return {
+    envelope: fallbackResult.body,
+    url: fallbackResult.url,
+    route: legacyPath,
+    usedFallback: true,
   }
 }
 
@@ -96,19 +135,33 @@ async function smokePrivateChat() {
     }
   }
 
-  const homesPath = `/api/group-chat/chat/homes/${encodeURIComponent(privateChatMetaId)}`
-  const listPath = `/api/group-chat/private-chat-list?metaId=${encodeURIComponent(
+  const canonicalHomesPath = `/api/private-chat/homes/${encodeURIComponent(privateChatMetaId)}`
+  const legacyHomesPath = `/api/group-chat/chat/homes/${encodeURIComponent(privateChatMetaId)}`
+  const canonicalListPath = `/api/private-chat/messages?metaId=${encodeURIComponent(
+    privateChatMetaId,
+  )}&otherMetaId=${encodeURIComponent(privateChatOtherMetaId)}&cursor=&size=5`
+  const legacyListPath = `/api/group-chat/private-chat-list?metaId=${encodeURIComponent(
     privateChatMetaId,
   )}&otherMetaId=${encodeURIComponent(privateChatOtherMetaId)}&cursor=&size=5`
 
-  const homes = await fetchJson(homesPath, 'private chat homes')
+  const homesResult = await fetchJsonWithFallback(
+    canonicalHomesPath,
+    legacyHomesPath,
+    'private chat homes',
+  )
+  const homes = homesResult.envelope
   assertSuccessEnvelope(homes, 'private chat homes')
   assert(
     homes.data.list === null || Array.isArray(homes.data.list),
     'private chat homes data.list is not an array',
   )
 
-  const chatList = await fetchJson(listPath, 'private chat list')
+  const chatListResult = await fetchJsonWithFallback(
+    canonicalListPath,
+    legacyListPath,
+    'private chat list',
+  )
+  const chatList = chatListResult.envelope
   assertSuccessEnvelope(chatList, 'private chat list')
   assert(
     chatList.data.list === null || Array.isArray(chatList.data.list),
@@ -135,8 +188,16 @@ async function smokePrivateChat() {
   return {
     skipped: false,
     urls: {
-      homes: `${baseUrl}${homesPath}`,
-      privateChatList: `${baseUrl}${listPath}`,
+      homes: homesResult.url,
+      privateChatList: chatListResult.url,
+    },
+    routeMode: {
+      homes: homesResult.usedFallback ? 'legacy-fallback' : 'canonical',
+      privateChatList: chatListResult.usedFallback ? 'legacy-fallback' : 'canonical',
+    },
+    routes: {
+      homes: homesResult.route,
+      privateChatList: chatListResult.route,
     },
     identities: {
       metaId: {

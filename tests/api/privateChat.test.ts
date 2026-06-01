@@ -19,8 +19,10 @@ describe('private chat API client', () => {
       vi.stubEnv('VITE_META_SOCKET_BASE_URL', '/meta-socket/')
     })
 
-    it('listPrivateChatHomes fetches encoded homes endpoint and unwraps list', async () => {
+    it('listPrivateChatHomes fetches canonical encoded homes endpoint and unwraps list', async () => {
       const fetchMock = vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
         json: async () => homesFixture,
       })
       vi.stubGlobal('fetch', fetchMock)
@@ -30,7 +32,7 @@ describe('private chat API client', () => {
 
       expect(fetchMock).toHaveBeenCalledOnce()
       expect(fetchMock.mock.calls[0][0]).toBe(
-        '/meta-socket/api/group-chat/chat/homes/wallet%20address%2Fwith%20space',
+        '/meta-socket/api/private-chat/homes/wallet%20address%2Fwith%20space',
       )
       expect(homes).toHaveLength(1)
       expect(homes[0]).toMatchObject({
@@ -40,8 +42,10 @@ describe('private chat API client', () => {
       expect(homes[0].lastMessage?.content).toBeTruthy()
     })
 
-    it('listPrivateChatHistory builds query string and preserves pagination fields', async () => {
+    it('listPrivateChatHistory fetches canonical messages endpoint and preserves pagination fields', async () => {
       const fetchMock = vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
         json: async () => historyFixture,
       })
       vi.stubGlobal('fetch', fetchMock)
@@ -57,7 +61,7 @@ describe('private chat API client', () => {
 
       expect(fetchMock).toHaveBeenCalledOnce()
       expect(fetchMock.mock.calls[0][0]).toBe(
-        '/meta-socket/api/group-chat/private-chat-list?metaId=1JzFmwf498bXRyFiJTrxikSP7xh9iZ3JrX&otherMetaId=peer+id%2Fwith%3F&cursor=&size=5&timestamp=1777322934',
+        '/meta-socket/api/private-chat/messages?metaId=1JzFmwf498bXRyFiJTrxikSP7xh9iZ3JrX&otherMetaId=peer+id%2Fwith%3F&cursor=&size=5&timestamp=1777322934',
       )
       expect(page.total).toBe(3)
       expect(page.nextCursor).toBe('')
@@ -69,6 +73,8 @@ describe('private chat API client', () => {
       vi.stubGlobal(
         'fetch',
         vi.fn().mockResolvedValue({
+          ok: true,
+          status: 200,
           json: async () => ({
             code: 0,
             data: {
@@ -117,6 +123,8 @@ describe('private chat API client', () => {
       vi.stubGlobal(
         'fetch',
         vi.fn().mockResolvedValue({
+          ok: true,
+          status: 200,
           json: async () => ({
             code: 0,
             data: {
@@ -156,8 +164,10 @@ describe('private chat API client', () => {
 
     it('treats null empty homes and history lists as empty arrays', async () => {
       const fetchMock = vi.fn(async (url: string) => ({
+        ok: true,
+        status: 200,
         json: async () =>
-          url.includes('/chat/homes/')
+          url.includes('/homes/')
             ? {
                 code: 0,
                 data: { list: null },
@@ -192,10 +202,97 @@ describe('private chat API client', () => {
       })
     })
 
+    it('falls back to legacy homes route only when canonical route is missing', async () => {
+      const fetchMock = vi
+        .fn()
+        .mockResolvedValueOnce({
+          ok: false,
+          status: 404,
+          json: async () => ({ code: 404, data: null, message: 'not found' }),
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+          json: async () => ({ code: 0, data: { list: null }, message: '' }),
+        })
+      vi.stubGlobal('fetch', fetchMock)
+
+      const { listPrivateChatHomes } = await loadPrivateChat()
+      await expect(listPrivateChatHomes('me')).resolves.toEqual([])
+
+      expect(fetchMock).toHaveBeenCalledTimes(2)
+      expect(fetchMock.mock.calls[0][0]).toBe('/meta-socket/api/private-chat/homes/me')
+      expect(fetchMock.mock.calls[1][0]).toBe('/meta-socket/api/group-chat/chat/homes/me')
+    })
+
+    it('falls back to legacy history route when canonical route returns 405', async () => {
+      const fetchMock = vi
+        .fn()
+        .mockResolvedValueOnce({
+          ok: false,
+          status: 405,
+          json: async () => ({ code: 405, data: null, message: 'method not allowed' }),
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+          json: async () => ({
+            code: 0,
+            data: { total: 0, nextCursor: '', nextTimestamp: 0, list: null },
+            message: '',
+          }),
+        })
+      vi.stubGlobal('fetch', fetchMock)
+
+      const { listPrivateChatHistory } = await loadPrivateChat()
+      await expect(
+        listPrivateChatHistory({ metaId: 'me', otherMetaId: 'peer', size: 5 }),
+      ).resolves.toEqual({
+        list: [],
+        total: 0,
+        nextCursor: '',
+        nextTimestamp: 0,
+      })
+
+      expect(fetchMock).toHaveBeenCalledTimes(2)
+      expect(fetchMock.mock.calls[0][0]).toBe(
+        '/meta-socket/api/private-chat/messages?metaId=me&otherMetaId=peer&size=5',
+      )
+      expect(fetchMock.mock.calls[1][0]).toBe(
+        '/meta-socket/api/group-chat/private-chat-list?metaId=me&otherMetaId=peer&size=5',
+      )
+    })
+
+    it('does not fall back for canonical non-404 failures', async () => {
+      const fetchMock = vi.fn().mockResolvedValue({
+        ok: false,
+        status: 500,
+        json: async () => ({ code: 50001, data: null, message: 'server failed' }),
+      })
+      vi.stubGlobal('fetch', fetchMock)
+
+      const { listPrivateChatHistory, PrivateChatApiError } = await loadPrivateChat()
+      let thrown: unknown
+      try {
+        await listPrivateChatHistory({ metaId: 'me', otherMetaId: 'peer' })
+      } catch (error) {
+        thrown = error
+      }
+
+      expect(fetchMock).toHaveBeenCalledOnce()
+      expect(thrown).toBeInstanceOf(PrivateChatApiError)
+      expect(thrown).toMatchObject({
+        code: 50001,
+        message: 'server failed',
+      })
+    })
+
     it('throws PrivateChatApiError for non-zero envelopes', async () => {
       vi.stubGlobal(
         'fetch',
         vi.fn().mockResolvedValue({
+          ok: true,
+          status: 200,
           json: async () => ({ code: 50001, data: null, message: 'private chat failed' }),
         }),
       )
@@ -223,6 +320,8 @@ describe('private chat API client', () => {
       vi.stubGlobal(
         'fetch',
         vi.fn().mockResolvedValue({
+          ok: true,
+          status: 200,
           json: async () => ({
             code: 0,
             data: {
@@ -258,6 +357,8 @@ describe('private chat API client', () => {
       vi.stubGlobal(
         'fetch',
         vi.fn().mockResolvedValue({
+          ok: true,
+          status: 200,
           json: async () => ({
             code: 0,
             data: {
