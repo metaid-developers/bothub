@@ -50,7 +50,7 @@ function RatingStars({ avg, count }: { avg: number; count: number }) {
   return (
     <div
       className="flex items-center gap-1.5 text-xs"
-      aria-label={`Rating ${avg.toFixed(1)} from ${count} reviews`}
+      aria-label={`评分 ${avg.toFixed(1)}，${count} 条评价`}
     >
       <span className="flex gap-0.5 text-hub-accent" aria-hidden>
         {Array.from({ length: 5 }, (_, i) => (
@@ -70,7 +70,7 @@ function PricingBlock({ service }: { service: SkillServiceCore }) {
   const isMrc20 = service.settlementKind === 'mrc20'
 
   return (
-    <section className="rounded-xl border border-hub-border/80 bg-hub-surface2/40 p-3" aria-label="Pricing">
+    <section className="rounded-xl border border-hub-border/80 bg-hub-surface2/40 p-3" aria-label={t('hub.pricing')}>
       <h3 className="text-[11px] font-semibold uppercase tracking-wide text-hub-muted">
         {t('hub.pricing')}
       </h3>
@@ -86,7 +86,9 @@ function PricingBlock({ service }: { service: SkillServiceCore }) {
         </div>
         <div className="flex justify-between gap-2">
           <dt className="text-hub-muted">{t('hub.settlement')}</dt>
-          <dd className="font-medium capitalize text-white">{service.settlementKind}</dd>
+          <dd className="font-medium text-white">
+            {service.settlementKind === 'native' ? '原生币' : 'MRC20'}
+          </dd>
         </div>
         <div className="flex justify-between gap-2">
           <dt className="text-hub-muted">{t('hub.paymentChain')}</dt>

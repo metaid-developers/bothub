@@ -96,7 +96,7 @@ export function ServicesPanel({
     <div className={className}>
       <ul
         className="grid list-none gap-4 p-0 md:grid-cols-2"
-        aria-label="Skill services"
+        aria-label="服务列表"
       >
         {services.map((service) => (
           <li key={`${service.id}-${service.updatedAt}`}>

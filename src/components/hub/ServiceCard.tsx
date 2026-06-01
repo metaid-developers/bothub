@@ -59,7 +59,7 @@ function RatingStars({ avg, count }: { avg: number; count: number }) {
   return (
     <div
       className="flex items-center gap-1.5 text-xs"
-      aria-label={`Rating ${avg.toFixed(1)} from ${count} reviews`}
+      aria-label={`评分 ${avg.toFixed(1)}，${count} 条评价`}
     >
       <span className="flex gap-0.5 text-hub-accent" aria-hidden>
         {Array.from({ length: 5 }, (_, i) => (
@@ -155,7 +155,7 @@ export function ServiceCard({
         <div className="flex min-w-0 items-center gap-2">
           <span
             className="h-2 w-2 shrink-0 rounded-full bg-hub-online shadow-[0_0_8px_rgba(34,197,94,0.55)]"
-            title="Online"
+            title="在线"
             aria-hidden
           />
           <ProviderAvatar name={providerName} avatar={service.providerAvatar} />
@@ -171,9 +171,9 @@ export function ServiceCard({
           onRequest?.(service)
         }}
         className="mt-4 w-full rounded-xl bg-hub-accent py-2.5 text-sm font-semibold text-hub-bg opacity-90 transition enabled:hover:bg-hub-accent-hover disabled:cursor-not-allowed disabled:opacity-60"
-        title={onRequest ? undefined : 'Open service details to connect your wallet and request this service'}
+        title={onRequest ? undefined : '打开服务详情，连接钱包后即可下单'}
       >
-        Pay &amp; Request
+        {t('hub.payRequest')}
       </button>
     </article>
   )

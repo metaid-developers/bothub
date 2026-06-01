@@ -34,7 +34,7 @@ describe('ServicesPanel', () => {
     )
   })
 
-  it('uses the explicit request handler for card-level Pay & Request', () => {
+  it('uses the explicit request handler for card-level request actions', () => {
     const onRequestService = vi.fn()
     const onSelectService = vi.fn()
 
@@ -46,7 +46,7 @@ describe('ServicesPanel', () => {
       />,
     )
 
-    fireEvent.click(screen.getAllByRole('button', { name: 'Pay & Request' })[0])
+    fireEvent.click(screen.getAllByRole('button', { name: '下单请求' })[0])
 
     expect(onRequestService).toHaveBeenCalledWith(services[0])
     expect(onSelectService).not.toHaveBeenCalled()

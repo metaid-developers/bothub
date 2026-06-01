@@ -17,10 +17,10 @@ function renderApp(initialPath = '/') {
 describe('App smoke', () => {
   it('shows main tabs and connect wallet on Bot Hub route', () => {
     renderApp('/')
-    expect(screen.getByRole('link', { name: 'Bot Hub' })).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: 'Delivery' })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: '服务广场' })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: '我的交付' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '连接钱包' })).toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: 'Services' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: '可下单服务' })).toBeInTheDocument()
   })
 
   it('navigates to Delivery route', () => {

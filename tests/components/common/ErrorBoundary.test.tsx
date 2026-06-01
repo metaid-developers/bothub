@@ -23,7 +23,8 @@ describe('ErrorBoundary', () => {
         <Boom />
       </ErrorBoundary>,
     )
-    expect(screen.getByText(/something went wrong/i)).toBeInTheDocument()
+    expect(screen.getByText('出了点问题')).toBeInTheDocument()
+    expect(screen.getByText('应用遇到异常，可以刷新页面后再试。')).toBeInTheDocument()
     spy.mockRestore()
   })
 })

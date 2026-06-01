@@ -42,7 +42,7 @@ export interface RequestModalProps {
 }
 
 const MRC20_CHECKOUT_UNSUPPORTED_MESSAGE =
-  'MRC20 checkout is not available in BotHub yet. Choose a native paid or free service.'
+  '暂不支持 MRC20 服务下单，请选择原生币或免费服务。'
 
 export function RequestModal({ open, onClose, service, provider, wallet }: RequestModalProps) {
   const navigate = useNavigate()
@@ -54,7 +54,7 @@ export function RequestModal({ open, onClose, service, provider, wallet }: Reque
   const [createPinDiagnosticJson, setCreatePinDiagnosticJson] = useState<string | null>(null)
 
   const price = useMemo(() => formatPrice(service.price, service.currency), [service])
-  const providerName = provider.name?.trim() || 'Unknown Bot'
+  const providerName = provider.name?.trim() || '未知服务方'
   const promptTooLong = prompt.length > ORDER_RAW_REQUEST_MAX_CHARS
   const promptEmpty = prompt.trim().length === 0
 
@@ -74,14 +74,12 @@ export function RequestModal({ open, onClose, service, provider, wallet }: Reque
     setRetryDisabled(false)
     setCreatePinDiagnosticJson(null)
     if (!wallet?.globalMetaId?.trim()) {
-      setErrorMessage('Connect your Metalet wallet before sending a request.')
+      setErrorMessage('连接 Metalet 钱包后即可下单。')
       setStep('error')
       return
     }
     if (!provider.chatPubkey?.trim()) {
-      setErrorMessage(
-        'This provider cannot receive encrypted orders right now. Try another service or check back later.',
-      )
+      setErrorMessage('服务方暂时无法接单，请稍后再试或选择其他服务。')
       setStep('error')
       return
     }
@@ -164,11 +162,11 @@ export function RequestModal({ open, onClose, service, provider, wallet }: Reque
         setRetryDisabled(Boolean(paidTxid) && !savedForRecovery)
         const message = savedForRecovery
           ? paidTxid
-            ? 'Your payment went through, but the order message was not sent. The paid request was saved in Delivery for recovery.'
-            : 'The free order message failed. The request was saved in Delivery for recovery.'
+            ? '付款已完成，但请求消息未成功发送。已在我的交付中保存，可继续处理。'
+            : '免费请求暂时发送失败，已在我的交付中保存，可继续处理。'
           : paidTxid
-            ? `Your payment went through, but the order message was not sent and the recovery record could not be saved locally. Payment reference: ${paidTxid}`
-            : 'The free order message failed and could not be saved in Delivery. You can try again.'
+            ? `付款已完成，但请求消息未成功发送，本地恢复记录也未能保存。支付参考：${paidTxid}`
+            : '免费请求暂时发送失败，且无法保存到我的交付。请稍后重试。'
         setErrorMessage(
           message,
         )
@@ -177,13 +175,14 @@ export function RequestModal({ open, onClose, service, provider, wallet }: Reque
       }
       const message =
         err instanceof PayAndRequestError
-          ? err.message
-          : err instanceof Error
-            ? err.message
-            : 'Request failed'
+          ? '下单前信息不完整，请换一个服务或稍后再试。'
+          : '下单失败，请稍后重试。'
       const walletStore = useWallet.getState()
       if (walletStore.isWalletReadinessError(err)) {
         walletStore.clearStaleConnection()
+        setErrorMessage('钱包连接已失效，请重新连接 Metalet 后再下单。')
+        setStep('error')
+        return
       }
       setErrorMessage(message)
       setStep('error')
@@ -202,14 +201,14 @@ export function RequestModal({ open, onClose, service, provider, wallet }: Reque
       <div className="fixed inset-0 flex items-center justify-center p-4">
         <Dialog.Panel className="w-full max-w-lg rounded-card border border-hub-border bg-hub-surface p-5 shadow-xl">
           <Dialog.Title className="font-display text-lg font-semibold text-white">
-            Pay &amp; Request
+            下单请求
           </Dialog.Title>
           <p className="mt-1 text-sm text-hub-muted">{service.displayName}</p>
 
           {step === 'prompt' ? (
             <div className="mt-4 space-y-3">
               <label className="block text-sm text-hub-muted" htmlFor="request-prompt">
-                Describe what you need from the provider
+                填写你的需求
               </label>
               <textarea
                 id="request-prompt"
@@ -218,7 +217,7 @@ export function RequestModal({ open, onClose, service, provider, wallet }: Reque
                 maxLength={ORDER_RAW_REQUEST_MAX_CHARS}
                 rows={6}
                 className="w-full resize-y rounded-xl border border-hub-border bg-hub-surface2 px-3 py-2 text-sm text-white placeholder:text-hub-muted/60 focus:border-hub-accent focus:outline-none"
-                placeholder="Your request (required)"
+                placeholder="请描述你想让服务方完成的任务"
               />
               <p
                 className={clsx(
@@ -234,7 +233,7 @@ export function RequestModal({ open, onClose, service, provider, wallet }: Reque
                   onClick={resetAndClose}
                   className="rounded-lg px-3 py-2 text-sm text-hub-muted hover:bg-hub-surface2"
                 >
-                  Cancel
+                  取消
                 </button>
                 <button
                   type="button"
@@ -242,7 +241,7 @@ export function RequestModal({ open, onClose, service, provider, wallet }: Reque
                   onClick={() => setStep('confirm')}
                   className="rounded-lg bg-hub-accent px-4 py-2 text-sm font-semibold text-hub-bg disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  Review
+                  检查订单
                 </button>
               </div>
             </div>
@@ -252,19 +251,21 @@ export function RequestModal({ open, onClose, service, provider, wallet }: Reque
             <div className="mt-4 space-y-4">
               <dl className="space-y-2 rounded-xl border border-hub-border/80 bg-hub-surface2/50 p-3 text-sm">
                 <div className="flex justify-between gap-2">
-                  <dt className="text-hub-muted">Provider</dt>
+                  <dt className="text-hub-muted">服务方</dt>
                   <dd className="font-medium text-white">{providerName}</dd>
                 </div>
                 <div className="flex justify-between gap-2">
-                  <dt className="text-hub-muted">Price</dt>
+                  <dt className="text-hub-muted">价格</dt>
                   <dd className="font-semibold text-hub-accent">
                     {price.amount}{' '}
                     <span className="text-xs uppercase text-hub-muted">{price.currency}</span>
                   </dd>
                 </div>
                 <div className="flex justify-between gap-2">
-                  <dt className="text-hub-muted">Settlement</dt>
-                  <dd className="capitalize text-white">{service.settlementKind}</dd>
+                  <dt className="text-hub-muted">结算方式</dt>
+                  <dd className="text-white">
+                    {service.settlementKind === 'native' ? '原生币' : 'MRC20'}
+                  </dd>
                 </div>
               </dl>
               <p className="rounded-lg bg-hub-surface2/80 p-3 text-sm text-hub-muted whitespace-pre-wrap">
@@ -276,14 +277,14 @@ export function RequestModal({ open, onClose, service, provider, wallet }: Reque
                   onClick={() => setStep('prompt')}
                   className="rounded-lg px-3 py-2 text-sm text-hub-muted hover:bg-hub-surface2"
                 >
-                  Back
+                  返回修改
                 </button>
                 <button
                   type="button"
                   onClick={() => void handleConfirm()}
                   className="rounded-lg bg-hub-accent px-4 py-2 text-sm font-semibold text-hub-bg"
                 >
-                  Confirm &amp; pay
+                  确认并下单
                 </button>
               </div>
             </div>
@@ -292,24 +293,24 @@ export function RequestModal({ open, onClose, service, provider, wallet }: Reque
           {busy ? (
             <div className="mt-6 space-y-2 text-sm" aria-live="polite">
               <ProgressRow
-                label="Checking wallet"
+                label="检查钱包"
                 active={step === 'checking_wallet'}
                 done={step === 'paying' || step === 'encrypting' || step === 'broadcasting'}
               />
               {service.price !== '0' ? (
                 <ProgressRow
-                  label="Payment"
+                  label="付款"
                   active={step === 'paying'}
                   done={step === 'encrypting' || step === 'broadcasting'}
                 />
               ) : null}
               <ProgressRow
-                label="Encrypting order"
+                label="加密请求"
                 active={step === 'encrypting'}
                 done={step === 'broadcasting'}
               />
               <ProgressRow
-                label="Broadcasting to chain"
+                label="写入链上"
                 active={step === 'broadcasting'}
                 done={false}
               />
@@ -317,7 +318,7 @@ export function RequestModal({ open, onClose, service, provider, wallet }: Reque
           ) : null}
 
           {step === 'done' ? (
-            <p className="mt-4 text-sm text-hub-accent">Order sent. Opening delivery…</p>
+            <p className="mt-4 text-sm text-hub-accent">请求已发送，正在打开我的交付…</p>
           ) : null}
 
           {step === 'error' ? (
@@ -328,7 +329,7 @@ export function RequestModal({ open, onClose, service, provider, wallet }: Reque
               {createPinDiagnosticJson ? (
                 <details className="rounded-lg border border-hub-border bg-hub-surface2/70 px-3 py-2 text-xs text-hub-muted">
                   <summary className="cursor-pointer text-hub-accent">
-                    CreatePin diagnostic
+                    发单诊断详情
                   </summary>
                   <pre className="mt-2 max-h-48 overflow-auto whitespace-pre-wrap break-words">
                     {createPinDiagnosticJson}
@@ -341,7 +342,7 @@ export function RequestModal({ open, onClose, service, provider, wallet }: Reque
                   onClick={resetAndClose}
                   className="rounded-lg px-3 py-2 text-sm text-hub-muted hover:bg-hub-surface2"
                 >
-                  Close
+                  关闭
                 </button>
                 <button
                   type="button"
@@ -350,10 +351,10 @@ export function RequestModal({ open, onClose, service, provider, wallet }: Reque
                   className="rounded-lg bg-hub-accent px-4 py-2 text-sm font-semibold text-hub-bg"
                 >
                   {recoverableDeliveryPath
-                    ? 'Retry saved in Delivery'
+                    ? '已保存到我的交付'
                     : retryDisabled
-                      ? 'Recovery not saved'
-                      : 'Try again'}
+                      ? '无法保存恢复记录'
+                      : '再试一次'}
                 </button>
                 {recoverableDeliveryPath ? (
                   <button
@@ -361,7 +362,7 @@ export function RequestModal({ open, onClose, service, provider, wallet }: Reque
                     onClick={() => navigate(recoverableDeliveryPath)}
                     className="rounded-lg bg-hub-accent px-4 py-2 text-sm font-semibold text-hub-bg"
                   >
-                    Open Delivery
+                    打开我的交付
                   </button>
                 ) : null}
               </div>

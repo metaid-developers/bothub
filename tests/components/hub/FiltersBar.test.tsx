@@ -34,7 +34,7 @@ describe('FiltersBar', () => {
     const onChange = vi.fn()
     render(<ControlledFiltersHarness onChange={onChange} />)
 
-    const search = screen.getByRole('searchbox', { name: /search services/i })
+    const search = screen.getByRole('searchbox', { name: '搜索服务' })
     fireEvent.change(search, { target: { value: 'fortune' } })
 
     expect(onChange).not.toHaveBeenCalledWith(
@@ -52,12 +52,12 @@ describe('FiltersBar', () => {
     const onChange = vi.fn()
     render(<ControlledFiltersHarness onChange={onChange} />)
 
-    fireEvent.change(screen.getByLabelText('Currency filter'), { target: { value: 'BTC' } })
+    fireEvent.change(screen.getByLabelText('币种筛选'), { target: { value: 'BTC' } })
     expect(onChange).toHaveBeenLastCalledWith(
       expect.objectContaining({ currency: 'BTC' }),
     )
 
-    fireEvent.change(screen.getByLabelText('Sort services'), {
+    fireEvent.change(screen.getByLabelText('服务排序'), {
       target: { value: 'updated:desc' },
     })
     expect(onChange).toHaveBeenLastCalledWith(

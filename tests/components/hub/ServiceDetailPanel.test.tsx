@@ -69,27 +69,27 @@ describe('ServiceDetailPanel', () => {
       screen.getByRole('heading', { name: detailData.service.displayName }),
     ).toBeInTheDocument()
     expect(screen.getByText(detailData.service.description)).toBeInTheDocument()
-    expect(screen.getByText('Pricing')).toBeInTheDocument()
-    expect(screen.getByText('native')).toBeInTheDocument()
+    expect(screen.getAllByText('价格').length).toBeGreaterThan(0)
+    expect(screen.getByText('原生币')).toBeInTheDocument()
     expect(screen.getByText('mvc')).toBeInTheDocument()
     expect(screen.getByText('Fortune Bot')).toBeInTheDocument()
-    expect(screen.getByText('truncated')).toBeInTheDocument()
+    expect(screen.getByText('已缩略')).toBeInTheDocument()
     expect(
-      screen.getByLabelText(`Rating 4.8 from 12 reviews`),
+      screen.getByLabelText('评分 4.8，12 条评价'),
     ).toBeInTheDocument()
     expect(screen.queryByText(/deliverable/i)).not.toBeInTheDocument()
     expect(screen.queryByText(/example/i)).not.toBeInTheDocument()
   })
 
-  it('keeps Pay & Request available with a connect-required hint when wallet is not connected', () => {
+  it('keeps request action available with a connect-required hint when wallet is not connected', () => {
     renderPanel()
 
-    const payButton = screen.getByRole('button', { name: 'Pay & Request' })
+    const payButton = screen.getByRole('button', { name: '下单请求' })
     expect(payButton).toBeEnabled()
-    expect(payButton).toHaveAttribute('title', expect.stringMatching(/Metalet|Connect|连接/))
+    expect(payButton).toHaveAttribute('title', expect.stringMatching(/Metalet|连接/))
   })
 
-  it('enables Pay & Request when wallet is connected', () => {
+  it('enables request action when wallet is connected', () => {
     useWallet.mockImplementation(
       (selector: (state: { status: string; identity: unknown }) => unknown) =>
         selector({
@@ -104,10 +104,10 @@ describe('ServiceDetailPanel', () => {
     )
     renderPanel()
 
-    expect(screen.getByRole('button', { name: 'Pay & Request' })).toBeEnabled()
+    expect(screen.getByRole('button', { name: '下单请求' })).toBeEnabled()
   })
 
-  it('opens request modal when Pay & Request is clicked', () => {
+  it('opens request modal when request action is clicked', () => {
     useWallet.mockImplementation(
       (selector: (state: { status: string; identity: unknown }) => unknown) =>
         selector({
@@ -122,8 +122,8 @@ describe('ServiceDetailPanel', () => {
     )
     renderPanel()
 
-    fireEvent.click(screen.getByRole('button', { name: 'Pay & Request' }))
-    expect(screen.getByRole('dialog', { name: /pay & request/i })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: '下单请求' }))
+    expect(screen.getByRole('dialog', { name: '下单请求' })).toBeInTheDocument()
   })
 
   it('calls onClose when Escape is pressed', () => {
@@ -136,7 +136,7 @@ describe('ServiceDetailPanel', () => {
   it('calls onClose from the close button', () => {
     const { onClose } = renderPanel()
 
-    fireEvent.click(screen.getByRole('button', { name: 'Close service detail' }))
+    fireEvent.click(screen.getByRole('button', { name: '关闭服务详情' }))
     expect(onClose).toHaveBeenCalledTimes(1)
   })
 
@@ -149,7 +149,7 @@ describe('ServiceDetailPanel', () => {
     })
     renderPanel()
 
-    expect(screen.getByLabelText('Loading service details')).toBeInTheDocument()
+    expect(screen.getByLabelText('正在加载服务详情')).toBeInTheDocument()
     await waitFor(() => {
       expect(screen.queryByText(detailData.service.displayName)).not.toBeInTheDocument()
     })

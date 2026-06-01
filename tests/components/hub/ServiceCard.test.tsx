@@ -19,10 +19,10 @@ describe('ServiceCard', () => {
     expect(screen.getByText('SPACE')).toBeInTheDocument()
     expect(
       screen.getByLabelText(
-        `Rating ${fortuneService.ratingAvg.toFixed(1)} from ${fortuneService.ratingCount} reviews`,
+        `评分 ${fortuneService.ratingAvg.toFixed(1)}，${fortuneService.ratingCount} 条评价`,
       ),
     ).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Pay & Request' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: '下单请求' })).toBeDisabled()
     const icon = document.querySelector(`img[src="${fortuneService.serviceIcon}"]`)
     expect(icon).not.toBeNull()
   })
@@ -30,10 +30,10 @@ describe('ServiceCard', () => {
   it('falls back when provider name is missing', () => {
     const anon = listFixture.data!.list[1] as SkillServiceListItem
     render(<ServiceCard service={anon} />)
-    expect(screen.getByText('Unknown Bot')).toBeInTheDocument()
+    expect(screen.getByText('未知服务方')).toBeInTheDocument()
   })
 
-  it('enables Pay & Request when an explicit request handler exists', () => {
+  it('enables the request action when an explicit request handler exists', () => {
     const onRequest = vi.fn()
     const onSelect = vi.fn()
     render(
@@ -44,7 +44,7 @@ describe('ServiceCard', () => {
       />,
     )
 
-    const button = screen.getByRole('button', { name: 'Pay & Request' })
+    const button = screen.getByRole('button', { name: '下单请求' })
     expect(button).toBeEnabled()
 
     fireEvent.click(button)

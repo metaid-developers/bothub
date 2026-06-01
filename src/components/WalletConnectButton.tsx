@@ -69,8 +69,8 @@ export function WalletConnectButton() {
         {status === 'connecting' ? t('wallet.connecting') : t('wallet.connect')}
       </button>
       {status === 'error' && errorMessage ? (
-        <span className="max-w-[200px] truncate text-xs text-red-400" title={errorMessage}>
-          {errorMessage}
+        <span className="max-w-[200px] truncate text-xs text-red-400">
+          {t('wallet.connectFailed')}
         </span>
       ) : null}
     </div>

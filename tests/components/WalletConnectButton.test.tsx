@@ -77,6 +77,8 @@ describe('WalletConnectButton', () => {
     render(<WalletConnectButton />)
 
     expect(screen.getByRole('button', { name: '连接钱包' })).toBeEnabled()
-    expect(screen.getByText(/did not respond to connect/i)).toBeInTheDocument()
+    expect(
+      screen.getByText('钱包连接失败，请确认 Metalet 已解锁并重新连接'),
+    ).toBeInTheDocument()
   })
 })

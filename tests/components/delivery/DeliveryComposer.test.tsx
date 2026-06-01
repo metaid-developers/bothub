@@ -159,7 +159,7 @@ describe('DeliveryComposer', () => {
     })
     fireEvent.click(screen.getByRole('button', { name: '发送' }))
 
-    await screen.findByText('wallet rejected')
+    await screen.findByText('消息暂时发送失败，请稍后再试')
     expect(screen.getByRole('textbox', { name: '补充需求或询问进度' })).toHaveValue(
       'Please send the source files too.',
     )

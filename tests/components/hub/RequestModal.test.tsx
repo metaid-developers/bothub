@@ -140,11 +140,11 @@ describe('RequestModal', () => {
       </MemoryRouter>,
     )
 
-    fireEvent.change(screen.getByLabelText(/describe what you need/i), {
+    fireEvent.change(screen.getByLabelText('填写你的需求'), {
       target: { value: 'Tell me my fortune' },
     })
-    fireEvent.click(screen.getByRole('button', { name: 'Review' }))
-    fireEvent.click(screen.getByRole('button', { name: /confirm & pay/i }))
+    fireEvent.click(screen.getByRole('button', { name: '检查订单' }))
+    fireEvent.click(screen.getByRole('button', { name: '确认并下单' }))
 
     await waitFor(() =>
       expect(navigate).toHaveBeenCalledWith(
@@ -202,11 +202,11 @@ describe('RequestModal', () => {
       </MemoryRouter>,
     )
 
-    fireEvent.change(screen.getByLabelText(/describe what you need/i), {
+    fireEvent.change(screen.getByLabelText('填写你的需求'), {
       target: { value: 'Paid fortune' },
     })
-    fireEvent.click(screen.getByRole('button', { name: 'Review' }))
-    fireEvent.click(screen.getByRole('button', { name: /confirm & pay/i }))
+    fireEvent.click(screen.getByRole('button', { name: '检查订单' }))
+    fireEvent.click(screen.getByRole('button', { name: '确认并下单' }))
 
     await waitFor(() =>
       expect(navigate).toHaveBeenCalledWith(
@@ -247,11 +247,11 @@ describe('RequestModal', () => {
       </MemoryRouter>,
     )
 
-    fireEvent.change(screen.getByLabelText(/describe what you need/i), {
+    fireEvent.change(screen.getByLabelText('填写你的需求'), {
       target: { value: 'Tell me my fortune' },
     })
-    fireEvent.click(screen.getByRole('button', { name: 'Review' }))
-    fireEvent.click(screen.getByRole('button', { name: /confirm & pay/i }))
+    fireEvent.click(screen.getByRole('button', { name: '检查订单' }))
+    fireEvent.click(screen.getByRole('button', { name: '确认并下单' }))
 
     await waitFor(() =>
       expect(navigate).toHaveBeenCalledWith(
@@ -267,7 +267,7 @@ describe('RequestModal', () => {
       result: resolvedWithoutPin,
     })
     expect(persistFailedToSendOrder).not.toHaveBeenCalled()
-    expect(screen.queryByText(/free order message failed/i)).not.toBeInTheDocument()
+    expect(screen.queryByText(/免费请求暂时发送失败/)).not.toBeInTheDocument()
   })
 
   it('blocks stale connected wallet state before creating an order', async () => {
@@ -292,13 +292,15 @@ describe('RequestModal', () => {
       </MemoryRouter>,
     )
 
-    fireEvent.change(screen.getByLabelText(/describe what you need/i), {
+    fireEvent.change(screen.getByLabelText('填写你的需求'), {
       target: { value: 'Tell me my fortune' },
     })
-    fireEvent.click(screen.getByRole('button', { name: 'Review' }))
-    fireEvent.click(screen.getByRole('button', { name: /confirm & pay/i }))
+    fireEvent.click(screen.getByRole('button', { name: '检查订单' }))
+    fireEvent.click(screen.getByRole('button', { name: '确认并下单' }))
 
-    expect(await screen.findByText(/did not respond to ping/i)).toBeInTheDocument()
+    expect(
+      await screen.findByText('钱包连接已失效，请重新连接 Metalet 后再下单。'),
+    ).toBeInTheDocument()
     expect(executePayAndRequest).not.toHaveBeenCalled()
     expect(persistPendingOrder).not.toHaveBeenCalled()
     expect(useWallet.getState().identity).toBeNull()
@@ -327,13 +329,15 @@ describe('RequestModal', () => {
       </MemoryRouter>,
     )
 
-    fireEvent.change(screen.getByLabelText(/describe what you need/i), {
+    fireEvent.change(screen.getByLabelText('填写你的需求'), {
       target: { value: 'Tell me my fortune' },
     })
-    fireEvent.click(screen.getByRole('button', { name: 'Review' }))
-    fireEvent.click(screen.getByRole('button', { name: /confirm & pay/i }))
+    fireEvent.click(screen.getByRole('button', { name: '检查订单' }))
+    fireEvent.click(screen.getByRole('button', { name: '确认并下单' }))
 
-    expect(await screen.findByText(/not connected to this site/i)).toBeInTheDocument()
+    expect(
+      await screen.findByText('钱包连接已失效，请重新连接 Metalet 后再下单。'),
+    ).toBeInTheDocument()
     expect(executePayAndRequest).not.toHaveBeenCalled()
     expect(useWallet.getState().identity).toBeNull()
     expect(useWallet.getState().status).toBe('disconnected')
@@ -360,13 +364,13 @@ describe('RequestModal', () => {
       </MemoryRouter>,
     )
 
-    fireEvent.change(screen.getByLabelText(/describe what you need/i), {
+    fireEvent.change(screen.getByLabelText('填写你的需求'), {
       target: { value: 'Tell me my fortune' },
     })
-    fireEvent.click(screen.getByRole('button', { name: 'Review' }))
-    fireEvent.click(screen.getByRole('button', { name: /confirm & pay/i }))
+    fireEvent.click(screen.getByRole('button', { name: '检查订单' }))
+    fireEvent.click(screen.getByRole('button', { name: '确认并下单' }))
 
-    expect(await screen.findByText(/Order encryption failed/i)).toBeInTheDocument()
+    expect(await screen.findByText('下单失败，请稍后重试。')).toBeInTheDocument()
     expect(executePayAndRequest).not.toHaveBeenCalled()
     expect(useWallet.getState().identity).toEqual(wallet)
     expect(useWallet.getState().status).toBe('connected')
@@ -388,11 +392,11 @@ describe('RequestModal', () => {
       </MemoryRouter>,
     )
 
-    fireEvent.change(screen.getByLabelText(/describe what you need/i), {
+    fireEvent.change(screen.getByLabelText('填写你的需求'), {
       target: { value: 'Tell me my fortune' },
     })
-    fireEvent.click(screen.getByRole('button', { name: 'Review' }))
-    fireEvent.click(screen.getByRole('button', { name: /confirm & pay/i }))
+    fireEvent.click(screen.getByRole('button', { name: '检查订单' }))
+    fireEvent.click(screen.getByRole('button', { name: '确认并下单' }))
 
     await waitFor(() =>
       expect(navigate).toHaveBeenCalledWith('/delivery?session=idqprovider%3Aorder-ref-1'),
@@ -424,11 +428,11 @@ describe('RequestModal', () => {
       </MemoryRouter>,
     )
 
-    fireEvent.change(screen.getByLabelText(/describe what you need/i), {
+    fireEvent.change(screen.getByLabelText('填写你的需求'), {
       target: { value: 'Tell me my fortune' },
     })
-    fireEvent.click(screen.getByRole('button', { name: 'Review' }))
-    fireEvent.click(screen.getByRole('button', { name: /confirm & pay/i }))
+    fireEvent.click(screen.getByRole('button', { name: '检查订单' }))
+    fireEvent.click(screen.getByRole('button', { name: '确认并下单' }))
 
     await waitFor(() =>
       expect(navigate).toHaveBeenCalledWith(
@@ -455,13 +459,13 @@ describe('RequestModal', () => {
       </MemoryRouter>,
     )
 
-    fireEvent.change(screen.getByLabelText(/describe what you need/i), {
+    fireEvent.change(screen.getByLabelText('填写你的需求'), {
       target: { value: 'Tell me my fortune' },
     })
-    fireEvent.click(screen.getByRole('button', { name: 'Review' }))
-    fireEvent.click(screen.getByRole('button', { name: /confirm & pay/i }))
+    fireEvent.click(screen.getByRole('button', { name: '检查订单' }))
+    fireEvent.click(screen.getByRole('button', { name: '确认并下单' }))
 
-    expect(await screen.findByText(/connect your metalet wallet/i)).toBeInTheDocument()
+    expect(await screen.findByText(/连接 Metalet 钱包后即可下单/)).toBeInTheDocument()
     expect(executePayAndRequest).not.toHaveBeenCalled()
   })
 
@@ -478,14 +482,14 @@ describe('RequestModal', () => {
       </MemoryRouter>,
     )
 
-    fireEvent.change(screen.getByLabelText(/describe what you need/i), {
+    fireEvent.change(screen.getByLabelText('填写你的需求'), {
       target: { value: 'Paid fortune' },
     })
-    fireEvent.click(screen.getByRole('button', { name: 'Review' }))
-    fireEvent.click(screen.getByRole('button', { name: /confirm & pay/i }))
+    fireEvent.click(screen.getByRole('button', { name: '检查订单' }))
+    fireEvent.click(screen.getByRole('button', { name: '确认并下单' }))
 
     expect(
-      await screen.findByText(/provider cannot receive encrypted orders/i),
+      await screen.findByText(/服务方暂时无法接单/),
     ).toBeInTheDocument()
     expect(metalet.ensureReady).not.toHaveBeenCalled()
     expect(executePayAndRequest).not.toHaveBeenCalled()
@@ -513,15 +517,15 @@ describe('RequestModal', () => {
       </MemoryRouter>,
     )
 
-    fireEvent.change(screen.getByLabelText(/describe what you need/i), {
+    fireEvent.change(screen.getByLabelText('填写你的需求'), {
       target: { value: 'MRC20 fortune' },
     })
-    fireEvent.click(screen.getByRole('button', { name: 'Review' }))
-    fireEvent.click(screen.getByRole('button', { name: /confirm & pay/i }))
+    fireEvent.click(screen.getByRole('button', { name: '检查订单' }))
+    fireEvent.click(screen.getByRole('button', { name: '确认并下单' }))
 
     expect(
       await screen.findByText(
-        'MRC20 checkout is not available in BotHub yet. Choose a native paid or free service.',
+        '暂不支持 MRC20 服务下单，请选择原生币或免费服务。',
       ),
     ).toBeInTheDocument()
     expect(metalet.ensureReady).not.toHaveBeenCalled()
@@ -564,14 +568,14 @@ describe('RequestModal', () => {
       </MemoryRouter>,
     )
 
-    fireEvent.change(screen.getByLabelText(/describe what you need/i), {
+    fireEvent.change(screen.getByLabelText('填写你的需求'), {
       target: { value: 'Paid fortune' },
     })
-    fireEvent.click(screen.getByRole('button', { name: 'Review' }))
-    fireEvent.click(screen.getByRole('button', { name: /confirm & pay/i }))
+    fireEvent.click(screen.getByRole('button', { name: '检查订单' }))
+    fireEvent.click(screen.getByRole('button', { name: '确认并下单' }))
 
     expect(
-      await screen.findByText(/your payment went through, but the order message was not sent/i),
+      await screen.findByText(/付款已完成，但请求消息未成功发送/),
     ).toBeInTheDocument()
     expect(
       screen.queryByText(/payment succeeded but the order message failed/i),
@@ -584,7 +588,7 @@ describe('RequestModal', () => {
       partial,
     })
     expect(useMessageStore.getState().hydrateFromDb).toHaveBeenCalledWith(wallet.globalMetaId)
-    fireEvent.click(screen.getByRole('button', { name: /open delivery/i }))
+    fireEvent.click(screen.getByRole('button', { name: '打开我的交付' }))
     expect(navigate).toHaveBeenCalledWith(
       '/delivery?order=idqbuyer%3Aidqprovider%3Apaid-txid-1',
     )
@@ -629,16 +633,16 @@ describe('RequestModal', () => {
       </MemoryRouter>,
     )
 
-    fireEvent.change(screen.getByLabelText(/describe what you need/i), {
+    fireEvent.change(screen.getByLabelText('填写你的需求'), {
       target: { value: 'Paid fortune' },
     })
-    fireEvent.click(screen.getByRole('button', { name: 'Review' }))
-    fireEvent.click(screen.getByRole('button', { name: /confirm & pay/i }))
+    fireEvent.click(screen.getByRole('button', { name: '检查订单' }))
+    fireEvent.click(screen.getByRole('button', { name: '确认并下单' }))
 
     expect(
-      await screen.findByText(/your payment went through, but the order message was not sent/i),
+      await screen.findByText(/付款已完成，但请求消息未成功发送/),
     ).toBeInTheDocument()
-    fireEvent.click(screen.getByRole('button', { name: /open delivery/i }))
+    fireEvent.click(screen.getByRole('button', { name: '打开我的交付' }))
 
     expect(navigate).toHaveBeenCalledWith(
       '/delivery?order=idqbuyer%3Aidqprovider%3Apaid-txid-1',
@@ -683,17 +687,17 @@ describe('RequestModal', () => {
       </MemoryRouter>,
     )
 
-    fireEvent.change(screen.getByLabelText(/describe what you need/i), {
+    fireEvent.change(screen.getByLabelText('填写你的需求'), {
       target: { value: 'Paid fortune' },
     })
-    fireEvent.click(screen.getByRole('button', { name: 'Review' }))
-    fireEvent.click(screen.getByRole('button', { name: /confirm & pay/i }))
+    fireEvent.click(screen.getByRole('button', { name: '检查订单' }))
+    fireEvent.click(screen.getByRole('button', { name: '确认并下单' }))
 
     expect(
-      await screen.findByText(/recovery record could not be saved locally/i),
-    ).toHaveTextContent('Payment reference: paid-txid-1')
-    expect(screen.queryByRole('button', { name: /open delivery/i })).not.toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Recovery not saved' })).toBeDisabled()
+      await screen.findByText(/本地恢复记录也未能保存/),
+    ).toHaveTextContent('支付参考：paid-txid-1')
+    expect(screen.queryByRole('button', { name: '打开我的交付' })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '无法保存恢复记录' })).toBeDisabled()
     expect(console.warn).toHaveBeenCalledWith(
       'Failed order could not be saved locally.',
       expect.any(Error),
@@ -732,16 +736,16 @@ describe('RequestModal', () => {
       </MemoryRouter>,
     )
 
-    fireEvent.change(screen.getByLabelText(/describe what you need/i), {
+    fireEvent.change(screen.getByLabelText('填写你的需求'), {
       target: { value: 'Free fortune' },
     })
-    fireEvent.click(screen.getByRole('button', { name: 'Review' }))
-    fireEvent.click(screen.getByRole('button', { name: /confirm & pay/i }))
+    fireEvent.click(screen.getByRole('button', { name: '检查订单' }))
+    fireEvent.click(screen.getByRole('button', { name: '确认并下单' }))
 
     expect(
-      await screen.findByText(/order message failed/i),
+      await screen.findByText(/免费请求暂时发送失败/),
     ).toHaveTextContent(
-      'The free order message failed. The request was saved in Delivery for recovery.',
+      '免费请求暂时发送失败，已在我的交付中保存，可继续处理。',
     )
     expect(
       screen.queryByText(/payment succeeded but the order message failed/i),
@@ -804,13 +808,13 @@ describe('RequestModal', () => {
       </MemoryRouter>,
     )
 
-    fireEvent.change(screen.getByLabelText(/describe what you need/i), {
+    fireEvent.change(screen.getByLabelText('填写你的需求'), {
       target: { value: 'Free diagnostic' },
     })
-    fireEvent.click(screen.getByRole('button', { name: 'Review' }))
-    fireEvent.click(screen.getByRole('button', { name: /confirm & pay/i }))
+    fireEvent.click(screen.getByRole('button', { name: '检查订单' }))
+    fireEvent.click(screen.getByRole('button', { name: '确认并下单' }))
 
-    fireEvent.click(await screen.findByText('CreatePin diagnostic'))
+    fireEvent.click(await screen.findByText('发单诊断详情'))
 
     expect(screen.getByText(/failure_envelope/)).toBeInTheDocument()
     expect(screen.getByText(/user canceled/)).toBeInTheDocument()

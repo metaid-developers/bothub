@@ -76,8 +76,8 @@ export function DeliveryComposer(props: {
       })
       setDraft('')
       onSent?.()
-    } catch (caught) {
-      setError(caught instanceof Error ? caught.message : t('delivery.composerSendFailed'))
+    } catch {
+      setError(t('delivery.composerSendFailed'))
     } finally {
       setSending(false)
     }
