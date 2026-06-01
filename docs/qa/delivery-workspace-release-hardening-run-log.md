@@ -1,5 +1,19 @@
 # Delivery Workspace Release Hardening Run Log
 
+## Endpoint Ownership Correction
+
+2026-06-01 follow-up: Bothub should not rely on `https://api.idchat.io` or
+idchat `/chat-api/` for this release. Earlier idchat probes in this run log were
+diagnostic checks while the local meta-socket runtime was unavailable or
+catching up; they are not release dependencies.
+
+Bothub's runtime contract is `VITE_META_SOCKET_BASE_URL` pointing at a
+meta-socket deployment that exposes native `/api/bot-hub/*`,
+`/api/group-chat/*`, and `/socket/socket.io`. The local restored
+`http://127.0.0.1:18091` instance remains valid for local/private beta. A
+non-local production/staging meta-socket base URL is a meta-socket ownership gap,
+now tracked as a backend issue rather than as an idchat dependency.
+
 Task 4 live meta-socket readiness re-check for `codex/delivery-workspace-release-hardening`.
 
 - Date checked: 2026-05-31 22:11 CST / 2026-05-31 14:11 UTC
@@ -736,16 +750,15 @@ A meta-socket issue was filed at:
 
 Bothub's frontend release-hardening work is complete for this plan's frontend
 scope, including the latest createPin diagnostic safety net and real free/paid
-buyer-send paths against the local meta-socket + Metalet runtime. AI_Sunny also
-proved that a live provider can receive and answer a Bothub order, but Delivery
-cannot yet hydrate that answer through the local meta-socket contract. Strict
-live release acceptance still has external runtime conditions:
+buyer-send paths against the local meta-socket + Metalet runtime. The later
+meta-socket AI_Sunny alias fix restored canonical provider detail and
+private-chat history locally, and Bothub can now hydrate canonical-provider
+replies back into the original address-keyed order. Strict live release
+acceptance still has external runtime conditions:
 
 1. Free and paid provider-side visibility should be rechecked after MVC
    confirmation and meta-socket block indexing catch up. If unconfirmed
    provider visibility is required, meta-socket would need mempool/ZMQ support.
-2. AI_Sunny's provider service identity needs to resolve to the canonical
-   private-chat peer used by current IDChat rows, or local private-chat history
-   needs to resolve that alias for Bothub.
-3. Public `https://api.idchat.io/api/bot-hub/*` is still not a usable
-   production BotHub base URL while it returns nginx 502.
+2. A production/staging meta-socket base URL still needs to be provided and
+   verified for native BotHub, private-chat, and Socket.IO routes. BotHub should
+   not treat idchat `/chat-api/` as that base URL.

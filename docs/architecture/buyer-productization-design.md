@@ -217,14 +217,15 @@ The first release requires these fields:
 
 ### 7.2 Private chat history
 
-Use existing idchat-compatible private chat endpoints:
+Use meta-socket private chat endpoints. These may remain compatible with the
+legacy idchat group-chat shape, but BotHub's runtime dependency is meta-socket:
 
 - `GET /group-chat/private-chat-list`
 - `GET /group-chat/private-chat-list-by-index`
 
 Expected query identity:
 
-- `metaId`: current user identity as required by meta-socket/idchat contract.
+- `metaId`: current user identity as required by the deployed meta-socket contract.
 - `otherMetaId`: peer/provider identity.
 - `cursor`, `size`, `timestamp`, or `startIndex` depending on endpoint.
 

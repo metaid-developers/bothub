@@ -5,7 +5,7 @@
 **Bothub revision checked:** `codex/delivery-workspace-release-hardening`
 **Dev env:** `VITE_META_SOCKET_BASE_URL=/meta-socket`, `VITE_USE_AGGREGATOR_MOCK=false`, `VITE_USE_WS_MOCK=false`
 **Local meta-socket:** http://127.0.0.1:18091
-**Public idchat chat API:** https://api.idchat.io/chat-api/
+**Production/staging meta-socket:** not assigned in this acceptance note; BotHub must not use idchat `/chat-api/` as its backend.
 
 ## Automated Gates
 
@@ -35,8 +35,8 @@
 | Local meta-socket health | passed | `curl http://127.0.0.1:18091/healthz` returned a healthy `meta-socket` envelope. |
 | Local service list | passed | The restored MVC indexer returns real skill-service rows. A `size=10` list check returned paid service `metabot-ziwei-fortune-v2` plus multiple free services with native MVC metadata. |
 | Local service detail | passed | Free service detail includes provider chat key and native MVC payment metadata. After the meta-socket payment metadata fix, paid service `metabot-ziwei-fortune-v2` includes provider chat key, `0.01 SPACE`, `settlementKind: "native"`, `paymentChain: "mvc"`, and `paymentAddress: "125DQu9dBCXksYWg7HnmnmU3TpBNqnMsZF"`. |
-| Public idchat chat API | passed | Current quick check: `https://api.idchat.io/chat-api/` returned HTTP 200 and identifies `service: group-chat`. |
-| Public BotHub service list | blocked | Current quick check: `https://api.idchat.io/api/bot-hub/skill-service/list?...` returned HTTP 502, and `https://api.idchat.io/chat-api/api/bot-hub/skill-service/list?...` returned HTTP 404. Bothub should keep targeting native meta-socket `/api/bot-hub/*` routes, not `/chat-api/`. |
+| idchat probe | informational only | Historical checks showed idchat `/chat-api/` is a group-chat compatibility surface, not a BotHub backend. It is not a Bothub release dependency. |
+| Production/staging meta-socket service list | blocked externally | No non-local meta-socket base URL has been assigned and verified for native `/api/bot-hub/*`, `/api/group-chat/*`, and `/socket/socket.io`. Bothub should target meta-socket only; required public/staging deployment ownership is tracked in meta-socket. |
 | Mock-disabled browser service list | passed locally | Chrome at `http://127.0.0.1:5177/` loaded real services from local meta-socket with mocks disabled. |
 | Private-chat empty-history shape | passed | meta-socket returns `data.list: null` for an empty private-chat history; Bothub now normalizes this as an empty list and the smoke script treats it as compatible. |
 
@@ -55,7 +55,7 @@
 ## Active Blockers
 
 1. Free and paid provider-side visibility for the earlier Dan/BOT order txs is not yet proven through meta-socket history. Buyer sends succeeded and the transactions were visible to MVC RPC during the run, but those specific order histories still need a fresh confirmed-history check if they are used as release evidence.
-2. Public `https://api.idchat.io/chat-api/` is healthy for idchat group/private chat, but public BotHub native `/api/bot-hub/*` routes are still not a usable production base URL.
+2. A production/staging meta-socket base URL has not yet been assigned and verified. This must be provided by meta-socket; BotHub should not use idchat `/chat-api/`.
 
 ## Related Issues
 
@@ -65,6 +65,7 @@ triage are tracked in:
 ```text
 /Users/tusm/Documents/MetaID_Projects/meta-socket/issues/2026-06-01-bothub-paid-service-payment-metadata-gap.md
 /Users/tusm/Documents/MetaID_Projects/meta-socket/issues/2026-06-01-bothub-ai-sunny-provider-chat-identity-gap.md
+/Users/tusm/Documents/MetaID_Projects/meta-socket/issues/2026-06-01-bothub-production-meta-socket-endpoint-gap.md
 /Users/tusm/Documents/MetaID_Projects/meta-socket/issues/2026-06-01-bothub-skill-service-availability-gap.md
 /Users/tusm/Documents/MetaID_Projects/meta-socket/issues/2026-05-31-bothub-aggregator-readiness.md
 /Users/tusm/Documents/MetaID_Projects/meta-socket/issues/issues-fixed-logs.md
@@ -83,7 +84,8 @@ meta-socket runtime: real service loading, wallet connect, free buyer send, paid
 native payment, order PIN broadcast, Delivery recovery, and an external
 AI_Sunny provider response all have live evidence.
 
-Strict production release remains conditional on backend/runtime readiness:
-public native BotHub routes must be usable, provider-side visibility should be
-available through local meta-socket for the earlier Dan/BOT order txs if those
-flows remain part of launch evidence, and no Bothub backend was added.
+Strict production release remains conditional on backend/runtime readiness: a
+meta-socket-owned production/staging deployment must expose native BotHub,
+private-chat, and Socket.IO routes; provider-side visibility should be available
+through meta-socket for the earlier Dan/BOT order txs if those flows remain part
+of launch evidence; and no Bothub backend was added.

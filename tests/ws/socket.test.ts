@@ -54,13 +54,13 @@ describe('socket client', () => {
 
     const { connectSocket } = await loadSocketModule()
     connectSocket({
-      baseUrl: 'https://api.idchat.io/',
+      baseUrl: 'https://meta-socket.example.com/',
       globalMetaId: 'idq1abc',
       onEnvelope: vi.fn(),
     })
 
     expect(ioMock).toHaveBeenCalledOnce()
-    expect(ioMock).toHaveBeenCalledWith('https://api.idchat.io', {
+    expect(ioMock).toHaveBeenCalledWith('https://meta-socket.example.com', {
       path: '/socket/socket.io',
       query: { metaid: 'idq1abc', type: 'app' },
       transports: ['websocket', 'polling'],
