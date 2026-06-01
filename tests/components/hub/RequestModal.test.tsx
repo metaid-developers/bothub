@@ -107,8 +107,12 @@ describe('RequestModal', () => {
       errorMessage: null,
     })
     executePayAndRequest.mockResolvedValue(result)
-    persistPendingOrder.mockResolvedValue({})
-    persistFailedToSendOrder.mockResolvedValue({})
+    persistPendingOrder.mockResolvedValue({
+      order: { id: 'idqbuyer:idqprovider:order-ref-1' },
+    })
+    persistFailedToSendOrder.mockResolvedValue({
+      order: { id: 'idqbuyer:idqprovider:failed-order' },
+    })
     vi.mocked(metalet.ensureReady).mockResolvedValue({
       globalMetaId: wallet.globalMetaId,
       mvcAddress: wallet.mvcAddress,
@@ -120,6 +124,7 @@ describe('RequestModal', () => {
 
   afterEach(() => {
     vi.restoreAllMocks()
+    delete window.__bothubLastCreatePinDiagnostic
   })
 
   it('persists the pending order and hydrates before navigating to Delivery', async () => {
@@ -142,7 +147,9 @@ describe('RequestModal', () => {
     fireEvent.click(screen.getByRole('button', { name: /confirm & pay/i }))
 
     await waitFor(() =>
-      expect(navigate).toHaveBeenCalledWith('/delivery?session=idqprovider%3Aorder-ref-1'),
+      expect(navigate).toHaveBeenCalledWith(
+        '/delivery?order=idqbuyer%3Aidqprovider%3Aorder-ref-1',
+      ),
     )
 
     expect(persistPendingOrder).toHaveBeenCalledWith({
@@ -169,6 +176,53 @@ describe('RequestModal', () => {
     )
   })
 
+  it('navigates a persisted paid order using the payment txid correlation id', async () => {
+    const paidService = { ...service, price: '1' }
+    const paidResult: ExecutePayAndRequestResult = {
+      ...result,
+      paymentTxid: 'paid-txid-1',
+      orderReference: '',
+      sessionKey: 'idqprovider:paid-txid-1',
+      orderPayload: '[ORDER] Paid fortune\ntxid: paid-txid-1',
+    }
+    executePayAndRequest.mockResolvedValue(paidResult)
+    persistPendingOrder.mockResolvedValueOnce({
+      order: { id: 'idqbuyer:idqprovider:paid-txid-1' },
+    })
+
+    render(
+      <MemoryRouter>
+        <RequestModal
+          open
+          onClose={vi.fn()}
+          service={paidService}
+          provider={provider}
+          wallet={wallet}
+        />
+      </MemoryRouter>,
+    )
+
+    fireEvent.change(screen.getByLabelText(/describe what you need/i), {
+      target: { value: 'Paid fortune' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Review' }))
+    fireEvent.click(screen.getByRole('button', { name: /confirm & pay/i }))
+
+    await waitFor(() =>
+      expect(navigate).toHaveBeenCalledWith(
+        '/delivery?order=idqbuyer%3Aidqprovider%3Apaid-txid-1',
+      ),
+    )
+
+    expect(persistPendingOrder).toHaveBeenCalledWith({
+      wallet,
+      service: paidService,
+      provider,
+      prompt: 'Paid fortune',
+      result: paidResult,
+    })
+  })
+
   it('persists a resolved free order without a returned pin id as pending, not failed', async () => {
     const resolvedWithoutPin: ExecutePayAndRequestResult = {
       ...result,
@@ -177,6 +231,9 @@ describe('RequestModal', () => {
       orderReference: 'order-ref-without-pin',
     }
     executePayAndRequest.mockResolvedValue(resolvedWithoutPin)
+    persistPendingOrder.mockResolvedValueOnce({
+      order: { id: 'idqbuyer:idqprovider:order-ref-without-pin' },
+    })
 
     render(
       <MemoryRouter>
@@ -198,7 +255,7 @@ describe('RequestModal', () => {
 
     await waitFor(() =>
       expect(navigate).toHaveBeenCalledWith(
-        '/delivery?session=idqprovider%3Aorder-ref-without-pin',
+        '/delivery?order=idqbuyer%3Aidqprovider%3Aorder-ref-without-pin',
       ),
     )
 
@@ -349,6 +406,42 @@ describe('RequestModal', () => {
     )
   })
 
+  it('keeps order navigation when hydration fails after pending persistence succeeds', async () => {
+    vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+    vi.mocked(useMessageStore.getState().hydrateFromDb).mockRejectedValueOnce(
+      new Error('hydrate failed'),
+    )
+
+    render(
+      <MemoryRouter>
+        <RequestModal
+          open
+          onClose={vi.fn()}
+          service={service}
+          provider={provider}
+          wallet={wallet}
+        />
+      </MemoryRouter>,
+    )
+
+    fireEvent.change(screen.getByLabelText(/describe what you need/i), {
+      target: { value: 'Tell me my fortune' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Review' }))
+    fireEvent.click(screen.getByRole('button', { name: /confirm & pay/i }))
+
+    await waitFor(() =>
+      expect(navigate).toHaveBeenCalledWith(
+        '/delivery?order=idqbuyer%3Aidqprovider%3Aorder-ref-1',
+      ),
+    )
+
+    expect(console.warn).toHaveBeenCalledWith(
+      'Order was saved locally but could not hydrate Delivery.',
+      expect.any(Error),
+    )
+  })
+
   it('shows a connect-required message before attempting payment when wallet is missing', async () => {
     render(
       <MemoryRouter>
@@ -372,6 +465,70 @@ describe('RequestModal', () => {
     expect(executePayAndRequest).not.toHaveBeenCalled()
   })
 
+  it('blocks checkout before wallet or payment prompts when the provider chat key is missing', async () => {
+    render(
+      <MemoryRouter>
+        <RequestModal
+          open
+          onClose={vi.fn()}
+          service={{ ...service, price: '1' }}
+          provider={{ ...provider, chatPubkey: null }}
+          wallet={wallet}
+        />
+      </MemoryRouter>,
+    )
+
+    fireEvent.change(screen.getByLabelText(/describe what you need/i), {
+      target: { value: 'Paid fortune' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Review' }))
+    fireEvent.click(screen.getByRole('button', { name: /confirm & pay/i }))
+
+    expect(
+      await screen.findByText(/provider cannot receive encrypted orders/i),
+    ).toBeInTheDocument()
+    expect(metalet.ensureReady).not.toHaveBeenCalled()
+    expect(executePayAndRequest).not.toHaveBeenCalled()
+    expect(persistPendingOrder).not.toHaveBeenCalled()
+  })
+
+  it('blocks paid MRC20 checkout with buyer-facing copy before wallet or payment prompts', async () => {
+    render(
+      <MemoryRouter>
+        <RequestModal
+          open
+          onClose={vi.fn()}
+          service={{
+            ...service,
+            price: '1',
+            currency: 'MRC20',
+            settlementKind: 'mrc20',
+            paymentChain: 'btc',
+            mrc20Ticker: 'DEMO',
+            mrc20Id: 'mrc20-genesis-id-demo',
+          }}
+          provider={provider}
+          wallet={wallet}
+        />
+      </MemoryRouter>,
+    )
+
+    fireEvent.change(screen.getByLabelText(/describe what you need/i), {
+      target: { value: 'MRC20 fortune' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Review' }))
+    fireEvent.click(screen.getByRole('button', { name: /confirm & pay/i }))
+
+    expect(
+      await screen.findByText(
+        'MRC20 checkout is not available in BotHub yet. Choose a native paid or free service.',
+      ),
+    ).toBeInTheDocument()
+    expect(metalet.ensureReady).not.toHaveBeenCalled()
+    expect(executePayAndRequest).not.toHaveBeenCalled()
+    expect(persistPendingOrder).not.toHaveBeenCalled()
+  })
+
   it('persists a recoverable failed_to_send row when payment succeeds but broadcast fails', async () => {
     const partial: PreparedPayAndRequest = {
       service: { ...service, price: '1' },
@@ -388,6 +545,9 @@ describe('RequestModal', () => {
       sessionKey: 'idqprovider:paid-txid-1',
       displaySummary: 'Paid fortune',
     }
+    persistFailedToSendOrder.mockResolvedValueOnce({
+      order: { id: 'idqbuyer:idqprovider:paid-txid-1' },
+    })
     executePayAndRequest.mockRejectedValue(
       new PayAndRequestBroadcastError('Order pin broadcast failed', partial),
     )
@@ -411,8 +571,11 @@ describe('RequestModal', () => {
     fireEvent.click(screen.getByRole('button', { name: /confirm & pay/i }))
 
     expect(
-      await screen.findByText(/payment succeeded but the order message failed/i),
+      await screen.findByText(/your payment went through, but the order message was not sent/i),
     ).toBeInTheDocument()
+    expect(
+      screen.queryByText(/payment succeeded but the order message failed/i),
+    ).not.toBeInTheDocument()
     expect(persistFailedToSendOrder).toHaveBeenCalledWith({
       wallet,
       service: { ...service, price: '1' },
@@ -422,7 +585,119 @@ describe('RequestModal', () => {
     })
     expect(useMessageStore.getState().hydrateFromDb).toHaveBeenCalledWith(wallet.globalMetaId)
     fireEvent.click(screen.getByRole('button', { name: /open delivery/i }))
-    expect(navigate).toHaveBeenCalledWith('/delivery?session=idqprovider%3Apaid-txid-1')
+    expect(navigate).toHaveBeenCalledWith(
+      '/delivery?order=idqbuyer%3Aidqprovider%3Apaid-txid-1',
+    )
+  })
+
+  it('keeps recoverable order navigation when hydration fails after failed-order persistence succeeds', async () => {
+    vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+    const partial: PreparedPayAndRequest = {
+      service: { ...service, price: '1' },
+      provider,
+      prompt: 'Paid fortune',
+      payment: {
+        paymentTxid: 'paid-txid-1',
+        paymentCommitTxid: '',
+        orderReference: '',
+      },
+      orderPayload: '[ORDER] Paid fortune\ntxid: paid-txid-1',
+      encryptedContent: 'ciphertext',
+      simplemsgBody: '{"content":"ciphertext"}',
+      sessionKey: 'idqprovider:paid-txid-1',
+      displaySummary: 'Paid fortune',
+    }
+    persistFailedToSendOrder.mockResolvedValueOnce({
+      order: { id: 'idqbuyer:idqprovider:paid-txid-1' },
+    })
+    vi.mocked(useMessageStore.getState().hydrateFromDb).mockRejectedValueOnce(
+      new Error('hydrate failed'),
+    )
+    executePayAndRequest.mockRejectedValue(
+      new PayAndRequestBroadcastError('Order pin broadcast failed', partial),
+    )
+
+    render(
+      <MemoryRouter>
+        <RequestModal
+          open
+          onClose={vi.fn()}
+          service={{ ...service, price: '1' }}
+          provider={provider}
+          wallet={wallet}
+        />
+      </MemoryRouter>,
+    )
+
+    fireEvent.change(screen.getByLabelText(/describe what you need/i), {
+      target: { value: 'Paid fortune' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Review' }))
+    fireEvent.click(screen.getByRole('button', { name: /confirm & pay/i }))
+
+    expect(
+      await screen.findByText(/your payment went through, but the order message was not sent/i),
+    ).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: /open delivery/i }))
+
+    expect(navigate).toHaveBeenCalledWith(
+      '/delivery?order=idqbuyer%3Aidqprovider%3Apaid-txid-1',
+    )
+    expect(console.warn).toHaveBeenCalledWith(
+      'Failed order was saved locally but could not hydrate Delivery.',
+      expect.any(Error),
+    )
+  })
+
+  it('does not offer Delivery recovery when a paid failed order cannot be saved locally', async () => {
+    vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+    const partial: PreparedPayAndRequest = {
+      service: { ...service, price: '1' },
+      provider,
+      prompt: 'Paid fortune',
+      payment: {
+        paymentTxid: 'paid-txid-1',
+        paymentCommitTxid: '',
+        orderReference: '',
+      },
+      orderPayload: '[ORDER] Paid fortune\ntxid: paid-txid-1',
+      encryptedContent: 'ciphertext',
+      simplemsgBody: '{"content":"ciphertext"}',
+      sessionKey: 'idqprovider:paid-txid-1',
+      displaySummary: 'Paid fortune',
+    }
+    persistFailedToSendOrder.mockRejectedValueOnce(new Error('IndexedDB unavailable'))
+    executePayAndRequest.mockRejectedValue(
+      new PayAndRequestBroadcastError('Order pin broadcast failed', partial),
+    )
+
+    render(
+      <MemoryRouter>
+        <RequestModal
+          open
+          onClose={vi.fn()}
+          service={{ ...service, price: '1' }}
+          provider={provider}
+          wallet={wallet}
+        />
+      </MemoryRouter>,
+    )
+
+    fireEvent.change(screen.getByLabelText(/describe what you need/i), {
+      target: { value: 'Paid fortune' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Review' }))
+    fireEvent.click(screen.getByRole('button', { name: /confirm & pay/i }))
+
+    expect(
+      await screen.findByText(/recovery record could not be saved locally/i),
+    ).toHaveTextContent('Payment reference: paid-txid-1')
+    expect(screen.queryByRole('button', { name: /open delivery/i })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Recovery not saved' })).toBeDisabled()
+    expect(console.warn).toHaveBeenCalledWith(
+      'Failed order could not be saved locally.',
+      expect.any(Error),
+    )
   })
 
   it('uses free-order recovery wording when a free order broadcast fails', async () => {
@@ -478,5 +753,68 @@ describe('RequestModal', () => {
       prompt: 'Free fortune',
       partial,
     })
+  })
+
+  it('shows sanitized createPin diagnostics behind dev-only details after a recoverable broadcast failure', async () => {
+    const partial: PreparedPayAndRequest = {
+      service,
+      provider,
+      prompt: 'Free diagnostic',
+      payment: {
+        paymentTxid: '',
+        paymentCommitTxid: '',
+        orderReference: 'free-order-ref-2',
+      },
+      orderPayload: '[ORDER] Free diagnostic\norder id: free-order-ref-2',
+      encryptedContent: 'ciphertext',
+      simplemsgBody: '{"content":"ciphertext"}',
+      sessionKey: 'idqprovider:free-order-ref-2',
+      displaySummary: 'Free diagnostic',
+    }
+    window.__bothubLastCreatePinDiagnostic = {
+      at: '2026-06-01T00:00:00.000Z',
+      phase: 'failure_envelope',
+      serviceId: service.id,
+      serviceName: service.serviceName,
+      providerGlobalMetaId: provider.globalMetaId,
+      providerName: provider.name ?? '',
+      paymentTxid: '',
+      orderReference: 'free-order-ref-2',
+      sessionKey: 'idqprovider:free-order-ref-2',
+      resolvedPinId: '',
+      failureMessage: 'user canceled',
+      errorName: '',
+      errorMessage: '',
+      txidCandidates: [],
+      resultShape: { type: 'object', keys: ['error'] },
+    }
+    executePayAndRequest.mockRejectedValue(
+      new PayAndRequestBroadcastError('Order pin broadcast failed', partial),
+    )
+
+    render(
+      <MemoryRouter>
+        <RequestModal
+          open
+          onClose={vi.fn()}
+          service={service}
+          provider={provider}
+          wallet={wallet}
+        />
+      </MemoryRouter>,
+    )
+
+    fireEvent.change(screen.getByLabelText(/describe what you need/i), {
+      target: { value: 'Free diagnostic' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Review' }))
+    fireEvent.click(screen.getByRole('button', { name: /confirm & pay/i }))
+
+    fireEvent.click(await screen.findByText('CreatePin diagnostic'))
+
+    expect(screen.getByText(/failure_envelope/)).toBeInTheDocument()
+    expect(screen.getByText(/user canceled/)).toBeInTheDocument()
+    expect(screen.queryByText(/ciphertext/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/\[ORDER\]/)).not.toBeInTheDocument()
   })
 })

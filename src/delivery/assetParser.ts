@@ -74,8 +74,8 @@ const MIME_TYPE_BY_EXTENSION = new Map<string, string>([
 function normalizeMetafileCandidate(value: string): string {
   return String(value || '')
     .trim()
-    .replace(/^[[{]+/, '')
-    .replace(/[\]}),.;:!?，。；：！？]+$/, '')
+    .replace(/^[[({【（]+/, '')
+    .replace(/[\])}】）,.;:!?，。；：！？]+$/, '')
 }
 
 function metafileUriFromContentUrl(rawUrl: string): string {

@@ -99,7 +99,7 @@ describe('DeliveryAssetLibrary', () => {
     expect(screen.getByText('还没有收到成果')).toBeInTheDocument()
     expect(
       screen.getByText(
-        'Provider 完成交付后，图片、视频、音频和附件会显示在这里。',
+        '服务方完成交付后，图片、视频、音频和附件会显示在这里。',
       ),
     ).toBeInTheDocument()
   })

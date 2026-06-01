@@ -5,6 +5,15 @@ import type { DeliveryMessage } from '@/delivery/messageStore'
 import { deliveryAssetsForSession } from '@/delivery/sessionDisplay'
 import { t } from '@/i18n'
 
+const assetKindLabelKeys: Record<string, Parameters<typeof t>[0]> = {
+  image: 'delivery.assetKinds.image',
+  video: 'delivery.assetKinds.video',
+  audio: 'delivery.assetKinds.audio',
+  document: 'delivery.assetKinds.document',
+  archive: 'delivery.assetKinds.archive',
+  other: 'delivery.assetKinds.other',
+}
+
 export interface DeliveredAssetsPanelProps {
   messages: DeliveryMessage[]
   storedAssets?: DeliveryAssetRecord[]
@@ -52,7 +61,7 @@ export function DeliveredAssetsPanel({
                 key={kind}
                 className="rounded-full border border-hub-border bg-hub-surface2 px-2 py-0.5 text-[11px] text-hub-muted"
               >
-                {kind} {count}
+                {t(assetKindLabelKeys[kind] ?? 'delivery.assetKinds.other')} {count}
               </span>
             ))}
           </div>

@@ -33,8 +33,8 @@ describe('SessionsList', () => {
       />,
     )
 
-    expect(screen.getByText('Delivered')).toBeInTheDocument()
-    expect(screen.getByText('2 assets')).toBeInTheDocument()
+    expect(screen.getByText('已交付')).toBeInTheDocument()
+    expect(screen.getByText('2 个成果')).toBeInTheDocument()
   })
 
   it('displays peer name and avatar when profile media is available', () => {
@@ -56,7 +56,7 @@ describe('SessionsList', () => {
     )
 
     expect(screen.getByText('Provider Bot')).toBeInTheDocument()
-    expect(screen.getByRole('img', { name: 'Provider Bot avatar' })).toHaveAttribute(
+    expect(screen.getByRole('img', { name: 'Provider Bot 头像' })).toHaveAttribute(
       'src',
       'https://cdn.example/provider.png',
     )
@@ -72,7 +72,7 @@ describe('SessionsList', () => {
       />,
     )
 
-    expect(screen.getByLabelText('idq1ab…mnop avatar')).toHaveTextContent('I')
+    expect(screen.getByLabelText('idq1ab…mnop 头像')).toHaveTextContent('I')
   })
 
   it('keeps selection behavior intact', () => {

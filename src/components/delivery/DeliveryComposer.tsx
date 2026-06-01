@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useId, useState } from 'react'
 import { sendDeliveryFollowUp } from '@/delivery/sendMessage'
 import { useMessageStore } from '@/delivery/messageStore'
 import type { DeliveryMessage } from '@/delivery/messageStore'
@@ -30,6 +30,8 @@ export function DeliveryComposer(props: {
   const [draft, setDraft] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [sending, setSending] = useState(false)
+  const [detailsOpen, setDetailsOpen] = useState(false)
+  const detailsId = useId()
   const appendOutgoingFollowUp = useMessageStore((s) => s.appendOutgoingFollowUp)
 
   const providerChatPubkey =
@@ -112,13 +114,30 @@ export function DeliveryComposer(props: {
         <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-hub-muted">
           <p role={error ? 'alert' : undefined}>{error ?? disabledReason}</p>
           {canFetchProviderKey ? (
-            <button
-              type="button"
-              onClick={props.onFetchProviderKey}
-              className="rounded-full border border-hub-border px-2 py-1 text-hub-accent hover:border-hub-muted"
-            >
-              Fetch provider key
-            </button>
+            <>
+              <p>{t('delivery.providerKeyRetryHint')}</p>
+              <button
+                type="button"
+                aria-controls={detailsId}
+                aria-expanded={detailsOpen}
+                aria-label={t('delivery.providerKeyDetailsLabel')}
+                onClick={() => setDetailsOpen((open) => !open)}
+                className="rounded-full border border-hub-border px-2 py-1 text-hub-accent hover:border-hub-muted"
+              >
+                {t('delivery.technicalDetails')}
+              </button>
+              {detailsOpen ? (
+                <div id={detailsId} className="flex flex-wrap items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={props.onFetchProviderKey}
+                    className="rounded-full border border-hub-border px-2 py-1 text-hub-accent hover:border-hub-muted"
+                  >
+                    {t('delivery.providerKeyRetry')}
+                  </button>
+                </div>
+              ) : null}
+            </>
           ) : null}
         </div>
       )}

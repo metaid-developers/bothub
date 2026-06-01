@@ -1,6 +1,12 @@
 import type { ProviderInfo, SkillServiceCore } from '@/api/aggregator.types'
 import type { TransferTask, WalletIdentity } from '@/wallet/types'
 import { buildOrderPayload } from './buildOrderPayload'
+import {
+  buildCreatePinDiagnostic,
+  recordCreatePinDiagnostic,
+  type CreatePinDiagnosticContext,
+  type CreatePinDiagnosticPhase,
+} from './createPinDiagnostics'
 import { ORDER_RAW_REQUEST_MAX_CHARS, validateOrderRawRequest } from './orderMessage'
 import {
   collectTxidLikeStrings,
@@ -193,7 +199,7 @@ export async function executeServicePayment(
       throw new PayAndRequestError('MRC20 asset id is missing for this service', 'payment_failed')
     }
     throw new PayAndRequestError(
-      'MRC20 paid checkout is not supported by the current Metalet transfer API.',
+      'MRC20 checkout is not available in BotHub yet. Choose a native paid or free service.',
       'payment_failed',
     )
   }
@@ -302,6 +308,48 @@ function resolveCreatePinChain(service: SkillServiceCore): 'btc' | 'mvc' | 'doge
   return 'mvc'
 }
 
+function buildCreatePinDiagnosticContext(
+  prepared: PreparedPayAndRequest,
+): CreatePinDiagnosticContext {
+  return {
+    service: {
+      id: prepared.service.id,
+      serviceName: prepared.service.serviceName,
+      displayName: prepared.service.displayName,
+      providerSkill: prepared.service.providerSkill,
+    },
+    provider: {
+      globalMetaId: prepared.provider.globalMetaId,
+      name: prepared.provider.name,
+    },
+    payment: {
+      paymentTxid: prepared.payment.paymentTxid,
+      orderReference: prepared.payment.orderReference,
+    },
+    sessionKey: prepared.sessionKey,
+  }
+}
+
+function recordCreatePinAttempt(input: {
+  phase: CreatePinDiagnosticPhase
+  prepared: PreparedPayAndRequest
+  result?: unknown
+  error?: unknown
+  resolvedPinId?: string
+  failureMessage?: string
+}): void {
+  recordCreatePinDiagnostic(
+    buildCreatePinDiagnostic({
+      phase: input.phase,
+      context: buildCreatePinDiagnosticContext(input.prepared),
+      result: input.result,
+      error: input.error,
+      resolvedPinId: input.resolvedPinId,
+      failureMessage: input.failureMessage,
+    }),
+  )
+}
+
 export async function broadcastPreparedOrder(
   prepared: PreparedPayAndRequest,
   metalet: Pick<PayAndRequestMetalet, 'createPin'>,
@@ -328,19 +376,40 @@ export async function broadcastPreparedOrder(
     )
   } catch (err) {
     if (isCreatePinTransportResponseLostError(err)) {
+      recordCreatePinAttempt({
+        phase: 'response_lost',
+        prepared,
+        error: err,
+      })
       return ''
     }
+    recordCreatePinAttempt({
+      phase: 'rejected',
+      prepared,
+      error: err,
+    })
     const message =
       err instanceof WalletResponseTimeoutError ? err.message : 'Order pin broadcast failed'
     throw new PayAndRequestBroadcastError(message, prepared, err)
   }
 
   const orderPinId = resolvePrimaryPinId(pinResult)
+  const failure = getResolvedCreatePinFailureMessage(pinResult)
+  recordCreatePinAttempt({
+    phase: orderPinId ? 'success_pin' : failure ? 'failure_envelope' : 'indeterminate_success',
+    prepared,
+    result: pinResult,
+    resolvedPinId: orderPinId,
+    failureMessage: failure,
+  })
   if (orderPinId) return orderPinId
 
-  const failure = getResolvedCreatePinFailureMessage(pinResult)
   if (failure) {
-    throw new PayAndRequestBroadcastError(`Order pin broadcast failed: ${failure}`, prepared)
+    throw new PayAndRequestBroadcastError(
+      `Order pin broadcast failed: ${failure}`,
+      prepared,
+      pinResult,
+    )
   }
   return ''
 }

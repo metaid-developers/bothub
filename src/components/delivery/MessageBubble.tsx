@@ -1,13 +1,16 @@
-import { useState } from 'react'
+import { useId, useState } from 'react'
 import { clsx } from 'clsx'
 import type { DeliveryMessage } from '@/delivery/messageStore'
-import { getMessageVariant } from '@/delivery/messageDisplay'
+import {
+  getMessageVariant,
+  protocolDisplayTextForMessage,
+} from '@/delivery/messageDisplay'
 import { parseOrderMessage } from '@/delivery/orderParser'
-import { parseDeliveryProtocol } from '@/delivery/protocol'
 import { deliveryAssetsFromMessage } from '@/delivery/sessionDisplay'
 import { AssetPreviewCard } from '@/components/delivery/AssetPreviewCard'
 import { PeerAvatar } from '@/components/delivery/PeerAvatar'
 import { peerDisplayName } from '@/components/delivery/peerDisplay'
+import { t } from '@/i18n'
 
 export interface MessageBubbleProps {
   message: DeliveryMessage
@@ -45,11 +48,11 @@ function OrderBubble({
         )}
       >
         <p className="text-xs font-semibold uppercase tracking-wide opacity-80">
-          Order
+          请求
         </p>
         <p className="mt-1 font-medium">{order.displaySummary}</p>
         {priceLabel ? (
-          <p className="mt-1 text-xs opacity-90">Price: {priceLabel}</p>
+          <p className="mt-1 text-xs opacity-90">费用：{priceLabel}</p>
         ) : null}
         {order.rawRequest ? (
           <div className="mt-2">
@@ -58,7 +61,7 @@ function OrderBubble({
               onClick={() => setPromptOpen((open) => !open)}
               className="text-xs underline opacity-90"
             >
-              {promptOpen ? 'Hide prompt' : 'Show prompt'}
+              {promptOpen ? '收起原始需求' : '查看原始需求'}
             </button>
             {promptOpen ? (
               <pre className="mt-2 max-h-48 overflow-auto whitespace-pre-wrap break-words rounded border border-white/20 bg-black/10 p-2 text-xs">
@@ -69,7 +72,7 @@ function OrderBubble({
         ) : null}
         {message.decryptError ? (
           <p className="mt-1 text-xs opacity-70">
-            Order broadcast issue recorded; showing saved order details.
+            请求发送异常已记录，正在显示已保存的请求详情。
           </p>
         ) : null}
       </div>
@@ -114,7 +117,7 @@ function TextBubble({
         ) : null}
         <p className="whitespace-pre-wrap break-words">{body}</p>
         {message.decryptError ? (
-          <p className="mt-1 text-xs opacity-70">Could not decrypt — showing ciphertext</p>
+          <p className="mt-1 text-xs opacity-70">{t('delivery.decryptFailedDefault')}</p>
         ) : null}
       </div>
     </div>
@@ -126,8 +129,8 @@ function SystemBubble({ message }: { message: DeliveryMessage }) {
     <div className="flex justify-center">
       <p className="max-w-[min(100%,32rem)] rounded-full border border-hub-border bg-hub-surface2/80 px-3 py-1 text-center text-xs text-hub-muted">
         {message.decryptError
-          ? 'Could not decrypt this message — stored ciphertext only.'
-          : message.content || 'System message'}
+          ? t('delivery.decryptFailedDefault')
+          : message.content || '系统消息'}
       </p>
     </div>
   )
@@ -135,6 +138,7 @@ function SystemBubble({ message }: { message: DeliveryMessage }) {
 
 function DecryptFailedBubble({ message }: { message: DeliveryMessage }) {
   const [detailsOpen, setDetailsOpen] = useState(false)
+  const detailsId = useId()
   const copyValue = (value: string | undefined) => {
     if (!value?.trim()) return
     void navigator.clipboard?.writeText(value.trim()).catch(() => undefined)
@@ -143,39 +147,38 @@ function DecryptFailedBubble({ message }: { message: DeliveryMessage }) {
   return (
     <div className="flex justify-start">
       <article className="max-w-[min(100%,32rem)] rounded-card border border-amber-400/30 bg-hub-surface2 px-3 py-2 text-sm leading-relaxed text-white">
-        <p className="font-medium">Unable to decrypt this message</p>
-        <p className="mt-1 text-xs text-hub-muted">
-          The session is still usable. You can retry after the provider key is available.
-        </p>
-        <div className="mt-2 flex flex-wrap gap-2 text-xs text-hub-muted">
-          {message.pinId ? (
-            <button
-              type="button"
-              onClick={() => copyValue(message.pinId)}
-              className="rounded-full border border-hub-border px-2 py-1 hover:border-hub-muted"
-            >
-              Pin: {message.pinId}
-            </button>
-          ) : null}
-          {message.txId ? (
-            <button
-              type="button"
-              onClick={() => copyValue(message.txId)}
-              className="rounded-full border border-hub-border px-2 py-1 hover:border-hub-muted"
-            >
-              Tx: {message.txId}
-            </button>
-          ) : null}
-        </div>
+        <p className="font-medium">{t('delivery.decryptFailedDefault')}</p>
         <button
           type="button"
+          aria-controls={detailsId}
+          aria-expanded={detailsOpen}
           onClick={() => setDetailsOpen((open) => !open)}
           className="mt-2 text-xs text-hub-accent underline"
         >
-          {detailsOpen ? 'Hide technical details' : 'Show technical details'}
+          {t('delivery.technicalDetails')}
         </button>
         {detailsOpen ? (
-          <div className="mt-2 space-y-2 text-xs text-hub-muted">
+          <div id={detailsId} className="mt-2 space-y-2 text-xs text-hub-muted">
+            <div className="flex flex-wrap gap-2">
+              {message.pinId ? (
+                <button
+                  type="button"
+                  onClick={() => copyValue(message.pinId)}
+                  className="rounded-full border border-hub-border px-2 py-1 hover:border-hub-muted"
+                >
+                  Pin: {message.pinId}
+                </button>
+              ) : null}
+              {message.txId ? (
+                <button
+                  type="button"
+                  onClick={() => copyValue(message.txId)}
+                  className="rounded-full border border-hub-border px-2 py-1 hover:border-hub-muted"
+                >
+                  Tx: {message.txId}
+                </button>
+              ) : null}
+            </div>
             {message.decryptError ? (
               <p className="whitespace-pre-wrap break-words">{message.decryptError}</p>
             ) : null}
@@ -217,23 +220,23 @@ function TimelineEvent({
 }
 
 function DeliveryBubble({ message }: { message: DeliveryMessage }) {
-  const protocol = parseDeliveryProtocol(message.content)
   const assets = deliveryAssetsFromMessage(message)
+  const displayText = protocolDisplayTextForMessage(message)
 
   return (
     <div className="flex justify-start">
       <article
-        aria-label="Delivery result"
+        aria-label="交付成果"
         className="max-w-[min(100%,32rem)] rounded-card border border-hub-accent/40 bg-hub-surface2 px-3 py-2 text-sm leading-relaxed text-white"
       >
         <p className="text-xs font-semibold uppercase tracking-wide text-hub-accent">
-          Delivery
+          交付成果
         </p>
         <p className="mt-1 whitespace-pre-wrap break-words">
-          {protocol.displayText || 'Delivery received'}
+          {displayText || '已收到交付'}
         </p>
         <p className="mt-2 text-xs text-hub-muted">
-          {assets.length} asset{assets.length === 1 ? '' : 's'} attached
+          {assets.length} 个成果
         </p>
         {assets.length > 0 ? (
           <div className="mt-2 grid max-w-full grid-cols-2 gap-2">
@@ -255,25 +258,32 @@ export function MessageBubble({ message, selfGlobalMetaId }: MessageBubbleProps)
     return <OrderBubble message={message} isSelf={isSelf} />
   }
   if (variant === 'status') {
-    const protocol = parseDeliveryProtocol(message.content)
-    return <TimelineEvent label="Order status update" body={protocol.displayText} />
+    return (
+      <TimelineEvent
+        label="交付状态更新"
+        body={protocolDisplayTextForMessage(message)}
+      />
+    )
   }
   if (variant === 'delivery') {
     return <DeliveryBubble message={message} />
   }
   if (variant === 'completion') {
-    const protocol = parseDeliveryProtocol(message.content)
     return (
       <TimelineEvent
-        label="Order completed"
-        body={protocol.displayText || 'Order completed'}
+        label="订单已完成"
+        body={protocolDisplayTextForMessage(message) || '订单已完成'}
         tone="success"
       />
     )
   }
   if (variant === 'rating_reserved') {
-    const protocol = parseDeliveryProtocol(message.content)
-    return <TimelineEvent label="Rating reserved" body={protocol.displayText} />
+    return (
+      <TimelineEvent
+        label="评价待开放"
+        body={protocolDisplayTextForMessage(message)}
+      />
+    )
   }
   if (message.decryptError) {
     return <DecryptFailedBubble message={message} />

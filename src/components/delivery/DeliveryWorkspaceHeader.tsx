@@ -15,7 +15,7 @@ export function DeliveryWorkspaceHeader({ order }: DeliveryWorkspaceHeaderProps)
   if (!order) {
     return (
       <div
-        aria-label="No delivery session selected"
+        aria-label={t('delivery.workspace.noSelectedAria')}
         role="status"
         className="border-b border-hub-border px-4 py-3"
       >

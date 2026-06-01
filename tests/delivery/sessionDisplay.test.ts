@@ -53,6 +53,18 @@ describe('deriveSessionStatus', () => {
     )
   })
 
+  it('marks protocolTag-only delivery messages as delivered', () => {
+    expect(
+      deriveSessionStatus(
+        [
+          orderMessage(),
+          message('U2FsdGVkX1encrypted-delivery', { protocolTag: 'delivery' }),
+        ],
+        SELF,
+      ),
+    ).toBe('delivered')
+  })
+
   it('does not fail a session just because plain text contains no error', () => {
     expect(deriveSessionStatus([orderMessage(), message('Finished with no error')], SELF)).toBe(
       'active',

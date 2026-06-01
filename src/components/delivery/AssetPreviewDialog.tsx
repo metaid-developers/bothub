@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react'
 import type { ParsedDeliveryAsset } from '@/delivery/assetParser'
 
 interface AssetPreviewDialogProps {
@@ -6,7 +7,32 @@ interface AssetPreviewDialogProps {
   onClose: () => void
 }
 
+const PREVIEW_UNAVAILABLE_LABEL = '预览暂不可用，可打开文件'
+
+function canInlinePreview(kind: ParsedDeliveryAsset['kind']): boolean {
+  return kind === 'image' || kind === 'video' || kind === 'audio'
+}
+
 export function AssetPreviewDialog({ asset, open, onClose }: AssetPreviewDialogProps) {
+  const previewUrl = asset.previewUrl || asset.downloadUrl
+  const fallbackUrl = asset.fallbackUrl || asset.downloadUrl
+  const supportsInlinePreview = canInlinePreview(asset.kind)
+  const [mediaSrc, setMediaSrc] = useState(() => previewUrl)
+  const [previewFailed, setPreviewFailed] = useState(() => !supportsInlinePreview)
+
+  useEffect(() => {
+    setMediaSrc(previewUrl)
+    setPreviewFailed(!supportsInlinePreview)
+  }, [asset.uri, previewUrl, supportsInlinePreview])
+
+  const handlePreviewError = () => {
+    if (mediaSrc !== fallbackUrl) {
+      setMediaSrc(fallbackUrl)
+      return
+    }
+    setPreviewFailed(true)
+  }
+
   if (!open) return null
 
   return (
@@ -26,6 +52,14 @@ export function AssetPreviewDialog({ asset, open, onClose }: AssetPreviewDialogP
           </div>
           <div className="flex items-center gap-2">
             <a
+              href={fallbackUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="rounded-card border border-hub-border px-3 py-1 text-xs font-medium text-hub-muted hover:bg-hub-surface2"
+            >
+              打开
+            </a>
+            <a
               href={asset.downloadUrl}
               target="_blank"
               rel="noopener noreferrer"
@@ -43,61 +77,46 @@ export function AssetPreviewDialog({ asset, open, onClose }: AssetPreviewDialogP
             </button>
           </div>
         </div>
-        <div className="flex items-center justify-center bg-black/30 p-4">
-          {asset.kind === 'image' && (
+        <div className="flex min-h-[16rem] items-center justify-center bg-black/30 p-4">
+          {asset.kind === 'image' && !previewFailed && (
             <img
-              src={asset.previewUrl}
+              src={mediaSrc}
               alt={asset.filename}
-              onError={(e) => {
-                (e.target as HTMLImageElement).src = asset.fallbackUrl
-              }}
+              onError={handlePreviewError}
               className="max-h-[70vh] max-w-full object-contain"
             />
           )}
-          {asset.kind === 'video' && (
+          {asset.kind === 'video' && !previewFailed && (
             <video
-              key={asset.previewUrl}
+              key={mediaSrc}
               controls
               playsInline
-              onError={(e) => {
-                const video = e.target as HTMLVideoElement
-                video.poster = ''
-              }}
+              onError={handlePreviewError}
               className="max-h-[70vh] max-w-full"
             >
-              <source src={asset.previewUrl} type={asset.mimeType} />
+              <source src={mediaSrc} type={asset.mimeType} onError={handlePreviewError} />
             </video>
           )}
-          {asset.kind === 'audio' && (
+          {asset.kind === 'audio' && !previewFailed && (
             <div className="py-8">
               <audio
-                key={asset.previewUrl}
+                key={mediaSrc}
                 controls
-                onError={(e) => {
-                  const audio = e.target as HTMLAudioElement
-                  audio.controls = false
-                }}
+                onError={handlePreviewError}
               >
-                <source src={asset.previewUrl} type={asset.mimeType} />
+                <source src={mediaSrc} type={asset.mimeType} onError={handlePreviewError} />
               </audio>
             </div>
           )}
-          {(asset.kind === 'document' || asset.kind === 'archive' || asset.kind === 'other') && (
+          {previewFailed && (
             <div className="flex flex-col items-center gap-4 py-8 text-center">
               <span className="text-4xl font-bold text-hub-muted/50">
                 {asset.extension?.toUpperCase() || 'FILE'}
               </span>
               <p className="text-sm text-hub-muted">
-                {asset.filename}
+                {PREVIEW_UNAVAILABLE_LABEL}
               </p>
-              <a
-                href={asset.downloadUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="rounded-card bg-hub-accent px-4 py-2 text-sm font-semibold text-white hover:bg-hub-accent/90"
-              >
-                下载文件
-              </a>
+              <p className="max-w-sm text-xs text-hub-muted">{asset.filename}</p>
             </div>
           )}
         </div>

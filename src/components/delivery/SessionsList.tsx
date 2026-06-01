@@ -94,15 +94,14 @@ export function SessionsList({
                 </p>
               ) : null}
               <p className="mt-1 line-clamp-2 text-xs text-hub-muted">
-                {sessionPreviewText(session.lastMessage.content)}
+                {sessionPreviewText(
+                  session.lastMessage.content,
+                  session.lastMessage.protocolTag,
+                )}
               </p>
               <p className="mt-1 flex items-center justify-between gap-2 text-[11px] text-hub-muted">
-                <span>
-                  {session.messageCount} message{session.messageCount === 1 ? '' : 's'}
-                </span>
-                <span>
-                  {session.assetCount} asset{session.assetCount === 1 ? '' : 's'}
-                </span>
+                <span>{session.messageCount} 条消息</span>
+                <span>{session.assetCount} 个成果</span>
               </p>
             </button>
           </li>

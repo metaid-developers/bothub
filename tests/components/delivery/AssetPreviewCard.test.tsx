@@ -1,5 +1,5 @@
 import { fireEvent, render, screen } from '@testing-library/react'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { AssetPreviewCard } from '@/components/delivery/AssetPreviewCard'
 import type { ParsedDeliveryAsset } from '@/delivery/assetParser'
 
@@ -32,7 +32,7 @@ describe('AssetPreviewCard', () => {
     fireEvent.error(image)
 
     expect(image).toHaveAttribute('src', 'https://fallback.example/pin')
-    expect(screen.getByRole('link', { name: /download/i })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: '下载' })).toBeInTheDocument()
   })
 
   it('resets failed image preview state when rerendered with a new asset', () => {
@@ -43,7 +43,7 @@ describe('AssetPreviewCard', () => {
     const image = screen.getByRole('img', { name: 'pin.png' })
     fireEvent.error(image)
     fireEvent.error(image)
-    expect(screen.getByText('Preview unavailable')).toBeInTheDocument()
+    expect(screen.getByText('预览暂不可用，可打开文件')).toBeInTheDocument()
 
     rerender(
       <AssetPreviewCard
@@ -64,7 +64,7 @@ describe('AssetPreviewCard', () => {
       'src',
       'https://accelerate.example/next',
     )
-    expect(screen.queryByText('Preview unavailable')).not.toBeInTheDocument()
+    expect(screen.queryByText('预览暂不可用，可打开文件')).not.toBeInTheDocument()
   })
 
   it('renders video assets as controlled inline video', () => {
@@ -85,7 +85,7 @@ describe('AssetPreviewCard', () => {
     expect(video).toHaveAttribute('playsinline')
   })
 
-  it('tries video fallback before marking preview unavailable', () => {
+  it('tries video fallback before marking preview unavailable without collapsing actions', () => {
     const { container } = render(
       <AssetPreviewCard
         asset={asset({
@@ -102,6 +102,8 @@ describe('AssetPreviewCard', () => {
     const source = container.querySelector('video source')
     const video = container.querySelector('video')
     expect(source).toHaveAttribute('src', 'https://accelerate.example/clip')
+    const previewFrame = container.querySelector('article > div')
+    expect(previewFrame).toHaveClass('aspect-[16/9]')
 
     fireEvent.error(source as Element)
 
@@ -110,12 +112,17 @@ describe('AssetPreviewCard', () => {
       'src',
       'https://fallback.example/clip',
     )
-    expect(screen.getByRole('link', { name: /download/i })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: '下载' })).toBeInTheDocument()
 
     fireEvent.error(container.querySelector('video source') as Element)
 
-    expect(screen.getByText('Preview unavailable')).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: /download/i })).toBeInTheDocument()
+    expect(previewFrame).toHaveClass('aspect-[16/9]')
+    expect(screen.getByText('预览暂不可用，可打开文件')).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: '打开' })).toHaveAttribute(
+      'href',
+      'https://fallback.example/clip',
+    )
+    expect(screen.getByRole('link', { name: '下载' })).toBeInTheDocument()
   })
 
   it('renders audio assets as controlled inline audio', () => {
@@ -135,7 +142,7 @@ describe('AssetPreviewCard', () => {
     expect(audio).toHaveAttribute('controls')
   })
 
-  it('tries audio fallback before marking preview unavailable', () => {
+  it('tries audio fallback before marking preview unavailable without collapsing actions', () => {
     const { container } = render(
       <AssetPreviewCard
         asset={asset({
@@ -152,6 +159,8 @@ describe('AssetPreviewCard', () => {
     const source = container.querySelector('audio source')
     const audio = container.querySelector('audio')
     expect(source).toHaveAttribute('src', 'https://accelerate.example/voice')
+    const previewFrame = container.querySelector('article > div')
+    expect(previewFrame).toHaveClass('aspect-[16/9]')
 
     fireEvent.error(source as Element)
 
@@ -160,34 +169,60 @@ describe('AssetPreviewCard', () => {
       'src',
       'https://fallback.example/voice',
     )
-    expect(screen.getByRole('link', { name: /download/i })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: '下载' })).toBeInTheDocument()
 
     fireEvent.error(container.querySelector('audio source') as Element)
 
-    expect(screen.getByText('Preview unavailable')).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: /download/i })).toBeInTheDocument()
+    expect(previewFrame).toHaveClass('aspect-[16/9]')
+    expect(screen.getByText('预览暂不可用，可打开文件')).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: '打开' })).toHaveAttribute(
+      'href',
+      'https://fallback.example/voice',
+    )
+    expect(screen.getByRole('link', { name: '下载' })).toBeInTheDocument()
   })
 
-  it('renders document assets as download-focused cards without inline media', () => {
+  it('renders document and archive assets as open/download cards without inline preview claims', () => {
+    const onPreview = vi.fn()
     const { container } = render(
-      <AssetPreviewCard
-        asset={asset({
-          kind: 'document',
-          extension: '.pdf',
-          filename: 'brief.pdf',
-          mimeType: 'application/pdf',
-        })}
-      />,
+      <div>
+        <AssetPreviewCard
+          asset={asset({
+            kind: 'document',
+            extension: '.pdf',
+            filename: 'brief.pdf',
+            mimeType: 'application/pdf',
+          })}
+          onPreview={onPreview}
+        />
+        <AssetPreviewCard
+          asset={asset({
+            kind: 'archive',
+            extension: '.zip',
+            filename: 'bundle.zip',
+            mimeType: 'application/zip',
+            previewUrl: 'https://accelerate.example/bundle',
+            downloadUrl: 'https://download.example/bundle',
+            fallbackUrl: 'https://fallback.example/bundle',
+          })}
+          onPreview={onPreview}
+        />
+      </div>,
     )
 
     expect(container.querySelector('img, video, audio')).not.toBeInTheDocument()
     expect(screen.getByText('brief.pdf')).toBeInTheDocument()
+    expect(screen.getByText('bundle.zip')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '预览 brief.pdf' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '预览 bundle.zip' })).not.toBeInTheDocument()
+    expect(screen.getAllByRole('link', { name: '打开' })).toHaveLength(2)
+    expect(screen.getAllByRole('link', { name: '下载' })).toHaveLength(2)
   })
 
   it('keeps download links stable and safe for every asset', () => {
     render(<AssetPreviewCard asset={asset()} />)
 
-    const link = screen.getByRole('link', { name: /download/i })
+    const link = screen.getByRole('link', { name: '下载' })
     expect(link).toHaveAttribute('href', 'https://download.example/pin')
     expect(link).toHaveAttribute('target', '_blank')
     expect(link).toHaveAttribute('rel', expect.stringContaining('noopener'))

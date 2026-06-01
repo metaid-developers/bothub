@@ -157,6 +157,94 @@ describe('sessionGrouping', () => {
     expect(grouped.get(PEER)).toBeUndefined()
   })
 
+  it('uses delivery protocol tags as correlation even without a stored field', () => {
+    const grouped = groupPeerMessagesBySession(
+      [
+        msg({
+          id: 'delivery-only',
+          content: '[DELIVERY:protocol-only] Ready metafile://result.png',
+          timestamp: 1,
+        }),
+      ],
+      SELF,
+    )
+
+    expect(grouped.get(buildSessionKey(PEER, 'protocol-only'))?.map((m) => m.id)).toEqual([
+      'delivery-only',
+    ])
+    expect(grouped.get(PEER)).toBeUndefined()
+  })
+
+  it('keeps unrelated tagged orders from the same provider in separate sessions', () => {
+    const grouped = groupPeerMessagesBySession(
+      [
+        msg({
+          id: 'delivery-one',
+          content: '[DELIVERY:order-one] Ready metafile://one.png',
+          timestamp: 1,
+        }),
+        msg({
+          id: 'delivery-two',
+          content: '[DELIVERY:order-two] Ready metafile://two.png',
+          timestamp: 2,
+        }),
+      ],
+      SELF,
+    )
+
+    expect(grouped.get(buildSessionKey(PEER, 'order-one'))?.map((m) => m.id)).toEqual([
+      'delivery-one',
+    ])
+    expect(grouped.get(buildSessionKey(PEER, 'order-two'))?.map((m) => m.id)).toEqual([
+      'delivery-two',
+    ])
+  })
+
+  it('attaches unscoped protocol replies to the preceding order in a same-block batch', () => {
+    const txid = '05b77d20aef740a7f97341d89577b14286fd2a0e960a0809f29c4e65b0865dca'
+    const orderPayload = buildOrderPayload({
+      displayText: 'Wiki service',
+      rawRequest: 'Summarize MetaID',
+      price: '0',
+      currency: 'SPACE',
+      paymentTxid: txid,
+      serviceId: 'svc-wiki',
+      skillName: 'metabot-metaid-wiki-service',
+      outputType: 'text',
+    })
+
+    const grouped = groupPeerMessagesBySession(
+      [
+        msg({
+          id: '42-provider-delivery',
+          content: '[DELIVERY] {"result":"Received. MetaID is a decentralized identity layer."}',
+          timestamp: 100,
+        }),
+        msg({
+          id: '2f-provider-rating',
+          content: '[NeedsRating] Rating will be requested later',
+          timestamp: 100,
+        }),
+        msg({
+          id: '69-outgoing-order',
+          fromGlobalMetaId: SELF,
+          toGlobalMetaId: PEER,
+          content: orderPayload,
+          orderCorrelationId: txid,
+          timestamp: 100,
+        }),
+      ],
+      SELF,
+    )
+
+    expect(grouped.get(buildSessionKey(PEER, txid))?.map((m) => m.id)).toEqual([
+      '69-outgoing-order',
+      '2f-provider-rating',
+      '42-provider-delivery',
+    ])
+    expect(grouped.get(PEER)).toBeUndefined()
+  })
+
   it('lists grouped sessions with service label for order threads', () => {
     const orderRef = 'c'.repeat(64)
     const orderPayload = buildOrderPayload({

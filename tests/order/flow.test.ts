@@ -1,6 +1,8 @@
 import { describe, expect, it, vi } from 'vitest'
 import type { ProviderInfo, SkillServiceCore } from '@/api/aggregator.types'
 import {
+  buildDeliveryOrderPath,
+  buildDeliverySessionPath,
   executePayAndRequest,
   generateRandomHex,
   PayAndRequestBroadcastError,
@@ -10,6 +12,8 @@ import {
   CREATE_PIN_WALLET_RESPONSE_TIMEOUT_MS,
   ECDH_WALLET_RESPONSE_TIMEOUT_MS,
 } from '@/order/walletTimeout'
+import { getLastCreatePinDiagnostic } from '@/order/createPinDiagnostics'
+import { clearTestSessionStorage } from '../setup'
 
 const provider: ProviderInfo = {
   metaid: 'provider-metaid',
@@ -60,6 +64,20 @@ const wallet = {
 }
 
 const OLD_CREATE_PIN_WALLET_RESPONSE_TIMEOUT_MS = 90_000
+
+describe('Delivery route helpers', () => {
+  it('builds an order-centered Delivery URL', () => {
+    expect(buildDeliveryOrderPath('idqbuyer:idqprovider:order-ref-1')).toBe(
+      '/delivery?order=idqbuyer%3Aidqprovider%3Aorder-ref-1',
+    )
+  })
+
+  it('keeps the session Delivery URL helper compatible', () => {
+    expect(buildDeliverySessionPath('idqprovider:order-ref-1')).toBe(
+      '/delivery?session=idqprovider%3Aorder-ref-1',
+    )
+  })
+})
 
 describe('executePayAndRequest', () => {
   it('posts orders as standard simplemsg pins with millisecond timestamps', async () => {
@@ -205,6 +223,20 @@ describe('executePayAndRequest', () => {
     })
 
     expect(transfer).not.toHaveBeenCalled()
+    expect(ecdh).toHaveBeenCalledWith({ externalPubKey: provider.chatPubkey })
+    expect(createPin).toHaveBeenCalledOnce()
+    const pinArgs = createPin.mock.calls[0][0] as {
+      dataList: Array<{ metaidData: { path: string; body: string } }>
+    }
+    expect(pinArgs.dataList[0].metaidData.path).toBe('/protocols/simplemsg')
+    const body = JSON.parse(pinArgs.dataList[0].metaidData.body) as {
+      to: string
+      encrypt: string
+      content: string
+    }
+    expect(body.to).toBe(provider.globalMetaId)
+    expect(body.encrypt).toBe('ecdh')
+    expect(body.content).toBeTruthy()
     expect(result.paymentTxid).toBe('')
     expect(result.paymentCommitTxid).toBe('')
     expect(result.orderReference).toBe(generateRandomHex(32))
@@ -431,6 +463,30 @@ describe('executePayAndRequest', () => {
     expect(transfer).not.toHaveBeenCalled()
   })
 
+  it('fails preflight before transfer or broadcast when provider chat key is missing', async () => {
+    const transfer = vi.fn()
+    const ecdh = vi.fn()
+    const createPin = vi.fn()
+
+    await expect(
+      executePayAndRequest({
+        service: paidService,
+        provider: { ...provider, chatPubkey: null },
+        prompt: 'Need this service.',
+        wallet,
+        metalet: {
+          transfer,
+          ecdh,
+          createPin,
+        },
+      }),
+    ).rejects.toMatchObject({ code: 'missing_provider_key' } satisfies Partial<PayAndRequestError>)
+
+    expect(transfer).not.toHaveBeenCalled()
+    expect(ecdh).not.toHaveBeenCalled()
+    expect(createPin).not.toHaveBeenCalled()
+  })
+
   it('blocks paid MRC20 checkout with a clear unsupported-state error before transfer', async () => {
     const transfer = vi.fn()
     await expect(
@@ -455,7 +511,7 @@ describe('executePayAndRequest', () => {
       }),
     ).rejects.toMatchObject({
       code: 'payment_failed',
-      message: expect.stringMatching(/MRC20 paid checkout is not supported/i),
+      message: 'MRC20 checkout is not available in BotHub yet. Choose a native paid or free service.',
     } satisfies Partial<PayAndRequestError>)
 
     expect(transfer).not.toHaveBeenCalled()
@@ -479,17 +535,25 @@ describe('executePayAndRequest', () => {
     ).rejects.toMatchObject({
       code: 'broadcast_failed',
       partial: {
+        service: paidService,
+        provider,
+        prompt: 'Paid request that should be recoverable.',
         payment: {
           paymentTxid,
           paymentCommitTxid: '',
           orderReference: '',
         },
         sessionKey: `${provider.globalMetaId}:${paymentTxid}`,
+        orderPayload: expect.stringContaining(`txid: ${paymentTxid}`),
+        encryptedContent: expect.any(String),
+        simplemsgBody: expect.stringContaining('"content"'),
+        displaySummary: 'Paid request that should be recoverable.',
       },
     })
   })
 
   it('throws a broadcast error with a free order reference when createPin fails', async () => {
+    clearTestSessionStorage()
     vi.spyOn(crypto, 'getRandomValues').mockImplementation((array) => {
       if (array instanceof Uint8Array) {
         array.fill(0x0b)
@@ -520,6 +584,12 @@ describe('executePayAndRequest', () => {
         },
         sessionKey: `${provider.globalMetaId}:${expectedOrderReference}`,
       },
+    })
+    expect(getLastCreatePinDiagnostic()).toMatchObject({
+      phase: 'rejected',
+      providerGlobalMetaId: provider.globalMetaId,
+      orderReference: expectedOrderReference,
+      errorMessage: 'network down',
     })
   })
 

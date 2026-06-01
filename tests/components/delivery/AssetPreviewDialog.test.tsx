@@ -28,6 +28,97 @@ describe('AssetPreviewDialog', () => {
       'href',
       'https://download.example/image.png',
     )
+    expect(screen.getByRole('link', { name: '打开' })).toHaveAttribute(
+      'href',
+      'https://fallback.example/image.png',
+    )
+  })
+
+  it('falls back from accelerated image preview to content URL before showing unavailable copy', () => {
+    render(<AssetPreviewDialog asset={imageAsset} open onClose={vi.fn()} />)
+
+    const image = screen.getByRole('img', { name: 'image.png' })
+    fireEvent.error(image)
+    expect(image).toHaveAttribute('src', 'https://fallback.example/image.png')
+
+    fireEvent.error(image)
+    expect(screen.getByText('预览暂不可用，可打开文件')).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: '打开' })).toHaveAttribute(
+      'href',
+      'https://fallback.example/image.png',
+    )
+    expect(screen.getByRole('link', { name: '下载' })).toHaveAttribute(
+      'href',
+      'https://download.example/image.png',
+    )
+  })
+
+  it('shows a stable buyer-facing fallback when video or audio preview fails', () => {
+    const videoAsset: ParsedDeliveryAsset = {
+      ...imageAsset,
+      uri: 'metafile://clip.mp4',
+      pinId: 'clip',
+      extension: '.mp4',
+      filename: 'clip.mp4',
+      kind: 'video',
+      mimeType: 'video/mp4',
+      previewUrl: 'https://preview.example/clip.mp4',
+      downloadUrl: 'https://download.example/clip.mp4',
+      fallbackUrl: 'https://fallback.example/clip.mp4',
+    }
+    const { container } = render(<AssetPreviewDialog asset={videoAsset} open onClose={vi.fn()} />)
+
+    expect(container.querySelector('video')).toBeInTheDocument()
+    fireEvent.error(container.querySelector('video source') as Element)
+    expect(container.querySelector('video source')).toHaveAttribute(
+      'src',
+      'https://fallback.example/clip.mp4',
+    )
+    fireEvent.error(container.querySelector('video source') as Element)
+
+    expect(container.querySelector('video')).not.toBeInTheDocument()
+    expect(screen.getByText('预览暂不可用，可打开文件')).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: '打开' })).toHaveAttribute(
+      'href',
+      'https://fallback.example/clip.mp4',
+    )
+    expect(screen.getByRole('link', { name: '下载' })).toHaveAttribute(
+      'href',
+      'https://download.example/clip.mp4',
+    )
+  })
+
+  it('renders documents as open/download fallback cards without inline media', () => {
+    render(
+      <AssetPreviewDialog
+        asset={{
+          ...imageAsset,
+          uri: 'metafile://brief.pdf',
+          pinId: 'brief',
+          extension: '.pdf',
+          filename: 'brief.pdf',
+          kind: 'document',
+          mimeType: 'application/pdf',
+          previewUrl: 'https://preview.example/brief.pdf',
+          downloadUrl: 'https://download.example/brief.pdf',
+          fallbackUrl: 'https://fallback.example/brief.pdf',
+        }}
+        open
+        onClose={vi.fn()}
+      />,
+    )
+
+    expect(screen.queryByRole('img')).not.toBeInTheDocument()
+    expect(document.querySelector('video, audio')).not.toBeInTheDocument()
+    expect(screen.getByText('预览暂不可用，可打开文件')).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: '打开' })).toHaveAttribute(
+      'href',
+      'https://fallback.example/brief.pdf',
+    )
+    expect(screen.getByRole('link', { name: '下载' })).toHaveAttribute(
+      'href',
+      'https://download.example/brief.pdf',
+    )
   })
 
   it('closes with the close button', async () => {

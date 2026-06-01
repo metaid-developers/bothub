@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { DeliveryPage } from '@/routes/Delivery'
 import { fetchUserProfileByGlobalMetaId } from '@/api/userProfile'
 import { retryDecryptPeerMessages } from '@/delivery/decryptRetry'
+import type { DeliveryAssetRecord } from '@/delivery/domain'
 import type { DeliveryMessage } from '@/delivery/messageStore'
 import type { WalletIdentity } from '@/wallet/types'
 
@@ -80,6 +81,26 @@ function deliveryMessage(
   }
 }
 
+function deliveryAsset(overrides: Partial<DeliveryAssetRecord> = {}): DeliveryAssetRecord {
+  return {
+    id: `${connectedWallet.globalMetaId}:idqprovider:uncorrelated:metafile://cached.png`,
+    walletGlobalMetaId: connectedWallet.globalMetaId,
+    sessionId: `${connectedWallet.globalMetaId}:idqprovider:uncorrelated`,
+    messageId: 'pin-idqprovider',
+    uri: 'metafile://cached.png',
+    pinId: 'cached',
+    filename: 'cached.png',
+    extension: 'png',
+    kind: 'image',
+    mimeType: 'image/png',
+    previewUrl: 'https://file.example/cached-preview',
+    downloadUrl: 'https://file.example/cached',
+    fallbackUrl: 'https://file.example/cached-fallback',
+    createdAt: 1,
+    ...overrides,
+  }
+}
+
 function renderDeliveryPage(initialEntry = '/delivery') {
   return render(
     <MemoryRouter
@@ -113,10 +134,10 @@ describe('DeliveryPage layout', () => {
     renderDeliveryPage()
 
     const orders = screen.getByRole('heading', { name: '我的请求' })
-    const header = screen.getByRole('status', { name: 'No delivery session selected' })
+    const header = screen.getByRole('status', { name: '选择一个请求查看交付' })
     const timeline = screen.getAllByText('选择一个请求查看交付进度')[0]
     const assets = screen.getByRole('heading', { name: '成果库' })
-    const composer = screen.getByRole('textbox', { name: 'Message provider' })
+    const composer = screen.getByRole('textbox', { name: '补充需求或询问进度' })
 
     expectBefore(orders, header)
     expectBefore(header, timeline)
@@ -155,9 +176,10 @@ describe('DeliveryPage layout', () => {
 
     renderDeliveryPage()
 
-    expect(screen.getByRole('textbox', { name: 'Message provider' })).toBeDisabled()
-    expect(screen.getByRole('button', { name: 'Send' })).toBeDisabled()
-    expect(screen.getByText('Connect wallet to reply')).toBeInTheDocument()
+    expect(screen.getByRole('textbox', { name: '补充需求或询问进度' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: '发送' })).toBeDisabled()
+    expect(screen.getByText('连接钱包后可继续沟通')).toBeInTheDocument()
+    expect(screen.queryByText('Connect wallet to reply')).not.toBeInTheDocument()
   })
 
   it('fetches and displays selected peer profile even when the session already has a chat key', async () => {
@@ -198,8 +220,8 @@ describe('DeliveryPage layout', () => {
 
     expect(fetchUserProfileByGlobalMetaId).toHaveBeenCalledWith(peerGlobalMetaId)
     expect(await screen.findAllByText('余生请多指教')).toHaveLength(3)
-    expect(screen.getAllByRole('img', { name: '余生请多指教 avatar' })).toHaveLength(3)
-    expect(screen.queryByLabelText('idq133…uv2n avatar')).not.toBeInTheDocument()
+    expect(screen.getAllByRole('img', { name: '余生请多指教 头像' })).toHaveLength(3)
+    expect(screen.queryByLabelText('idq133…uv2n 头像')).not.toBeInTheDocument()
   })
 
   it('hydrates the selected peer profile and retries decrypting failed ciphertext', async () => {
@@ -356,10 +378,10 @@ describe('DeliveryPage layout', () => {
     expect(await within(orderList).findByText('Provider Alpha')).toBeInTheDocument()
     expect(await within(orderList).findByText('Provider Beta')).toBeInTheDocument()
     expect(
-      within(orderList).getByRole('img', { name: 'Provider Alpha avatar' }),
+      within(orderList).getByRole('img', { name: 'Provider Alpha 头像' }),
     ).toBeInTheDocument()
     expect(
-      within(orderList).getByRole('img', { name: 'Provider Beta avatar' }),
+      within(orderList).getByRole('img', { name: 'Provider Beta 头像' }),
     ).toBeInTheDocument()
   })
 
@@ -399,7 +421,7 @@ describe('DeliveryPage layout', () => {
     const sessionList = screen.getByRole('list', { name: '我的请求' })
     expect(await within(sessionList).findByText('Visible Plain Provider')).toBeInTheDocument()
     expect(
-      within(sessionList).getByRole('img', { name: 'Visible Plain Provider avatar' }),
+      within(sessionList).getByRole('img', { name: 'Visible Plain Provider 头像' }),
     ).toBeInTheDocument()
     expect(retryDecryptPeerMessages).not.toHaveBeenCalled()
 
@@ -611,6 +633,61 @@ describe('DeliveryPage layout', () => {
     expect(retryDecryptPeerMessages).not.toHaveBeenCalled()
   })
 
+  it('shows session-only historical messages with buyer-safe service copy', () => {
+    const peerGlobalMetaId = 'idqhistorical-provider'
+    mocks.walletState.identity = connectedWallet
+    mocks.walletState.status = 'connected'
+    mocks.messageState.byPeer = {
+      [peerGlobalMetaId]: [
+        deliveryMessage({
+          peerGlobalMetaId,
+          content: 'Older delivery note',
+          rawContent: 'Older delivery note',
+        }),
+      ],
+    }
+
+    renderDeliveryPage('/delivery')
+
+    const orderList = screen.getByRole('list', { name: '我的请求' })
+    expect(within(orderList).getAllByText('历史交付').length).toBeGreaterThan(0)
+    expect(screen.queryByText(/Unknown service/i)).not.toBeInTheDocument()
+  })
+
+  it('keeps locally cached assets visible when provider profile lookup fails', async () => {
+    const peerGlobalMetaId = 'idqasset-provider'
+    const sessionId = `${connectedWallet.globalMetaId}:${peerGlobalMetaId}:uncorrelated`
+    vi.mocked(fetchUserProfileByGlobalMetaId).mockRejectedValue(new Error('profile offline'))
+    mocks.walletState.identity = connectedWallet
+    mocks.walletState.status = 'connected'
+    mocks.messageState.byPeer = {
+      [peerGlobalMetaId]: [
+        deliveryMessage({
+          peerGlobalMetaId,
+          content: 'Cached delivery asset is available locally',
+          rawContent: 'Cached delivery asset is available locally',
+        }),
+      ],
+    }
+    mocks.messageState.assetsBySession = {
+      [sessionId]: [
+        deliveryAsset({
+          id: `${sessionId}:metafile://cached.png`,
+          sessionId,
+          messageId: `pin-${peerGlobalMetaId}`,
+        }),
+      ],
+    }
+
+    renderDeliveryPage('/delivery')
+
+    expect(await screen.findByText('cached.png')).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: '下载' })).toHaveAttribute(
+      'href',
+      'https://file.example/cached',
+    )
+  })
+
   it('allows a manual provider key retry after an empty profile response', async () => {
     const peerGlobalMetaId = 'idqprovider-manual'
     vi.mocked(fetchUserProfileByGlobalMetaId).mockResolvedValue({})
@@ -631,7 +708,8 @@ describe('DeliveryPage layout', () => {
     renderDeliveryPage(`/delivery?session=${peerGlobalMetaId}`)
 
     await waitFor(() => expect(fetchUserProfileByGlobalMetaId).toHaveBeenCalledTimes(1))
-    fireEvent.click(screen.getByRole('button', { name: 'Fetch provider key' }))
+    fireEvent.click(screen.getByRole('button', { name: '同步资料技术详情' }))
+    fireEvent.click(screen.getByRole('button', { name: '重试同步资料' }))
 
     await waitFor(() => expect(fetchUserProfileByGlobalMetaId).toHaveBeenCalledTimes(2))
   })
@@ -641,7 +719,10 @@ describe('DeliveryPage layout', () => {
 
     expect(screen.getByRole('heading', { name: '我的交付' })).toBeInTheDocument()
     expect(
-      screen.queryByText(/simplemsg|Socket.IO|meta-socket|chat key|ciphertext/i),
+      screen.queryByText(/simplemsg|Socket\.IO|meta-socket|chat key|ciphertext|session/i),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByText(/Wallet not connected|Connect wallet to reply|Message provider/i),
     ).not.toBeInTheDocument()
   })
 })

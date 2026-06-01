@@ -27,7 +27,7 @@ describe('MessageBubble', () => {
       />,
     )
 
-    expect(screen.getByRole('status', { name: 'Order status update' })).toBeInTheDocument()
+    expect(screen.getByRole('status', { name: '交付状态更新' })).toBeInTheDocument()
     expect(screen.getByText('Provider is generating assets')).toBeInTheDocument()
     expect(screen.queryByText(/\[ORDER_STATUS/)).not.toBeInTheDocument()
   })
@@ -40,9 +40,9 @@ describe('MessageBubble', () => {
       />,
     )
 
-    expect(screen.getByRole('article', { name: 'Delivery result' })).toBeInTheDocument()
+    expect(screen.getByRole('article', { name: '交付成果' })).toBeInTheDocument()
     expect(screen.getByText('Ready metafile://pin1.png metafile://pin2.pdf')).toBeInTheDocument()
-    expect(screen.getByText('2 assets attached')).toBeInTheDocument()
+    expect(screen.getByText('2 个成果')).toBeInTheDocument()
   })
 
   it('shows incoming peer name and avatar beside regular private chat text', () => {
@@ -57,7 +57,7 @@ describe('MessageBubble', () => {
     )
 
     expect(screen.getByText('Provider Bot')).toBeInTheDocument()
-    expect(screen.getByRole('img', { name: 'Provider Bot avatar' })).toHaveAttribute(
+    expect(screen.getByRole('img', { name: 'Provider Bot 头像' })).toHaveAttribute(
       'src',
       'https://cdn.example/provider.png',
     )
@@ -73,7 +73,7 @@ describe('MessageBubble', () => {
       />,
     )
 
-    expect(screen.getByLabelText('idqpro…cdef avatar')).toHaveTextContent('I')
+    expect(screen.getByLabelText('idqpro…cdef 头像')).toHaveTextContent('I')
   })
 
   it('counts structured delivery assets without rendering raw payload as body text', () => {
@@ -85,7 +85,7 @@ describe('MessageBubble', () => {
     )
 
     expect(screen.getByText('Done')).toBeInTheDocument()
-    expect(screen.getByText('1 asset attached')).toBeInTheDocument()
+    expect(screen.getByText('1 个成果')).toBeInTheDocument()
     expect(screen.queryByText(/"assets"/)).not.toBeInTheDocument()
   })
 
@@ -98,7 +98,7 @@ describe('MessageBubble', () => {
     )
 
     expect(screen.getByRole('img', { name: 'pin.png' })).toBeInTheDocument()
-    expect(screen.getAllByRole('link', { name: /download/i })).toHaveLength(1)
+    expect(screen.getAllByRole('link', { name: '下载' })).toHaveLength(1)
   })
 
   it('renders completion and rating-reserved messages with distinct accessible labels', () => {
@@ -115,8 +115,8 @@ describe('MessageBubble', () => {
       </>,
     )
 
-    expect(screen.getByRole('status', { name: 'Order completed' })).toBeInTheDocument()
-    expect(screen.getByRole('status', { name: 'Rating reserved' })).toBeInTheDocument()
+    expect(screen.getByRole('status', { name: '订单已完成' })).toBeInTheDocument()
+    expect(screen.getByRole('status', { name: '评价待开放' })).toBeInTheDocument()
     expect(screen.getByText('Rating will be requested later')).toBeInTheDocument()
   })
 
@@ -128,7 +128,7 @@ describe('MessageBubble', () => {
       />,
     )
 
-    expect(screen.getByRole('status', { name: 'Rating reserved' })).toBeInTheDocument()
+    expect(screen.getByRole('status', { name: '评价待开放' })).toBeInTheDocument()
     expect(screen.queryByRole('form', { name: /rating|review/i })).not.toBeInTheDocument()
     expect(
       screen.queryByRole('button', { name: /rate|review|star|submit/i }),
@@ -138,7 +138,7 @@ describe('MessageBubble', () => {
     ).not.toBeInTheDocument()
   })
 
-  it('keeps decrypt-failed raw ciphertext hidden behind explicit details', () => {
+  it('keeps decrypt-failed raw content hidden behind explicit technical details', () => {
     render(
       <MessageBubble
         message={message('encrypted-ciphertext', {
@@ -151,14 +151,20 @@ describe('MessageBubble', () => {
       />,
     )
 
-    expect(screen.getByText('Unable to decrypt this message')).toBeInTheDocument()
-    expect(screen.getByText('Pin: pin-decrypt-failed')).toBeInTheDocument()
-    expect(screen.getByText('Tx: tx-decrypt-failed')).toBeInTheDocument()
+    expect(screen.getByText('这条交付记录暂时无法显示，已保留原始记录')).toBeInTheDocument()
+    expect(screen.queryByText('Pin: pin-decrypt-failed')).not.toBeInTheDocument()
+    expect(screen.queryByText('Tx: tx-decrypt-failed')).not.toBeInTheDocument()
     expect(screen.queryByText('encrypted-ciphertext')).not.toBeInTheDocument()
+    expect(screen.queryByText(/ciphertext|Unable to decrypt/i)).not.toBeInTheDocument()
     expect(screen.queryByText(/connect wallet|pay/i)).not.toBeInTheDocument()
 
-    fireEvent.click(screen.getByRole('button', { name: 'Show technical details' }))
+    const detailsButton = screen.getByRole('button', { name: '技术详情' })
+    expect(detailsButton).toHaveAttribute('aria-expanded', 'false')
+    fireEvent.click(detailsButton)
 
+    expect(detailsButton).toHaveAttribute('aria-expanded', 'true')
+    expect(screen.getByText('Pin: pin-decrypt-failed')).toBeInTheDocument()
+    expect(screen.getByText('Tx: tx-decrypt-failed')).toBeInTheDocument()
     expect(screen.getByText('missing peer key')).toBeInTheDocument()
     expect(screen.getByText('encrypted-ciphertext')).toBeInTheDocument()
   })
@@ -186,13 +192,13 @@ describe('MessageBubble', () => {
       />,
     )
 
-    expect(screen.getByText('Order')).toBeInTheDocument()
+    expect(screen.getByText('请求')).toBeInTheDocument()
     expect(screen.getByText('Free Ecommerce Store Blueprint')).toBeInTheDocument()
-    expect(screen.getByText('Price: 0 SPACE')).toBeInTheDocument()
-    expect(screen.queryByText('Unable to decrypt this message')).not.toBeInTheDocument()
+    expect(screen.getByText('费用：0 SPACE')).toBeInTheDocument()
+    expect(screen.queryByText('这条交付记录暂时无法显示，已保留原始记录')).not.toBeInTheDocument()
     expect(screen.queryByText(/Could not decrypt/i)).not.toBeInTheDocument()
 
-    fireEvent.click(screen.getByRole('button', { name: 'Show prompt' }))
+    fireEvent.click(screen.getByRole('button', { name: '查看原始需求' }))
     expect(screen.getByText('Launch a practical ecommerce store.')).toBeInTheDocument()
   })
 })

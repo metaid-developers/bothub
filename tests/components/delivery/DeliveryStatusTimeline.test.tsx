@@ -1,4 +1,4 @@
-import { render, screen, within } from '@testing-library/react'
+import { fireEvent, render, screen, within } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 import { DeliveryStatusTimeline } from '@/components/delivery/DeliveryStatusTimeline'
 import type { DeliveryMessage } from '@/delivery/messageStore'
@@ -90,8 +90,49 @@ describe('DeliveryStatusTimeline', () => {
     )
 
     const alert = screen.getByRole('status', { name: '交付记录需要同步' })
-    expect(within(alert).getByText('有消息暂时无法解密，已保留原始记录。')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: '查看技术细节' })).toBeInTheDocument()
+    expect(within(alert).getByText('有交付记录暂时无法显示，已保留原始记录。')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '查看技术细节' })).not.toBeInTheDocument()
+    const detailsButton = screen.getByRole('button', { name: '技术详情' })
+    expect(detailsButton).toHaveAttribute('aria-expanded', 'false')
+    expect(screen.queryByText('U2FsdGVkX1cipher')).not.toBeInTheDocument()
+    expect(screen.queryByText('missing peer key')).not.toBeInTheDocument()
+
+    fireEvent.click(detailsButton)
+
+    expect(detailsButton).toHaveAttribute('aria-expanded', 'true')
+    expect(screen.getByText('这条交付记录暂时无法显示，已保留原始记录')).toBeInTheDocument()
+    expect(screen.queryByText('U2FsdGVkX1cipher')).not.toBeInTheDocument()
+    expect(screen.queryByText('missing peer key')).not.toBeInTheDocument()
+  })
+
+  it('hides raw ecdh content behind diagnostics even without a stored error', () => {
+    render(
+      <DeliveryStatusTimeline
+        order={order({
+          status: 'active',
+          messages: [
+            message({
+              id: 'raw-ecdh',
+              fromGlobalMetaId: 'idqprovider',
+              content: 'U2FsdGVkX1rawcipher',
+              rawContent: 'U2FsdGVkX1rawcipher',
+              encryption: 'ecdh',
+            }),
+          ],
+        })}
+        selfGlobalMetaId="idqbuyer"
+      />,
+    )
+
+    const detailsButton = screen.getByRole('button', { name: '技术详情' })
+    expect(detailsButton).toHaveAttribute('aria-expanded', 'false')
+    expect(screen.queryByText('U2FsdGVkX1rawcipher')).not.toBeInTheDocument()
+
+    fireEvent.click(detailsButton)
+
+    expect(detailsButton).toHaveAttribute('aria-expanded', 'true')
+    expect(screen.getByText('这条交付记录暂时无法显示，已保留原始记录')).toBeInTheDocument()
+    expect(screen.queryByText('U2FsdGVkX1rawcipher')).not.toBeInTheDocument()
   })
 
   it('shows empty state when no order is selected', () => {

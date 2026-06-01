@@ -10,8 +10,11 @@ import {
 } from '@/delivery/orderStore'
 import { formatPrice } from '@/lib/format'
 import {
+  buildDeliveryOrderPath,
   buildDeliverySessionPath,
   executePayAndRequest,
+  getLastCreatePinDiagnostic,
+  isFreeServicePrice,
   PayAndRequestBroadcastError,
   PayAndRequestError,
 } from '@/order/flow'
@@ -38,12 +41,17 @@ export interface RequestModalProps {
   wallet: WalletIdentity | null
 }
 
+const MRC20_CHECKOUT_UNSUPPORTED_MESSAGE =
+  'MRC20 checkout is not available in BotHub yet. Choose a native paid or free service.'
+
 export function RequestModal({ open, onClose, service, provider, wallet }: RequestModalProps) {
   const navigate = useNavigate()
   const [prompt, setPrompt] = useState('')
   const [step, setStep] = useState<RequestModalStep>('prompt')
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
-  const [recoverableSessionKey, setRecoverableSessionKey] = useState<string | null>(null)
+  const [recoverableDeliveryPath, setRecoverableDeliveryPath] = useState<string | null>(null)
+  const [retryDisabled, setRetryDisabled] = useState(false)
+  const [createPinDiagnosticJson, setCreatePinDiagnosticJson] = useState<string | null>(null)
 
   const price = useMemo(() => formatPrice(service.price, service.currency), [service])
   const providerName = provider.name?.trim() || 'Unknown Bot'
@@ -54,19 +62,35 @@ export function RequestModal({ open, onClose, service, provider, wallet }: Reque
     setPrompt('')
     setStep('prompt')
     setErrorMessage(null)
-    setRecoverableSessionKey(null)
+    setRecoverableDeliveryPath(null)
+    setRetryDisabled(false)
+    setCreatePinDiagnosticJson(null)
     onClose()
   }, [onClose])
 
   const handleConfirm = async () => {
     setErrorMessage(null)
-    setRecoverableSessionKey(null)
+    setRecoverableDeliveryPath(null)
+    setRetryDisabled(false)
+    setCreatePinDiagnosticJson(null)
     if (!wallet?.globalMetaId?.trim()) {
       setErrorMessage('Connect your Metalet wallet before sending a request.')
       setStep('error')
       return
     }
-    const isFree = service.price === '0'
+    if (!provider.chatPubkey?.trim()) {
+      setErrorMessage(
+        'This provider cannot receive encrypted orders right now. Try another service or check back later.',
+      )
+      setStep('error')
+      return
+    }
+    const isFree = isFreeServicePrice(service.price)
+    if (!isFree && service.settlementKind === 'mrc20') {
+      setErrorMessage(MRC20_CHECKOUT_UNSUPPORTED_MESSAGE)
+      setStep('error')
+      return
+    }
     try {
       setStep('checking_wallet')
       await metalet.ensureReady(wallet.globalMetaId)
@@ -95,34 +119,56 @@ export function RequestModal({ open, onClose, service, provider, wallet }: Reque
         },
       })
 
+      let deliveryPath = buildDeliverySessionPath(result.sessionKey)
       try {
-        await persistPendingOrder({ wallet, service, provider, prompt, result })
-        await useMessageStore.getState().hydrateFromDb(wallet.globalMetaId)
+        const persisted = await persistPendingOrder({ wallet, service, provider, prompt, result })
+        deliveryPath = buildDeliveryOrderPath(persisted.order.id)
+        try {
+          await useMessageStore.getState().hydrateFromDb(wallet.globalMetaId)
+        } catch (hydrateError) {
+          console.warn('Order was saved locally but could not hydrate Delivery.', hydrateError)
+        }
       } catch (persistError) {
         console.warn('Order was sent but could not be saved locally.', persistError)
       }
 
       setStep('done')
-      navigate(buildDeliverySessionPath(result.sessionKey))
+      navigate(deliveryPath)
       resetAndClose()
     } catch (err) {
       if (err instanceof PayAndRequestBroadcastError) {
+        const diagnostic = import.meta.env.DEV ? getLastCreatePinDiagnostic() : null
+        setCreatePinDiagnosticJson(diagnostic ? JSON.stringify(diagnostic, null, 2) : null)
+        let deliveryPath: string | null = null
+        let savedForRecovery = false
         try {
-          await persistFailedToSendOrder({
+          const persisted = await persistFailedToSendOrder({
             wallet,
             service,
             provider,
             prompt,
             partial: err.partial,
           })
-          await useMessageStore.getState().hydrateFromDb(wallet.globalMetaId)
+          deliveryPath = buildDeliveryOrderPath(persisted.order.id)
+          savedForRecovery = true
+          try {
+            await useMessageStore.getState().hydrateFromDb(wallet.globalMetaId)
+          } catch (hydrateError) {
+            console.warn('Failed order was saved locally but could not hydrate Delivery.', hydrateError)
+          }
         } catch (persistError) {
           console.warn('Failed order could not be saved locally.', persistError)
         }
-        setRecoverableSessionKey(err.partial.sessionKey)
-        const message = err.partial.payment.paymentTxid
-          ? 'Payment succeeded but the order message failed. The paid request was saved in Delivery for recovery.'
-          : 'The free order message failed. The request was saved in Delivery for recovery.'
+        setRecoverableDeliveryPath(deliveryPath)
+        const paidTxid = err.partial.payment.paymentTxid.trim()
+        setRetryDisabled(Boolean(paidTxid) && !savedForRecovery)
+        const message = savedForRecovery
+          ? paidTxid
+            ? 'Your payment went through, but the order message was not sent. The paid request was saved in Delivery for recovery.'
+            : 'The free order message failed. The request was saved in Delivery for recovery.'
+          : paidTxid
+            ? `Your payment went through, but the order message was not sent and the recovery record could not be saved locally. Payment reference: ${paidTxid}`
+            : 'The free order message failed and could not be saved in Delivery. You can try again.'
         setErrorMessage(
           message,
         )
@@ -279,6 +325,16 @@ export function RequestModal({ open, onClose, service, provider, wallet }: Reque
               <p className="rounded-lg border border-red-500/40 bg-red-950/30 px-3 py-2 text-sm text-red-200">
                 {errorMessage}
               </p>
+              {createPinDiagnosticJson ? (
+                <details className="rounded-lg border border-hub-border bg-hub-surface2/70 px-3 py-2 text-xs text-hub-muted">
+                  <summary className="cursor-pointer text-hub-accent">
+                    CreatePin diagnostic
+                  </summary>
+                  <pre className="mt-2 max-h-48 overflow-auto whitespace-pre-wrap break-words">
+                    {createPinDiagnosticJson}
+                  </pre>
+                </details>
+              ) : null}
               <div className="flex justify-end gap-2">
                 <button
                   type="button"
@@ -290,15 +346,19 @@ export function RequestModal({ open, onClose, service, provider, wallet }: Reque
                 <button
                   type="button"
                   onClick={() => setStep('confirm')}
-                  disabled={Boolean(recoverableSessionKey)}
+                  disabled={Boolean(recoverableDeliveryPath) || retryDisabled}
                   className="rounded-lg bg-hub-accent px-4 py-2 text-sm font-semibold text-hub-bg"
                 >
-                  {recoverableSessionKey ? 'Retry saved in Delivery' : 'Try again'}
+                  {recoverableDeliveryPath
+                    ? 'Retry saved in Delivery'
+                    : retryDisabled
+                      ? 'Recovery not saved'
+                      : 'Try again'}
                 </button>
-                {recoverableSessionKey ? (
+                {recoverableDeliveryPath ? (
                   <button
                     type="button"
-                    onClick={() => navigate(buildDeliverySessionPath(recoverableSessionKey))}
+                    onClick={() => navigate(recoverableDeliveryPath)}
                     className="rounded-lg bg-hub-accent px-4 py-2 text-sm font-semibold text-hub-bg"
                   >
                     Open Delivery

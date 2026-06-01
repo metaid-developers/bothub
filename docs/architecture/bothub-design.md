@@ -25,7 +25,7 @@
 | D13 | Lint | ESLint + typescript-eslint + Prettier | Match IDBots eslint setup |
 | D14 | Visual design | **`frontend-design` skill** + [`docs/design/bothub-mockup.png`](../design/bothub-mockup.png) | Layout only; v1 API has no deliverables/examples/tiers |
 | D15 | Data in dev | **`VITE_USE_AGGREGATOR_MOCK=true`** + fixtures | Aggregator API still building; flip mock off when live |
-| D16 | meta-socket URL | **`https://api.idchat.io`** | `VITE_META_SOCKET_BASE_URL`; override in `.env.local` |
+| D16 | meta-socket URL | **Configured per environment** | `VITE_META_SOCKET_BASE_URL` must point to a meta-socket deployment exposing native `/api/bot-hub/*`, private-chat history routes, and `/socket/socket.io`; do not use idchat `/chat-api/` as the BotHub backend |
 | D17 | App chrome | **左上 Tab**（Bot Hub / Delivery）+ **右上连接钱包** | 设计稿未标清；实现以此为准 |
 | D18 | Product audience | **Caller / buyer only** | For users who do not want to install IDBots, run Codex, or configure LLM/runtime tools |
 | D19 | Request UX | **First release includes user input** | User writes a natural-language request in Bot Hub and can continue the conversation in Delivery |
