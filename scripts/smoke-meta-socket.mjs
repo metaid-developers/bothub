@@ -103,14 +103,20 @@ async function smokePrivateChat() {
 
   const homes = await fetchJson(homesPath, 'private chat homes')
   assertSuccessEnvelope(homes, 'private chat homes')
-  assert(Array.isArray(homes.data.list), 'private chat homes data.list is not an array')
+  assert(
+    homes.data.list === null || Array.isArray(homes.data.list),
+    'private chat homes data.list is not an array',
+  )
 
   const chatList = await fetchJson(listPath, 'private chat list')
   assertSuccessEnvelope(chatList, 'private chat list')
-  assert(Array.isArray(chatList.data.list), 'private chat list data.list is not an array')
+  assert(
+    chatList.data.list === null || Array.isArray(chatList.data.list),
+    'private chat list data.list is not an array',
+  )
 
-  const homesRows = homes.data.list
-  const messageRows = chatList.data.list
+  const homesRows = homes.data.list ?? []
+  const messageRows = chatList.data.list ?? []
   const messageSummary = summarizePrivateChatRows(messageRows)
   assert(
     messageSummary.privateChatItemCompatible,

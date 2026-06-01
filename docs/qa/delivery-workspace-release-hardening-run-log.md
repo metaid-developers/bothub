@@ -511,3 +511,56 @@ Relevant backend tracking:
 /Users/tusm/Documents/MetaID_Projects/meta-socket/issues/2026-06-01-bothub-skill-service-availability-gap.md
 /Users/tusm/Documents/MetaID_Projects/meta-socket/issues/issues-fixed-logs.md
 ```
+
+## Real Indexer Recovery Follow-Up
+
+Meta-socket maintainers later restored the local `127.0.0.1:18091` service to a
+real MVC indexed instance. This follow-up re-ran the live Bothub acceptance path
+on 2026-06-01 16:13 CST / 2026-06-01 08:13 UTC.
+
+### Runtime Evidence
+
+| Check | Result | Evidence |
+| --- | --- | --- |
+| Local health | passed | `curl http://127.0.0.1:18091/healthz` returned a healthy meta-socket envelope. |
+| Local smoke | passed | `META_SOCKET_BASE_URL=http://127.0.0.1:18091 pnpm smoke:meta-socket` passed with skill-service list/detail and Socket.IO heartbeat evidence. |
+| Chrome wallet connect | passed | Chrome showed the connected Metalet identity `SunnyFung` / `idq1zf...kgv0`. |
+| Real service list/detail | passed | Chrome loaded real services from local meta-socket, including `Free Ecommerce Store Blueprint`; its detail showed price `0 SPACE`, settlement `Native`, payment chain `MVC`, provider `Dan Mercier`, and a provider chat public key. |
+| Free order request entry | passed | The request modal accepted `Bothub smoke test for the 0 SPACE free service order flow. Please ignore this test request.` and the review step showed provider, price, and settlement. |
+| Metalet createPin prompt | reached | `Confirm & pay` opened the Metalet `CreatePin` prompt for chain `MVC`, one `/protocols/simplemsg` pin, broadcast `Yes`, and total network cost `1,091 sats` / `0.00001091 SPACE`. The user explicitly approved clicking Confirm. |
+| Post-confirm app state | blocked | After Metalet returned, Bothub reported `The free order message failed. The request was saved in Delivery for recovery.` Delivery displayed a local recovery order for Dan Mercier with `failed_to_send` details. |
+| Private chat history | blocked | `GET /api/group-chat/private-chat-list?metaId=idq1zfazvxaq69uw6txe3ewce30ewyhy9a7mzykgv0&otherMetaId=12FxJzsxhQ5snAieJ5MPo9x9bhAZ2e3ejc&cursor=&size=20` returned `total: 0` and no rows; the home list did not include Dan Mercier. This does not prove a successful chain write. |
+
+### Empty Private-Chat History Shape
+
+The same live history probe exposed a frontend tolerance gap: meta-socket returns
+`data.list: null` for an empty private-chat history page. Bothub previously
+treated that as an invalid envelope, which could make empty histories look like
+sync failures.
+
+Implementation changes in this follow-up:
+
+- `src/api/privateChat.ts` now normalizes `data.list: null` to an empty array
+  for private-chat homes and history pages.
+- `scripts/smoke-meta-socket.mjs` now treats `data.list: null` as an empty list
+  for optional private-chat smoke checks.
+- `tests/api/privateChat.test.ts` covers null empty homes/history lists.
+
+Verification:
+
+| Command | Result | Notes |
+| --- | --- | --- |
+| `pnpm test -- tests/api/privateChat.test.ts` | passed | The repo test script ran all 56 test files; 428 tests passed. Existing React Router, FocusTrap, profile-offline, and act warnings were observed. |
+| `META_SOCKET_PRIVATE_CHAT_METAID=idq1zfazvxaq69uw6txe3ewce30ewyhy9a7mzykgv0 META_SOCKET_PRIVATE_CHAT_OTHER_METAID=12FxJzsxhQ5snAieJ5MPo9x9bhAZ2e3ejc pnpm smoke:meta-socket` | passed | Private-chat homes count was 6; Dan Mercier history count was 0 and normalized as an empty compatible list. |
+| `pnpm build` | passed | TypeScript build and Vite production build completed. Vite reported the existing large-chunk warning. |
+| `pnpm lint` | passed | ESLint completed with `--max-warnings 0`. |
+| `git diff --check` | passed | No whitespace errors after the null-list tolerance changes and run-log update. |
+
+### Current Release Implication
+
+The earlier local skill-service availability blocker is superseded for this
+machine: local real services are now available. Full real free-order acceptance
+is still not complete because the user-approved Metalet `CreatePin` attempt did
+not produce an observable Dan Mercier private-chat history row through
+meta-socket, and Bothub saved the request as a recovery record instead of a
+confirmed sent order.

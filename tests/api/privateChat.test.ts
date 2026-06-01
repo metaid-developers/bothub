@@ -154,6 +154,44 @@ describe('private chat API client', () => {
       )
     })
 
+    it('treats null empty homes and history lists as empty arrays', async () => {
+      const fetchMock = vi.fn(async (url: string) => ({
+        json: async () =>
+          url.includes('/chat/homes/')
+            ? {
+                code: 0,
+                data: { list: null },
+                message: '',
+              }
+            : {
+                code: 0,
+                data: {
+                  total: 0,
+                  nextCursor: '',
+                  nextTimestamp: 0,
+                  list: null,
+                },
+                message: '',
+              },
+      }))
+      vi.stubGlobal('fetch', fetchMock)
+
+      const { listPrivateChatHistory, listPrivateChatHomes } = await loadPrivateChat()
+
+      await expect(listPrivateChatHomes('wallet-with-no-homes')).resolves.toEqual([])
+      await expect(
+        listPrivateChatHistory({
+          metaId: 'wallet-with-no-history',
+          otherMetaId: 'new-peer',
+        }),
+      ).resolves.toEqual({
+        list: [],
+        total: 0,
+        nextCursor: '',
+        nextTimestamp: 0,
+      })
+    })
+
     it('throws PrivateChatApiError for non-zero envelopes', async () => {
       vi.stubGlobal(
         'fetch',

@@ -56,11 +56,16 @@ function unwrapPrivateChatEnvelope(envelope: ApiEnvelope<unknown>): unknown {
 }
 
 function parseHomes(data: unknown): PrivateChatHome[] {
-  if (!isRecord(data) || !Array.isArray(data.list)) {
+  if (!isRecord(data)) {
     throw new PrivateChatApiError(0, 'invalid private chat homes')
   }
 
-  return data.list.map((item) => {
+  const list = data.list === null ? [] : data.list
+  if (!Array.isArray(list)) {
+    throw new PrivateChatApiError(0, 'invalid private chat homes')
+  }
+
+  return list.map((item) => {
     if (!isRecord(item)) {
       throw new PrivateChatApiError(0, 'invalid private chat home')
     }
@@ -84,11 +89,16 @@ function parseHomes(data: unknown): PrivateChatHome[] {
 }
 
 function parseHistoryPage(data: unknown): PrivateChatHistoryPage {
-  if (!isRecord(data) || !Array.isArray(data.list)) {
+  if (!isRecord(data)) {
     throw new PrivateChatApiError(0, 'invalid private chat history')
   }
 
-  const list = data.list.map((item) => {
+  const rawList = data.list === null ? [] : data.list
+  if (!Array.isArray(rawList)) {
+    throw new PrivateChatApiError(0, 'invalid private chat history')
+  }
+
+  const list = rawList.map((item) => {
     const normalizedItem = normalizePrivateChatItem(item)
     if (!normalizedItem) {
       throw new PrivateChatApiError(0, 'invalid private chat item')
