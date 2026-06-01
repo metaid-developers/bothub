@@ -26,7 +26,7 @@
 ## Pre-flight
 
 - [x] Decisions D1–D14 locked — see `bothub-design.md` §0.
-- [x] **`VITE_META_SOCKET_BASE_URL`** → environment-specific meta-socket deployment URL; override in `.env.local` for local/staging. The target must expose native `/api/bot-hub/*`, `/api/group-chat/*`, and `/socket/socket.io`; do not use idchat `/chat-api/` as the BotHub backend.
+- [x] **`VITE_META_SOCKET_BASE_URL`** → environment-specific meta-socket deployment URL; override in `.env.local` for local/staging. The target must expose native `/api/bot-hub/*`, private-chat history routes, and `/socket/socket.io`; do not use idchat `/chat-api/` as the BotHub backend.
 - [x] **CORS** — will allow BotHub origin when API ships; not a blocker for MVP.
 - [x] **Mock-first** — until aggregator is live, `VITE_USE_AGGREGATOR_MOCK=true` (default in dev) serves fixtures matching the frozen spec. Flip to `false` to hit real HTTP.
 - [x] **Design mockup** — layout reference: `docs/design/bothub-mockup.png` (three-column Bot Hub + Delivery sessions/chat).

@@ -36,7 +36,7 @@
 | Local service list | passed | The restored MVC indexer returns real skill-service rows. A `size=10` list check returned paid service `metabot-ziwei-fortune-v2` plus multiple free services with native MVC metadata. |
 | Local service detail | passed | Free service detail includes provider chat key and native MVC payment metadata. After the meta-socket payment metadata fix, paid service `metabot-ziwei-fortune-v2` includes provider chat key, `0.01 SPACE`, `settlementKind: "native"`, `paymentChain: "mvc"`, and `paymentAddress: "125DQu9dBCXksYWg7HnmnmU3TpBNqnMsZF"`. |
 | idchat probe | informational only | Historical checks showed idchat `/chat-api/` is a group-chat compatibility surface, not a BotHub backend. It is not a Bothub release dependency. |
-| Production/staging meta-socket service list | blocked externally | No non-local meta-socket base URL has been assigned and verified for native `/api/bot-hub/*`, `/api/group-chat/*`, and `/socket/socket.io`. Bothub should target meta-socket only; required public/staging deployment ownership is tracked in meta-socket. |
+| Production/staging meta-socket service list | blocked externally | No non-local meta-socket base URL has been assigned and verified for native `/api/bot-hub/*`, private-chat history routes, and `/socket/socket.io`. Bothub should target meta-socket only; required public/staging deployment ownership is tracked in meta-socket. |
 | Mock-disabled browser service list | passed locally | Chrome at `http://127.0.0.1:5177/` loaded real services from local meta-socket with mocks disabled. |
 | Private-chat empty-history shape | passed | meta-socket returns `data.list: null` for an empty private-chat history; Bothub now normalizes this as an empty list and the smoke script treats it as compatible. |
 
@@ -86,6 +86,6 @@ AI_Sunny provider response all have live evidence.
 
 Strict production release remains conditional on backend/runtime readiness: a
 meta-socket-owned production/staging deployment must expose native BotHub,
-private-chat, and Socket.IO routes; provider-side visibility should be available
-through meta-socket for the earlier Dan/BOT order txs if those flows remain part
-of launch evidence; and no Bothub backend was added.
+private-chat history, and Socket.IO routes; provider-side visibility should be
+available through meta-socket for the earlier Dan/BOT order txs if those flows
+remain part of launch evidence; and no Bothub backend was added.

@@ -9,7 +9,7 @@ catching up; they are not release dependencies.
 
 Bothub's runtime contract is `VITE_META_SOCKET_BASE_URL` pointing at a
 meta-socket deployment that exposes native `/api/bot-hub/*`,
-`/api/group-chat/*`, and `/socket/socket.io`. The local restored
+private-chat history routes, and `/socket/socket.io`. The local restored
 `http://127.0.0.1:18091` instance remains valid for local/private beta. A
 non-local production/staging meta-socket base URL is a meta-socket ownership gap,
 now tracked as a backend issue rather than as an idchat dependency.
