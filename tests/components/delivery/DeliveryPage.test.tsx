@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { DeliveryPage } from '@/routes/Delivery'
 import { fetchUserProfileByGlobalMetaId } from '@/api/userProfile'
 import { retryDecryptPeerMessages } from '@/delivery/decryptRetry'
+import type { DeliveryAssetRecord } from '@/delivery/domain'
 import type { DeliveryMessage } from '@/delivery/messageStore'
 import type { WalletIdentity } from '@/wallet/types'
 
@@ -77,6 +78,26 @@ function deliveryMessage(
     timestamp: 1,
     pinId: `pin-${peerGlobalMetaId}`,
     ...rest,
+  }
+}
+
+function deliveryAsset(overrides: Partial<DeliveryAssetRecord> = {}): DeliveryAssetRecord {
+  return {
+    id: `${connectedWallet.globalMetaId}:idqprovider:uncorrelated:metafile://cached.png`,
+    walletGlobalMetaId: connectedWallet.globalMetaId,
+    sessionId: `${connectedWallet.globalMetaId}:idqprovider:uncorrelated`,
+    messageId: 'pin-idqprovider',
+    uri: 'metafile://cached.png',
+    pinId: 'cached',
+    filename: 'cached.png',
+    extension: 'png',
+    kind: 'image',
+    mimeType: 'image/png',
+    previewUrl: 'https://file.example/cached-preview',
+    downloadUrl: 'https://file.example/cached',
+    fallbackUrl: 'https://file.example/cached-fallback',
+    createdAt: 1,
+    ...overrides,
   }
 }
 
@@ -610,6 +631,61 @@ describe('DeliveryPage layout', () => {
 
     await waitFor(() => expect(fetchUserProfileByGlobalMetaId).toHaveBeenCalledTimes(1))
     expect(retryDecryptPeerMessages).not.toHaveBeenCalled()
+  })
+
+  it('shows session-only historical messages with buyer-safe service copy', () => {
+    const peerGlobalMetaId = 'idqhistorical-provider'
+    mocks.walletState.identity = connectedWallet
+    mocks.walletState.status = 'connected'
+    mocks.messageState.byPeer = {
+      [peerGlobalMetaId]: [
+        deliveryMessage({
+          peerGlobalMetaId,
+          content: 'Older delivery note',
+          rawContent: 'Older delivery note',
+        }),
+      ],
+    }
+
+    renderDeliveryPage('/delivery')
+
+    const orderList = screen.getByRole('list', { name: '我的请求' })
+    expect(within(orderList).getAllByText('历史交付').length).toBeGreaterThan(0)
+    expect(screen.queryByText(/Unknown service/i)).not.toBeInTheDocument()
+  })
+
+  it('keeps locally cached assets visible when provider profile lookup fails', async () => {
+    const peerGlobalMetaId = 'idqasset-provider'
+    const sessionId = `${connectedWallet.globalMetaId}:${peerGlobalMetaId}:uncorrelated`
+    vi.mocked(fetchUserProfileByGlobalMetaId).mockRejectedValue(new Error('profile offline'))
+    mocks.walletState.identity = connectedWallet
+    mocks.walletState.status = 'connected'
+    mocks.messageState.byPeer = {
+      [peerGlobalMetaId]: [
+        deliveryMessage({
+          peerGlobalMetaId,
+          content: 'Cached delivery asset is available locally',
+          rawContent: 'Cached delivery asset is available locally',
+        }),
+      ],
+    }
+    mocks.messageState.assetsBySession = {
+      [sessionId]: [
+        deliveryAsset({
+          id: `${sessionId}:metafile://cached.png`,
+          sessionId,
+          messageId: `pin-${peerGlobalMetaId}`,
+        }),
+      ],
+    }
+
+    renderDeliveryPage('/delivery')
+
+    expect(await screen.findByText('cached.png')).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: '下载' })).toHaveAttribute(
+      'href',
+      'https://file.example/cached',
+    )
   })
 
   it('allows a manual provider key retry after an empty profile response', async () => {

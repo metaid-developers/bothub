@@ -176,6 +176,141 @@ describe('delivery workspace', () => {
     expect(selected?.assets[0]?.filename).toBe('image.png')
   })
 
+  it('merges a provider reply carrying orderCorrelationId into the cached order', () => {
+    const workspace = buildDeliveryWorkspace({
+      walletGlobalMetaId: SELF,
+      orders: [order()],
+      sessions: [],
+      byPeer: {
+        [PROVIDER]: [
+          message({
+            id: 'status-1',
+            content: '[ORDER_STATUS:order-1] Working on it',
+            rawContent: '[ORDER_STATUS:order-1] Working on it',
+            orderCorrelationId: 'order-1',
+          }),
+        ],
+      },
+      assetsBySession: {},
+    })
+
+    expect(workspace.orders).toHaveLength(1)
+    expect(workspace.orders[0]).toMatchObject({
+      id: `${SELF}:${PROVIDER}:order-1`,
+      source: 'order',
+      status: 'active',
+      messageCount: 1,
+    })
+    expect(workspace.orders[0]?.messages.map((row) => row.id)).toEqual(['status-1'])
+  })
+
+  it('matches a DELIVERY tag to a cached order when the raw message has no stored correlation id', () => {
+    const workspace = buildDeliveryWorkspace({
+      walletGlobalMetaId: SELF,
+      orders: [order()],
+      sessions: [],
+      byPeer: {
+        [PROVIDER]: [
+          message({
+            id: 'delivery-with-tag',
+            content: '[DELIVERY:order-1] Done metafile://image.png',
+            rawContent: '[DELIVERY:order-1] Done metafile://image.png',
+            orderCorrelationId: undefined,
+          }),
+        ],
+      },
+      assetsBySession: {},
+    })
+
+    expect(workspace.orders).toHaveLength(1)
+    expect(workspace.orders[0]).toMatchObject({
+      id: `${SELF}:${PROVIDER}:order-1`,
+      status: 'delivered',
+      messageCount: 1,
+      assetCount: 1,
+    })
+    expect(workspace.orders[0]?.messages[0]?.id).toBe('delivery-with-tag')
+    expect(workspace.orders[0]?.assets[0]?.filename).toBe('image.png')
+  })
+
+  it('derives merged cached-order status from delivery messages when a stored session is stale', () => {
+    const workspace = buildDeliveryWorkspace({
+      walletGlobalMetaId: SELF,
+      orders: [order({ status: 'waiting' })],
+      sessions: [session({ status: 'waiting' })],
+      byPeer: {
+        [PROVIDER]: [
+          message({
+            id: 'delivery-after-stale-session',
+            content: '[DELIVERY:order-1] Done metafile://image.png',
+            rawContent: '[DELIVERY:order-1] Done metafile://image.png',
+            orderCorrelationId: undefined,
+          }),
+        ],
+      },
+      assetsBySession: {},
+    })
+
+    expect(workspace.orders).toHaveLength(1)
+    expect(workspace.orders[0]).toMatchObject({
+      id: `${SELF}:${PROVIDER}:order-1`,
+      status: 'delivered',
+      messageCount: 1,
+      assetCount: 1,
+    })
+  })
+
+  it('matches a paid provider reply by payment txid without collapsing same-provider orders', () => {
+    const txid = 'paid-txid-123'
+    const workspace = buildDeliveryWorkspace({
+      walletGlobalMetaId: SELF,
+      orders: [
+        order({
+          id: `${SELF}:${PROVIDER}:free-order`,
+          orderReference: 'free-order',
+          displaySummary: 'Free order',
+          rawRequest: 'Free order',
+          updatedAt: 30,
+        }),
+        order({
+          id: `${SELF}:${PROVIDER}:${txid}`,
+          orderReference: undefined,
+          paymentTxid: txid,
+          price: '25',
+          displaySummary: 'Paid order',
+          rawRequest: 'Paid order',
+          updatedAt: 20,
+        }),
+      ],
+      sessions: [],
+      byPeer: {
+        [PROVIDER]: [
+          message({
+            id: 'paid-delivery',
+            content: `Payment ${txid} received. Here is metafile://paid.png`,
+            rawContent: `Payment ${txid} received. Here is metafile://paid.png`,
+            orderCorrelationId: undefined,
+            timestamp: 55,
+          }),
+        ],
+      },
+      assetsBySession: {},
+    })
+
+    expect(workspace.orders).toHaveLength(2)
+    const freeOrder = workspace.orders.find((row) => row.orderCorrelationId === 'free-order')
+    const paidOrder = workspace.orders.find((row) => row.orderCorrelationId === txid)
+
+    expect(freeOrder).toMatchObject({ messageCount: 0, assetCount: 0 })
+    expect(paidOrder).toMatchObject({
+      id: `${SELF}:${PROVIDER}:${txid}`,
+      messageCount: 1,
+      assetCount: 1,
+      paymentReference: txid,
+    })
+    expect(paidOrder?.messages.map((row) => row.id)).toEqual(['paid-delivery'])
+  })
+
   it('keeps session-only deliveries visible when order cache is missing', () => {
     const workspace = buildDeliveryWorkspace({
       walletGlobalMetaId: SELF,
@@ -193,6 +328,66 @@ describe('delivery workspace', () => {
         assetCount: 1,
       }),
     )
+  })
+
+  it('shows unassociated historical provider messages alongside cached orders', () => {
+    const workspace = buildDeliveryWorkspace({
+      walletGlobalMetaId: SELF,
+      orders: [order()],
+      sessions: [],
+      byPeer: {
+        [PROVIDER]: [
+          message({
+            id: 'historical-delivery',
+            content: 'Older delivery note metafile://history.png',
+            rawContent: 'Older delivery note metafile://history.png',
+            orderCorrelationId: undefined,
+            timestamp: 5,
+          }),
+        ],
+      },
+      assetsBySession: {},
+    })
+
+    expect(workspace.orders.map((row) => row.id)).toEqual([
+      `${SELF}:${PROVIDER}:order-1`,
+      `${SELF}:${PROVIDER}:uncorrelated`,
+    ])
+    expect(workspace.orders[1]).toMatchObject({
+      source: 'session',
+      serviceLabel: '历史交付',
+      requestSummary: '历史交付',
+      messageCount: 1,
+      assetCount: 1,
+    })
+  })
+
+  it('keeps cached assets visible when provider profile fields are missing', () => {
+    const workspace = buildDeliveryWorkspace({
+      walletGlobalMetaId: SELF,
+      orders: [
+        order({
+          providerChatPubkey: undefined,
+          providerName: undefined,
+          providerAvatarUrl: undefined,
+        }),
+      ],
+      sessions: [
+        session({
+          providerChatPubkey: undefined,
+          providerName: undefined,
+          providerAvatarUrl: undefined,
+        }),
+      ],
+      byPeer: {},
+      assetsBySession: { [`${SELF}:${PROVIDER}:order-1`]: [asset()] },
+    })
+
+    expect(workspace.orders[0]).toMatchObject({
+      providerName: undefined,
+      assetCount: 1,
+    })
+    expect(workspace.orders[0]?.assets[0]?.downloadUrl).toBe('https://file.example/image')
   })
 
   it('sorts active and recent work above old completed work', () => {

@@ -157,6 +157,49 @@ describe('sessionGrouping', () => {
     expect(grouped.get(PEER)).toBeUndefined()
   })
 
+  it('uses delivery protocol tags as correlation even without a stored field', () => {
+    const grouped = groupPeerMessagesBySession(
+      [
+        msg({
+          id: 'delivery-only',
+          content: '[DELIVERY:protocol-only] Ready metafile://result.png',
+          timestamp: 1,
+        }),
+      ],
+      SELF,
+    )
+
+    expect(grouped.get(buildSessionKey(PEER, 'protocol-only'))?.map((m) => m.id)).toEqual([
+      'delivery-only',
+    ])
+    expect(grouped.get(PEER)).toBeUndefined()
+  })
+
+  it('keeps unrelated tagged orders from the same provider in separate sessions', () => {
+    const grouped = groupPeerMessagesBySession(
+      [
+        msg({
+          id: 'delivery-one',
+          content: '[DELIVERY:order-one] Ready metafile://one.png',
+          timestamp: 1,
+        }),
+        msg({
+          id: 'delivery-two',
+          content: '[DELIVERY:order-two] Ready metafile://two.png',
+          timestamp: 2,
+        }),
+      ],
+      SELF,
+    )
+
+    expect(grouped.get(buildSessionKey(PEER, 'order-one'))?.map((m) => m.id)).toEqual([
+      'delivery-one',
+    ])
+    expect(grouped.get(buildSessionKey(PEER, 'order-two'))?.map((m) => m.id)).toEqual([
+      'delivery-two',
+    ])
+  })
+
   it('lists grouped sessions with service label for order threads', () => {
     const orderRef = 'c'.repeat(64)
     const orderPayload = buildOrderPayload({

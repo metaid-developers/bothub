@@ -8,6 +8,7 @@ import {
   getSessionsForWallet,
   getSyncState,
   putMessage,
+  putOrder,
   putSession,
   putSyncState,
 } from '@/delivery/db'
@@ -292,6 +293,72 @@ describe('deliverySync', () => {
       expect.objectContaining({
         id: `${SELF}:${PEER}:${orderCorrelationId}`,
         orderCorrelationId,
+      }),
+    ])
+  })
+
+  it('matches paid history replies that mention the payment txid to the paid order session', async () => {
+    const paymentTxid = 'paid-history-txid'
+    await putOrder({
+      id: `${SELF}:${PEER}:${paymentTxid}`,
+      walletGlobalMetaId: SELF,
+      providerGlobalMetaId: PEER,
+      providerChatPubkey: 'provider-chat-key',
+      providerName: 'Paid Provider',
+      providerAvatarUrl: 'https://cdn.example/paid-provider.png',
+      serviceId: 'svc-paid',
+      serviceName: 'Paid Delivery',
+      skillName: 'paid-delivery',
+      outputType: 'image',
+      rawRequest: 'Paid request',
+      displaySummary: 'Paid request',
+      price: '9',
+      currency: 'SPACE',
+      settlementKind: 'native',
+      paymentChain: 'mvc',
+      paymentTxid,
+      status: 'waiting',
+      createdAt: 1_700_000_000_000,
+      updatedAt: 1_700_000_000_000,
+    })
+    await putSession({
+      id: `${SELF}:${PEER}:${paymentTxid}`,
+      walletGlobalMetaId: SELF,
+      providerGlobalMetaId: PEER,
+      providerChatPubkey: 'provider-chat-key',
+      providerName: 'Paid Provider',
+      providerAvatarUrl: 'https://cdn.example/paid-provider.png',
+      orderCorrelationId: paymentTxid,
+      serviceId: 'svc-paid',
+      serviceLabel: 'Paid Delivery',
+      status: 'waiting',
+      lastMessageId: 'pin-paid-order',
+      lastActivityAt: 1_700_000_000_000,
+      assetCount: 0,
+      unreadCount: 0,
+    })
+
+    await mergePrivateChatItem({
+      item: privateChatItem({
+        pinId: 'pin-paid-history-reply',
+        content: `Payment ${paymentTxid} received. Ready metafile://paid-history.png`,
+        timestamp: 1_700_000_000_200,
+      }),
+      selfGlobalMetaId: SELF,
+      walletIdentity: wallet,
+    })
+
+    expect(useMessageStore.getState().messagesForSession(`${PEER}:${paymentTxid}`, SELF)).toEqual([
+      expect.objectContaining({
+        id: 'pin-paid-history-reply',
+        orderCorrelationId: paymentTxid,
+      }),
+    ])
+    expect(useMessageStore.getState().messagesForSession(PEER, SELF)).toEqual([])
+    expect(await getMessagesForSession(`${SELF}:${PEER}:${paymentTxid}`)).toEqual([
+      expect.objectContaining({
+        id: 'pin-paid-history-reply',
+        orderCorrelationId: paymentTxid,
       }),
     ])
   })

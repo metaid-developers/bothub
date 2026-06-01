@@ -14,6 +14,11 @@ import {
 } from '@/delivery/db'
 import { decryptIncoming } from '@/delivery/decrypt'
 import {
+  findCorrelationInText,
+  getOrderCorrelationId,
+  parseOrderMessage,
+} from '@/delivery/orderParser'
+import {
   mergePeerProfiles,
   peerProfileFromPrivateChatUserInfo,
   peerProfileFromUserProfile,
@@ -25,6 +30,7 @@ import {
   useMessageStore,
   type DeliveryMessage,
 } from '@/delivery/messageStore'
+import { parseDeliveryProtocol } from '@/delivery/protocol'
 import type { WalletIdentity } from '@/wallet/types'
 import {
   messageIdFromPrivateChat,
@@ -217,6 +223,72 @@ async function resolveReplyOrderCorrelationId(input: {
   return undefined
 }
 
+function compositeIdTail(id: string): string {
+  const trimmed = id.trim()
+  const colon = trimmed.lastIndexOf(':')
+  return colon >= 0 ? trimmed.slice(colon + 1).trim() : trimmed
+}
+
+function addKnownCorrelation(
+  known: Map<string, string>,
+  value: string | null | undefined,
+  canonical: string | null | undefined,
+): void {
+  const rawValue = value?.trim()
+  const rawCanonical = canonical?.trim()
+  if (!rawValue || !rawCanonical) return
+  known.set(rawValue, rawCanonical)
+}
+
+async function resolveKnownOrderCorrelationId(input: {
+  walletGlobalMetaId: string
+  peerGlobalMetaId: string
+  content: string
+}): Promise<string | undefined> {
+  const wallet = input.walletGlobalMetaId.trim()
+  const peer = input.peerGlobalMetaId.trim()
+  if (!wallet || !peer) return undefined
+
+  const known = new Map<string, string>()
+  const [sessions, orders] = await Promise.all([
+    getSessionsForWallet(wallet),
+    getOrdersForWallet(wallet),
+  ])
+
+  for (const session of sessions) {
+    if (session.providerGlobalMetaId.trim() !== peer) continue
+    const canonical = session.orderCorrelationId?.trim() || compositeIdTail(session.id)
+    if (!canonical || canonical === 'uncorrelated') continue
+    addKnownCorrelation(known, session.orderCorrelationId, canonical)
+    addKnownCorrelation(known, session.id, canonical)
+  }
+
+  for (const order of orders) {
+    if (order.providerGlobalMetaId.trim() !== peer) continue
+    const canonical =
+      order.paymentTxid?.trim() ||
+      order.orderReference?.trim() ||
+      compositeIdTail(order.id)
+    if (!canonical) continue
+    addKnownCorrelation(known, canonical, canonical)
+    addKnownCorrelation(known, order.paymentTxid, canonical)
+    addKnownCorrelation(known, order.paymentCommitTxid, canonical)
+    addKnownCorrelation(known, order.orderReference, canonical)
+    addKnownCorrelation(known, order.orderPinId, canonical)
+    addKnownCorrelation(known, order.id, canonical)
+  }
+
+  const protocolCorrelation = parseDeliveryProtocol(input.content).orderCorrelationId.trim()
+  if (protocolCorrelation) return known.get(protocolCorrelation) ?? protocolCorrelation
+
+  const parsedOrder = parseOrderMessage(input.content)
+  const orderCorrelation = parsedOrder ? getOrderCorrelationId(parsedOrder).trim() : ''
+  if (orderCorrelation) return known.get(orderCorrelation) ?? orderCorrelation
+
+  const textMatch = findCorrelationInText(input.content, new Set(known.keys())).trim()
+  return textMatch ? known.get(textMatch) ?? textMatch : undefined
+}
+
 async function privateChatToDeliveryMessage(input: {
   item: PrivateChatItem
   selfGlobalMetaId: string
@@ -265,6 +337,14 @@ async function privateChatToDeliveryMessage(input: {
     peerGlobalMetaId,
     replyPin: input.item.replyPin,
   })
+  const content = plaintext || rawContent
+  const orderCorrelationId =
+    replyOrderCorrelationId ||
+    (await resolveKnownOrderCorrelationId({
+      walletGlobalMetaId: self,
+      peerGlobalMetaId,
+      content,
+    }))
 
   return {
     id: messageIdFromPrivateChat(input.item),
@@ -274,11 +354,11 @@ async function privateChatToDeliveryMessage(input: {
     peerAvatarUrl: peerProfile.avatarUrl,
     fromGlobalMetaId,
     toGlobalMetaId,
-    content: plaintext || rawContent,
+    content,
     rawContent,
     encryption: input.item.encryption ?? '',
     contentType: input.item.contentType ?? 'text/plain',
-    orderCorrelationId: replyOrderCorrelationId,
+    orderCorrelationId,
     timestamp: input.item.timestamp,
     pinId: input.item.pinId,
     txId: input.item.txId,

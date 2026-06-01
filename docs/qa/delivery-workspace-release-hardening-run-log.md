@@ -99,7 +99,82 @@ Run before handing this Task 4 pass back for controller review:
 | `git diff --check` | passed | No whitespace errors in the Bothub diff. |
 | `git -C /Users/tusm/Documents/MetaID_Projects/meta-socket diff --check` | passed | No whitespace errors in the meta-socket issue diff. |
 
-## Follow-Up
+## Task 7 Delivery History Reconciliation
+
+Task 7 reconciled historical delivery messages back into product-order rows.
+
+- Date checked: 2026-05-31 23:02 CST / 2026-05-31 15:02 UTC
+- Bothub base revision: `f6cba32`
+- Task state: controller-reviewed diff before commit
+- Live meta-socket acceptance: not attempted and not marked passed; Task 4's aggregator readiness blocker remains active.
+
+### Red Test Evidence
+
+The first focused run after adding Task 7 tests failed as expected:
+
+```bash
+pnpm test -- tests/delivery/workspace.test.ts tests/delivery/sessionGrouping.test.ts tests/delivery/messageStore.test.ts tests/delivery/deliverySync.test.ts tests/components/delivery/DeliveryPage.test.tsx
+```
+
+```text
+Test Files  3 failed | 53 passed (56)
+Tests       6 failed | 420 passed (426)
+```
+
+Expected failures covered:
+
+- `sessionGrouping` did not treat protocol-only `[DELIVERY:<id>]` tags as correlation ids.
+- `workspace` did not join raw protocol-tag messages to cached orders.
+- `workspace` did not match paid replies by payment txid.
+- `workspace` hid unassociated historical messages when any cached order existed.
+- `deliverySync` persisted paid history replies without recovering the payment txid correlation.
+
+### Implementation Notes
+
+Task 7 kept reconciliation frontend/local-only and made targeted changes:
+
+- `sessionGrouping` now treats `[ORDER_STATUS:<id>]`, `[DELIVERY:<id>]`, and `[ORDER_END:<id>]` protocol tags as session correlation ids even when the raw row lacks `orderCorrelationId`.
+- `workspace` builds provider-scoped known correlation maps from cached orders and sessions, including order id, order reference, order pin id, payment txid, and payment commit txid.
+- `workspace` normalizes message correlations against those known ids before building order rows, so paid txid replies and protocol-tag replies update the existing order row.
+- `workspace` still keeps same-provider orders separate by using provider plus correlation as the join key.
+- `workspace` now adds unassociated historical messages as separate `历史交付` rows instead of hiding them behind existing cached orders.
+- `deliverySync` recovers missing correlations from reply pins, protocol tags, parsed order payloads, and known cached order/session identifiers before persisting private-chat history.
+
+### Requirements Covered
+
+New or expanded tests now cover:
+
+- order-only row remains visible before provider reply
+- provider reply with matching `orderCorrelationId` updates the same workspace order
+- provider reply with `[DELIVERY:<orderRef>]` matches the order without a stored `orderCorrelationId`
+- paid provider reply with payment txid matches the paid order
+- same-provider unrelated orders do not collapse into one row
+- stale stored sessions do not mask delivered provider messages when merged into cached orders
+- session-only historical messages use `历史交付`, not `Unknown service`
+- missing provider profile does not prevent locally cached assets from remaining visible
+
+Some baseline coverage already existed before this task:
+
+- order-only row visibility
+- stored assets remaining visible after reload when live messages are empty
+- session-only deliveries when the order cache is missing
+
+### Task 7 Verification Commands
+
+Run before handing this Task 7 pass back for controller review:
+
+| Command | Result | Notes |
+| --- | --- | --- |
+| `pnpm test -- tests/delivery/workspace.test.ts` | failed, then passed | Controller-added regression first failed with merged cached order status `waiting` instead of `delivered`; after the status-derivation fix it passed with 56 files / 427 tests. Existing React Router, FocusTrap, profile-offline, and act warnings were observed. |
+| `pnpm test -- tests/delivery/workspace.test.ts tests/delivery/sessionGrouping.test.ts tests/delivery/messageStore.test.ts tests/delivery/deliverySync.test.ts tests/components/delivery/DeliveryPage.test.tsx` | passed | 56 test files / 427 tests passed. Existing React Router, FocusTrap, profile-offline, and act warnings were observed. |
+| `pnpm test` | passed | 56 test files / 427 tests passed. Existing test-suite warnings were unchanged. |
+| `pnpm build` | passed | TypeScript build and Vite production build completed. Vite reported the existing large-chunk warning for the app bundle. |
+| `pnpm lint` | passed | ESLint completed with `--max-warnings 0`. |
+| `git diff --check` | passed | No whitespace errors in the Bothub diff after the run-log update. |
+
+Task 7 verification completed at 2026-05-31 23:02 CST / 2026-05-31 15:02 UTC.
+
+## Task 4 Follow-Up
 
 A meta-socket issue was created at:
 

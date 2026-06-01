@@ -5,6 +5,7 @@ import {
   getOrderCorrelationId,
   parseOrderMessage,
 } from '@/delivery/orderParser'
+import { parseDeliveryProtocol } from '@/delivery/protocol'
 
 export function buildSessionKey(
   peerGlobalMetaId: string,
@@ -147,8 +148,9 @@ export function groupPeerMessagesBySession(
   const assignSessionKey = (message: DeliveryMessage): string => {
     const peer = message.peerGlobalMetaId.trim()
     const parsed = parseOrderMessage(message.content)
+    const protocolCorrelation = parseDeliveryProtocol(message.content).orderCorrelationId.trim()
     const isSelf = message.fromGlobalMetaId.trim() === self
-    const correlation = parsed ? getOrderCorrelationId(parsed) : ''
+    const correlation = parsed ? getOrderCorrelationId(parsed) : protocolCorrelation
     const storedCorrelation = message.orderCorrelationId?.trim() ?? ''
 
     if (parsed && isSelf && correlation) {
@@ -159,6 +161,11 @@ export function groupPeerMessagesBySession(
     if (storedCorrelation) {
       knownCorrelations.add(storedCorrelation)
       return buildSessionKey(peer, storedCorrelation)
+    }
+
+    if (protocolCorrelation) {
+      knownCorrelations.add(protocolCorrelation)
+      return buildSessionKey(peer, protocolCorrelation)
     }
 
     if (correlation && knownCorrelations.has(correlation)) {
