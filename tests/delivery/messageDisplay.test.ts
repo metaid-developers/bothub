@@ -1,6 +1,22 @@
 import { describe, expect, it } from 'vitest'
-import { sessionPreviewText } from '@/delivery/messageDisplay'
+import { getMessageVariant, sessionPreviewText } from '@/delivery/messageDisplay'
+import type { DeliveryMessage } from '@/delivery/messageStore'
 import { buildOrderPayload } from '@/order/buildOrderPayload'
+
+function deliveryMessage(overrides: Partial<DeliveryMessage>): DeliveryMessage {
+  return {
+    id: 'message-1',
+    peerGlobalMetaId: 'provider',
+    fromGlobalMetaId: 'provider',
+    toGlobalMetaId: 'buyer',
+    content: 'U2FsdGVkX1encrypted-delivery',
+    rawContent: 'U2FsdGVkX1encrypted-delivery',
+    encryption: 'simplemsg',
+    contentType: 'text/plain',
+    timestamp: 1,
+    ...overrides,
+  }
+}
 
 describe('sessionPreviewText', () => {
   it('shows clean delivery result text without structured asset payload details', () => {
@@ -37,5 +53,19 @@ describe('sessionPreviewText', () => {
     expect(sessionPreviewText('[ORDER_STATUS:order-demo]')).toBe('交付状态更新')
     expect(sessionPreviewText('[ORDER_END:order-demo]')).toBe('订单已完成')
     expect(sessionPreviewText('[NeedsRating:order-demo]')).toBe('评价待开放')
+  })
+
+  it('uses protocolTag fallback text when encrypted content is not parseable', () => {
+    expect(sessionPreviewText('U2FsdGVkX1encrypted-delivery', 'delivery')).toBe(
+      '已收到交付',
+    )
+  })
+})
+
+describe('getMessageVariant', () => {
+  it('uses persisted protocolTag when content is encrypted or unparseable', () => {
+    expect(getMessageVariant(deliveryMessage({ protocolTag: 'delivery' }))).toBe(
+      'delivery',
+    )
   })
 })

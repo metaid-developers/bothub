@@ -1,7 +1,10 @@
 import { extractMetafileAssets, type ParsedDeliveryAsset } from '@/delivery/assetParser'
 import type { DeliveryAssetRecord } from '@/delivery/domain'
 import type { DeliveryMessage, DeliverySession } from '@/delivery/messageStore'
-import { getMessageVariant } from '@/delivery/messageDisplay'
+import {
+  getMessageVariant,
+  protocolDisplayTextForMessage,
+} from '@/delivery/messageDisplay'
 import { parseDeliveryProtocol } from '@/delivery/protocol'
 import {
   messagesForSession as resolveMessagesForSession,
@@ -85,7 +88,7 @@ export function deriveSessionStatus(
 
   for (const message of messages) {
     const variant = getMessageVariant(message)
-    const protocol = parseDeliveryProtocol(message.content)
+    const protocolDisplayText = protocolDisplayTextForMessage(message)
     const isSelf = message.fromGlobalMetaId.trim() === self
 
     if (variant === 'order' && isSelf) {
@@ -101,14 +104,15 @@ export function deriveSessionStatus(
       continue
     }
     if (variant === 'status') {
-      if (statusTextIndicatesFailure(protocol.displayText)) {
+      if (statusTextIndicatesFailure(protocolDisplayText)) {
         status = 'failed'
         continue
       }
+      const normalizedProtocolText = protocolDisplayText.toLowerCase()
       status =
-        protocol.displayText.toLowerCase().includes('upload') ||
-        protocol.displayText.toLowerCase().includes('deliver') ||
-        protocol.displayText.toLowerCase().includes('generating delivery')
+        normalizedProtocolText.includes('upload') ||
+        normalizedProtocolText.includes('deliver') ||
+        normalizedProtocolText.includes('generating delivery')
           ? 'delivering'
           : 'active'
       continue

@@ -43,6 +43,7 @@ export interface DeliveryMessage {
   rawContent: string
   encryption: string
   contentType: string
+  protocolTag?: string
   orderCorrelationId?: string
   timestamp: number
   pinId?: string
@@ -240,6 +241,7 @@ function deliveryMessageFromRecord(
     rawContent: record.rawContent,
     encryption: record.encryption,
     contentType: record.contentType,
+    protocolTag: record.protocolTag,
     orderCorrelationId: record.orderCorrelationId,
     timestamp: record.timestamp,
     pinId: record.pinId,
@@ -275,7 +277,7 @@ function deliveryMessageRecordFromMessage(input: {
     rawContent: input.message.rawContent,
     contentType: input.message.contentType,
     encryption: input.message.encryption,
-    protocolTag: input.protocolTag,
+    protocolTag: input.protocolTag ?? input.message.protocolTag,
     orderCorrelationId: input.message.orderCorrelationId?.trim() || undefined,
     pinId: input.message.pinId,
     txId: input.message.txId,

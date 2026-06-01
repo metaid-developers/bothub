@@ -11,11 +11,11 @@
 
 | Check | Status | Evidence |
 | --- | --- | --- |
-| Unit/component suite | passed | Latest hardening gate `pnpm test`: 57 files / 431 tests passed on 2026-06-01. Existing React Router, FocusTrap, profile-offline, and act warnings remain. |
+| Unit/component suite | passed | Latest hardening gate `pnpm test`: 57 files / 437 tests passed on 2026-06-01. Existing React Router, FocusTrap, profile-offline, and act warnings remain. |
 | Production build | passed | Latest hardening gate `pnpm build` completed. Vite reported the existing large-chunk warning. |
 | Lint | passed | Latest hardening gate `pnpm lint` completed with `--max-warnings 0`. |
 | Whitespace | passed | Latest hardening gate `git diff --check` completed with no whitespace errors. |
-| Local meta-socket smoke | passed | `META_SOCKET_BASE_URL=http://127.0.0.1:18091 pnpm smoke:meta-socket` passed with skill-service list/detail, Socket.IO heartbeat, private-chat homes, and empty-history compatibility checks. |
+| Local meta-socket smoke | passed | `META_SOCKET_BASE_URL=http://127.0.0.1:18091 META_SOCKET_PRIVATE_CHAT_METAID=idq1zfazvxaq69uw6txe3ewce30ewyhy9a7mzykgv0 META_SOCKET_PRIVATE_CHAT_OTHER_METAID=idq14hmv23j5fnlx4ccnmvlyldjd38xjsechzwg9xz pnpm smoke:meta-socket` passed with skill-service list/detail, Socket.IO heartbeat, and AI_Sunny canonical private-chat history. |
 
 ## Seeded/Local Cache Acceptance
 
@@ -49,14 +49,13 @@
 | Free order provider visibility | pending confirmation/indexing | MVC RPC still reported the tx in mempool at block height `175627` with fee `0.00001175`; local meta-socket logs showed indexing through block `175625`, and private-chat history still returned `total: 0`, `list: null`. |
 | Real paid native order run | passed for buyer send | The user-approved Metalet transfer paid `0.01000000 SPACE` to `125DQu9dBCXksYWg7HnmnmU3TpBNqnMsZF` in tx `be6aba9e7a2e0b2eadb4a9630de7cb8f624865c25031a9dfbcccd29b0925806d`; the user-approved order PIN wrote `/protocols/simplemsg` tx `bef7f0e1bbc693bd3264f7620344c02b72e77c8d27d5303411f9fac55e0f83f0`; Bothub navigated to the paid Delivery order, showed `等待接单`, `请求已发送`, and the `0.01 SPACE` request record. |
 | Paid order provider visibility | pending confirmation/indexing | Payment tx `be6aba9e...5806d` and order PIN tx `bef7f0e1...83f0` were still in mempool at height `175635`; RPC tip was `175636`; local meta-socket private-chat history for buyer/provider still returned `total: 0`, `list: null`. |
-| AI_Sunny online provider run | passed externally, blocked in local hydration | A real free order to AI_Sunny service `e9a7064693dfdcbea381c8355c3c91c0ba3947abee816287774729c432378e61i0` produced buyer pin `5d429d59f5c984735d897be27f197abff44dc55fc757a8f2d22031241b6179c7i0`, and IDChat showed AI_Sunny's `[ORDER_STATUS:...]` reply. Bothub Delivery still showed `交付记录需要同步` because local service detail exposes provider id `1Grq...`, while the current IDChat conversation uses peer `idq14hm...`. |
+| AI_Sunny online provider run | passed after backend alias fix and frontend hydration hardening | A real free order to AI_Sunny service `e9a7064693dfdcbea381c8355c3c91c0ba3947abee816287774729c432378e61i0` produced buyer pin `5d429d59f5c984735d897be27f197abff44dc55fc757a8f2d22031241b6179c7i0`, and IDChat showed AI_Sunny's `[ORDER_STATUS:...]` reply. meta-socket now returns AI_Sunny detail with canonical provider `idq14hmv23j5fnlx4ccnmvlyldjd38xjsechzwg9xz` plus payment address `1GrqX7K9jdnUor8hAoAfDx99uFH2tT75Za`; canonical private-chat query returns `total: 57`, including reply pins `42c3f0...`, `2f26...`, and `0299...`. Bothub regression and controlled UI checks prove canonical-provider replies merge back into the address-keyed order without creating a separate `历史交付` row. |
 | Controlled final asset run | passed | In-app Playwright restored `Task 9 Controlled Delivery` from IndexedDB with a controlled wallet shim, one real image metafile pin, and video/audio/document/archive fallback records; UI showed 5 assets, preview/open/download/fallback controls, copy-one/copy-all buttons, and recovered after refresh. Screenshots: `/tmp/bothub-task9-controlled-assets.png`, `/tmp/bothub-task9-preview-dialog.png`, `/tmp/bothub-task9-copy-controls.png`, `/tmp/bothub-task9-refresh-recovery.png`. |
 
 ## Active Blockers
 
-1. Free and paid provider-side visibility is not yet proven through meta-socket history. Buyer sends succeeded and the transactions are visible to MVC RPC, but the latest paid order txs were still in mempool and local meta-socket had not indexed them into private-chat history.
-2. AI_Sunny proves the provider can receive and answer an order, but Bothub cannot hydrate that answer through local meta-socket because the service-detail provider identity (`1Grq...`) does not map to the current private-chat peer (`idq14hm...`) returned by public IDChat chat-api.
-3. Public `https://api.idchat.io/chat-api/` is healthy for idchat group/private chat, but public BotHub native `/api/bot-hub/*` routes are still not a usable production base URL.
+1. Free and paid provider-side visibility for the earlier Dan/BOT order txs is not yet proven through meta-socket history. Buyer sends succeeded and the transactions were visible to MVC RPC during the run, but those specific order histories still need a fresh confirmed-history check if they are used as release evidence.
+2. Public `https://api.idchat.io/chat-api/` is healthy for idchat group/private chat, but public BotHub native `/api/bot-hub/*` routes are still not a usable production base URL.
 
 ## Related Issues
 
@@ -86,5 +85,5 @@ AI_Sunny provider response all have live evidence.
 
 Strict production release remains conditional on backend/runtime readiness:
 public native BotHub routes must be usable, provider-side visibility should be
-available through local meta-socket, and AI_Sunny's service identity needs a
-canonical private-chat peer mapping. No Bothub backend was added.
+available through local meta-socket for the earlier Dan/BOT order txs if those
+flows remain part of launch evidence, and no Bothub backend was added.

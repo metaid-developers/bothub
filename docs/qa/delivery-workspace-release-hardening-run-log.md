@@ -162,6 +162,72 @@ Run after the acceptance-note and run-log edits:
 | `pnpm lint` | passed | ESLint completed with `--max-warnings 0`. |
 | `git diff --check` | passed | First run caught Markdown trailing spaces in the acceptance note; after removing those hard-break spaces, the command passed. |
 
+## AI_Sunny Backend Recovery Follow-Up
+
+The meta-socket maintainer resolved the AI_Sunny provider identity gap recorded
+under `/Users/tusm/Documents/MetaID_Projects/meta-socket/issues/`.
+
+- Date checked: 2026-06-01 21:10 CST / 2026-06-01 13:10 UTC
+- Bothub branch: `codex/delivery-workspace-release-hardening`
+- Local meta-socket: `http://127.0.0.1:18091`
+
+### Backend Evidence
+
+| Check | Result | Evidence |
+| --- | --- | --- |
+| Local health | passed | `curl http://127.0.0.1:18091/healthz` returned `{"code":0,"data":{"service":"meta-socket","status":"ok","version":"dev"}}`. |
+| Local service list | passed | A `size=10` BotHub list returned real skill-service rows, including paid `metabot-ziwei-fortune-v2` with native MVC payment metadata and multiple free services. |
+| AI_Sunny service detail | passed | Detail for `e9a7064693dfdcbea381c8355c3c91c0ba3947abee816287774729c432378e61i0` returned provider `globalMetaId: idq14hmv23j5fnlx4ccnmvlyldjd38xjsechzwg9xz`, address/payment `1GrqX7K9jdnUor8hAoAfDx99uFH2tT75Za`, and chat pubkey `046a2552...9b3b76`. |
+| AI_Sunny private chat alias query | passed | `private-chat-list?metaId=idq1zfazvxaq69uw6txe3ewce30ewyhy9a7mzykgv0&otherMetaId=idq14hmv23j5fnlx4ccnmvlyldjd38xjsechzwg9xz&size=5` returned `total: 57`, including provider reply pins `42c3f0...`, `2f26...`, and `0299...` at block height `175638`. |
+| Public BotHub service list | blocked | `https://api.idchat.io/api/bot-hub/skill-service/list?...` still returned nginx `502 Bad Gateway`. This remains a deployment/runtime blocker, not a local Bothub frontend blocker. |
+
+### Bothub Follow-Up
+
+Bothub now has additional frontend hardening for the exact shape of the
+AI_Sunny recovery:
+
+- `DeliveryMessageRecord` preserves `protocolTag`, so encrypted/private-chat
+  records can still be classified as order/status/delivery/completion/rating.
+- Delivery workspace correlation can attach unscoped protocol replies to the
+  matching recoverable order by provider chat pubkey, even when the order was
+  stored under the provider payment address and the reply was read through the
+  provider canonical globalMetaId.
+- Same-timestamp order/reply batches sort outgoing correlated order rows before
+  incoming unscoped protocol replies.
+- Normal buyer UI shows a safe delivery-sync warning for encrypted records and
+  does not expose raw ciphertext or transport names.
+
+### Browser Evidence
+
+Controlled Playwright UI run:
+
+- Seeded one local order under provider address
+  `1GrqX7K9jdnUor8hAoAfDx99uFH2tT75Za`.
+- Seeded one encrypted `protocolTag: "delivery"` reply under canonical provider
+  `idq14hmv23j5fnlx4ccnmvlyldjd38xjsechzwg9xz`.
+- Used the shared AI_Sunny provider chat pubkey and chain-style second
+  timestamps.
+- Reloaded `/delivery?order=...`.
+
+Result: the UI showed `AI_Sunny`, `MetaWeb/MetaID 百科全书`, `已交付`, a
+buyer-safe `有交付记录暂时无法显示，已保留原始记录。` warning, and no
+separate `历史交付` row. Normal visible text did not expose `U2FsdGVkX1`,
+`simplemsg`, `Socket.IO`, `meta-socket`, or `chat key`.
+
+Screenshot artifact: `.playwright-mcp/bothub-ai-sunny-alias-delivery.png`
+(generated for local review; not committed).
+
+### Focused Regression Evidence
+
+```bash
+pnpm vitest run tests/delivery/workspace.test.ts -t "provider identity alias"
+```
+
+Result: passed, `1` test selected. The selected regression now uses the
+AI_Sunny-style provider address/canonical globalMetaId split, shared chat
+pubkey, chain-style second timestamps, and an encrypted delivery record carrying
+only `protocolTag: "delivery"`.
+
 ## Task 7 Delivery History Reconciliation
 
 Task 7 reconciled historical delivery messages back into product-order rows.

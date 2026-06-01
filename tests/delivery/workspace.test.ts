@@ -4,6 +4,7 @@ import {
   selectWorkspaceOrder,
   type WorkspaceOrder,
 } from '@/delivery/workspace'
+import { buildOrderPayload } from '@/order/buildOrderPayload'
 import type {
   BuyerOrder,
   DeliveryAssetRecord,
@@ -309,6 +310,180 @@ describe('delivery workspace', () => {
       paymentReference: txid,
     })
     expect(paidOrder?.messages.map((row) => row.id)).toEqual(['paid-delivery'])
+  })
+
+  it('merges unscoped same-batch protocol replies into a recoverable paid order', () => {
+    const txid = '05b77d20aef740a7f97341d89577b14286fd2a0e960a0809f29c4e65b0865dca'
+    const orderRow = order({
+      id: `${SELF}:${PROVIDER}:${txid}`,
+      paymentTxid: txid,
+      orderReference: '',
+      status: 'failed_to_send',
+      updatedAt: 100,
+    })
+    const orderPayload = buildOrderPayload({
+      displayText: 'Wiki service',
+      rawRequest: 'Summarize MetaID',
+      price: '0',
+      currency: 'SPACE',
+      serviceId: 'svc-wiki',
+      skillName: 'metabot-metaid-wiki-service',
+      outputType: 'text',
+    })
+
+    const workspace = buildDeliveryWorkspace({
+      walletGlobalMetaId: SELF,
+      orders: [orderRow],
+      sessions: [
+        session({
+          id: `${SELF}:${PROVIDER}:${txid}`,
+          orderCorrelationId: txid,
+          status: 'failed_to_send',
+          lastMessageId: '69-outgoing-order',
+          lastActivityAt: 100,
+        }),
+        session({
+          id: `${SELF}:${PROVIDER}:uncorrelated`,
+          orderCorrelationId: undefined,
+          serviceLabel: undefined,
+          status: 'delivered',
+          lastMessageId: '42-provider-delivery',
+          lastActivityAt: 100,
+          assetCount: 0,
+        }),
+      ],
+      byPeer: {
+        [PROVIDER]: [
+          message({
+            id: '42-provider-delivery',
+            content:
+              '[DELIVERY] {"result":"Received. MetaID is a decentralized identity layer."}',
+            rawContent:
+              '[DELIVERY] {"result":"Received. MetaID is a decentralized identity layer."}',
+            orderCorrelationId: undefined,
+            timestamp: 100,
+          }),
+          message({
+            id: '69-outgoing-order',
+            fromGlobalMetaId: SELF,
+            toGlobalMetaId: PROVIDER,
+            content: orderPayload,
+            rawContent: orderPayload,
+            orderCorrelationId: undefined,
+            timestamp: 100,
+          }),
+        ],
+      },
+      assetsBySession: {},
+    })
+
+    expect(workspace.orders.map((row) => row.id)).toEqual([
+      `${SELF}:${PROVIDER}:${txid}`,
+    ])
+    expect(selectWorkspaceOrder(workspace, `${SELF}:${PROVIDER}:${txid}`)).toMatchObject({
+      status: 'delivered',
+      messageCount: 2,
+      orderCorrelationId: txid,
+    })
+  })
+
+  it('merges unscoped protocol replies from a provider identity alias', () => {
+    const txid = '05b77d20aef740a7f97341d89577b14286fd2a0e960a0809f29c4e65b0865dca'
+    const providerAddress = '1GrqX7K9jdnUor8hAoAfDx99uFH2tT75Za'
+    const providerCanonical = 'idq14hmv23j5fnlx4ccnmvlyldjd38xjsechzwg9xz'
+    const providerChatPubkey = '046a25523425b7b6c936c2279d95353605a38e53c7cfa46a'
+    const orderAt = 1_780_319_593_900
+    const chainMessageAt = Math.floor(orderAt / 1000)
+    const orderPayload = buildOrderPayload({
+      displayText: 'Wiki service',
+      rawRequest: 'Summarize MetaID',
+      price: '0',
+      currency: 'SPACE',
+      serviceId: 'svc-wiki',
+      skillName: 'metabot-metaid-wiki-service',
+      outputType: 'text',
+    })
+
+    const workspace = buildDeliveryWorkspace({
+      walletGlobalMetaId: SELF,
+      orders: [
+        order({
+          id: `${SELF}:${providerAddress}:${txid}`,
+          providerGlobalMetaId: providerAddress,
+          providerChatPubkey,
+          providerName: 'AI_Sunny',
+          paymentTxid: txid,
+          orderReference: '',
+          status: 'waiting',
+          updatedAt: orderAt,
+        }),
+      ],
+      sessions: [
+        session({
+          id: `${SELF}:${providerAddress}:${txid}`,
+          providerGlobalMetaId: providerAddress,
+          providerChatPubkey,
+          providerName: 'AI_Sunny',
+          orderCorrelationId: txid,
+          status: 'pending',
+          lastMessageId: '69-outgoing-order',
+          lastActivityAt: orderAt,
+        }),
+        session({
+          id: `${SELF}:${providerCanonical}:uncorrelated`,
+          providerGlobalMetaId: providerCanonical,
+          providerChatPubkey,
+          providerName: 'AI_Sunny',
+          orderCorrelationId: undefined,
+          status: 'delivered',
+          lastMessageId: '42-provider-delivery',
+          lastActivityAt: orderAt,
+        }),
+      ],
+      byPeer: {
+        [providerAddress]: [
+          message({
+            id: '69-outgoing-order',
+            peerGlobalMetaId: providerAddress,
+            peerChatPubkey: providerChatPubkey,
+            peerName: 'AI_Sunny',
+            fromGlobalMetaId: SELF,
+            toGlobalMetaId: providerAddress,
+            content: orderPayload,
+            rawContent: orderPayload,
+            orderCorrelationId: undefined,
+            timestamp: chainMessageAt,
+          }),
+        ],
+        [providerCanonical]: [
+          message({
+            id: '42-provider-delivery',
+            peerGlobalMetaId: providerCanonical,
+            peerChatPubkey: providerChatPubkey,
+            peerName: 'AI_Sunny',
+            fromGlobalMetaId: providerCanonical,
+            content: 'U2FsdGVkX1encrypted-delivery',
+            rawContent: 'U2FsdGVkX1encrypted-delivery',
+            encryption: '',
+            protocolTag: 'delivery',
+            orderCorrelationId: undefined,
+            timestamp: chainMessageAt,
+            decryptError: 'encrypted reply',
+          }),
+        ],
+      },
+      assetsBySession: {},
+    })
+
+    expect(workspace.orders.map((row) => row.id)).toEqual([
+      `${SELF}:${providerAddress}:${txid}`,
+    ])
+    expect(selectWorkspaceOrder(workspace, `${SELF}:${providerAddress}:${txid}`)).toMatchObject({
+      providerGlobalMetaId: providerAddress,
+      status: 'delivered',
+      messageCount: 2,
+      orderCorrelationId: txid,
+    })
   })
 
   it('keeps session-only deliveries visible when order cache is missing', () => {

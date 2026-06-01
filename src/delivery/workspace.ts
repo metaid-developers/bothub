@@ -81,6 +81,18 @@ export const STATUS_LABELS: Record<WorkspaceOrderStatus, string> = {
 }
 
 const HISTORICAL_DELIVERY_LABEL = '历史交付'
+const FALLBACK_CORRELATION_WINDOW_MS = 24 * 60 * 60 * 1000
+
+interface FallbackCorrelationCandidate {
+  providerGlobalMetaId: string
+  correlationId: string
+  timestamp: number
+}
+
+interface DerivedMessageCorrelation {
+  providerGlobalMetaId?: string
+  orderCorrelationId: string
+}
 
 function normalizeOrderStatus(status: string): WorkspaceOrderStatus {
   switch (status) {
@@ -241,6 +253,155 @@ function buildKnownCorrelations(input: {
   return known
 }
 
+function timestampMs(value: number): number {
+  if (!Number.isFinite(value) || value <= 0) return 0
+  return value < 10_000_000_000 ? value * 1000 : value
+}
+
+function isRecoverableOrderStatus(status: string): boolean {
+  return !['completed', 'failed'].includes(normalizeOrderStatus(status))
+}
+
+function isRecoverableSessionStatus(status: string): boolean {
+  return !['completed', 'failed'].includes(normalizeSessionStatus(status))
+}
+
+function addFallbackCorrelation(
+  candidates: Map<string, Map<string, FallbackCorrelationCandidate>>,
+  providerGlobalMetaId: string,
+  correlationId: string | null | undefined,
+  timestamp: number,
+): FallbackCorrelationCandidate | null {
+  const peer = providerGlobalMetaId.trim()
+  const canonical = correlationId?.trim()
+  if (!peer || !canonical) return null
+
+  const peerCandidates = candidates.get(peer) ?? new Map<string, FallbackCorrelationCandidate>()
+  const candidateKey = `${peer}:${canonical}`
+  const existing = peerCandidates.get(candidateKey)
+  const normalizedTimestamp = timestampMs(timestamp)
+  const candidate = {
+    providerGlobalMetaId: peer,
+    correlationId: canonical,
+    timestamp: Math.max(existing?.timestamp ?? 0, normalizedTimestamp),
+  }
+  peerCandidates.set(candidateKey, candidate)
+  candidates.set(peer, peerCandidates)
+  return candidate
+}
+
+function addFallbackAlias(
+  candidates: Map<string, Map<string, FallbackCorrelationCandidate>>,
+  providerGlobalMetaId: string,
+  candidate: FallbackCorrelationCandidate,
+): void {
+  const peer = providerGlobalMetaId.trim()
+  if (!peer) return
+  const peerCandidates = candidates.get(peer) ?? new Map<string, FallbackCorrelationCandidate>()
+  const candidateKey = `${candidate.providerGlobalMetaId}:${candidate.correlationId}`
+  const existing = peerCandidates.get(candidateKey)
+  peerCandidates.set(candidateKey, {
+    ...candidate,
+    timestamp: Math.max(existing?.timestamp ?? 0, candidate.timestamp),
+  })
+  candidates.set(peer, peerCandidates)
+}
+
+function addFallbackByChatPubkey(
+  byChatPubkey: Map<string, FallbackCorrelationCandidate[]>,
+  chatPubkey: string | null | undefined,
+  candidate: FallbackCorrelationCandidate | null,
+): void {
+  const key = chatPubkey?.trim()
+  if (!key || !candidate) return
+  byChatPubkey.set(key, [...(byChatPubkey.get(key) ?? []), candidate])
+}
+
+function buildFallbackCorrelations(input: {
+  orders: BuyerOrder[]
+  sessions: DeliverySessionRecord[]
+  byPeer: Record<string, DeliveryMessage[]>
+}): Map<string, FallbackCorrelationCandidate[]> {
+  const byPeer = new Map<string, Map<string, FallbackCorrelationCandidate>>()
+  const byChatPubkey = new Map<string, FallbackCorrelationCandidate[]>()
+
+  for (const order of input.orders) {
+    if (!isRecoverableOrderStatus(order.status)) continue
+    const candidate = addFallbackCorrelation(
+      byPeer,
+      order.providerGlobalMetaId,
+      orderCorrelationIdFor(order),
+      order.updatedAt || order.createdAt,
+    )
+    addFallbackByChatPubkey(byChatPubkey, order.providerChatPubkey, candidate)
+  }
+
+  for (const session of input.sessions) {
+    if (!isRecoverableSessionStatus(session.status)) continue
+    const candidate = addFallbackCorrelation(
+      byPeer,
+      session.providerGlobalMetaId,
+      sessionCorrelationIdFor(session),
+      session.lastActivityAt,
+    )
+    addFallbackByChatPubkey(byChatPubkey, session.providerChatPubkey, candidate)
+  }
+
+  for (const [peerGlobalMetaId, messages] of Object.entries(input.byPeer)) {
+    const chatPubkey = messages.find((message) => message.peerChatPubkey?.trim())
+      ?.peerChatPubkey
+      ?.trim()
+    const aliasCandidates = chatPubkey ? byChatPubkey.get(chatPubkey) : undefined
+    if (!aliasCandidates?.length) continue
+    for (const candidate of aliasCandidates) {
+      addFallbackAlias(byPeer, peerGlobalMetaId, candidate)
+    }
+  }
+
+  return new Map(
+    Array.from(byPeer.entries()).map(([peer, peerCandidates]) => [
+      peer,
+      Array.from(peerCandidates.values()),
+    ]),
+  )
+}
+
+function canUseFallbackCorrelation(message: DeliveryMessage): boolean {
+  if (parseOrderMessage(message.content)) return true
+  const protocolTag = message.protocolTag?.trim()
+  if (protocolTag) return protocolTag !== 'plain'
+  return parseDeliveryProtocol(message.content).kind !== 'plain'
+}
+
+function fallbackCorrelationForMessage(
+  message: DeliveryMessage,
+  candidates: FallbackCorrelationCandidate[] | undefined,
+): FallbackCorrelationCandidate | null {
+  if (!candidates?.length || !canUseFallbackCorrelation(message)) return null
+
+  const messageAt = timestampMs(message.timestamp)
+  const timedCandidates = candidates.filter((candidate) => candidate.timestamp > 0)
+  if (messageAt > 0 && timedCandidates.length > 0) {
+    const ranked = timedCandidates
+      .map((candidate) => ({
+        ...candidate,
+        distance: Math.abs(candidate.timestamp - messageAt),
+      }))
+      .sort((a, b) => a.distance - b.distance || a.correlationId.localeCompare(b.correlationId))
+    const best = ranked[0]
+    if (!best || best.distance > FALLBACK_CORRELATION_WINDOW_MS) return null
+    const tied = ranked.find(
+      (candidate) =>
+        (candidate.providerGlobalMetaId !== best.providerGlobalMetaId ||
+          candidate.correlationId !== best.correlationId) &&
+        candidate.distance === best.distance,
+    )
+    return tied ? null : best
+  }
+
+  return candidates.length === 1 ? candidates[0] : null
+}
+
 function canonicalCorrelation(
   peerKnown: Map<string, string> | undefined,
   value: string | null | undefined,
@@ -253,46 +414,87 @@ function canonicalCorrelation(
 function deriveMessageCorrelation(
   message: DeliveryMessage,
   peerKnown: Map<string, string> | undefined,
-): string {
+  fallbackCandidates: FallbackCorrelationCandidate[] | undefined,
+): DerivedMessageCorrelation | null {
   const stored = canonicalCorrelation(peerKnown, message.orderCorrelationId)
-  if (stored) return stored
+  if (stored) return { orderCorrelationId: stored }
 
   const protocol = parseDeliveryProtocol(message.content).orderCorrelationId.trim()
   const protocolCorrelation = canonicalCorrelation(peerKnown, protocol)
-  if (protocolCorrelation) return protocolCorrelation
+  if (protocolCorrelation) return { orderCorrelationId: protocolCorrelation }
 
   const order = parseOrderMessage(message.content)
   const orderCorrelation = canonicalCorrelation(
     peerKnown,
     order ? getOrderCorrelationId(order) : '',
   )
-  if (orderCorrelation) return orderCorrelation
+  if (orderCorrelation) return { orderCorrelationId: orderCorrelation }
 
   if (peerKnown?.size) {
-    return canonicalCorrelation(
+    const textCorrelation = canonicalCorrelation(
       peerKnown,
       findCorrelationInText(message.content, new Set(peerKnown.keys())),
     )
+    if (textCorrelation) return { orderCorrelationId: textCorrelation }
   }
 
-  return ''
+  const fallback = fallbackCorrelationForMessage(message, fallbackCandidates)
+  return fallback
+    ? {
+        providerGlobalMetaId: fallback.providerGlobalMetaId,
+        orderCorrelationId: fallback.correlationId,
+      }
+    : null
+}
+
+function appendNormalizedMessage(
+  output: Map<string, Map<string, DeliveryMessage>>,
+  peerGlobalMetaId: string,
+  message: DeliveryMessage,
+): void {
+  const peer = peerGlobalMetaId.trim()
+  if (!peer) return
+  const messages = output.get(peer) ?? new Map<string, DeliveryMessage>()
+  messages.set(message.id, message)
+  output.set(peer, messages)
 }
 
 function normalizeMessagesByKnownCorrelations(
   byPeer: Record<string, DeliveryMessage[]>,
   known: Map<string, Map<string, string>>,
+  fallbackCorrelations: Map<string, FallbackCorrelationCandidate[]>,
 ): Record<string, DeliveryMessage[]> {
+  const output = new Map<string, Map<string, DeliveryMessage>>()
+  for (const [peerGlobalMetaId, messages] of Object.entries(byPeer)) {
+    const peer = peerGlobalMetaId.trim()
+    const peerKnown = known.get(peer)
+    const fallbackCandidates = fallbackCorrelations.get(peer)
+    for (const message of messages) {
+      const correlation = deriveMessageCorrelation(
+        message,
+        peerKnown,
+        fallbackCandidates,
+      )
+      const targetPeer = correlation?.providerGlobalMetaId?.trim() || peer
+      appendNormalizedMessage(
+        output,
+        targetPeer,
+        correlation
+          ? {
+              ...message,
+              peerGlobalMetaId: targetPeer,
+              orderCorrelationId: correlation.orderCorrelationId,
+            }
+          : message,
+      )
+    }
+  }
+
   return Object.fromEntries(
-    Object.entries(byPeer).map(([peerGlobalMetaId, messages]) => {
-      const peerKnown = known.get(peerGlobalMetaId.trim())
-      return [
-        peerGlobalMetaId,
-        messages.map((message) => {
-          const orderCorrelationId = deriveMessageCorrelation(message, peerKnown)
-          return orderCorrelationId ? { ...message, orderCorrelationId } : message
-        }),
-      ]
-    }),
+    Array.from(output.entries()).map(([peerGlobalMetaId, messages]) => [
+      peerGlobalMetaId,
+      Array.from(messages.values()),
+    ]),
   )
 }
 
@@ -337,7 +539,16 @@ export function buildDeliveryWorkspace(input: {
     orders: input.orders,
     sessions: input.sessions,
   })
-  const byPeer = normalizeMessagesByKnownCorrelations(input.byPeer, knownCorrelations)
+  const fallbackCorrelations = buildFallbackCorrelations({
+    orders: input.orders,
+    sessions: input.sessions,
+    byPeer: input.byPeer,
+  })
+  const byPeer = normalizeMessagesByKnownCorrelations(
+    input.byPeer,
+    knownCorrelations,
+    fallbackCorrelations,
+  )
 
   const orderMap = new Map<string, WorkspaceOrder>()
 
@@ -366,6 +577,9 @@ export function buildDeliveryWorkspace(input: {
     const sessionKey = buildSessionKey(session.providerGlobalMetaId, orderCorrelationId)
     const messages = resolveMessagesForSession(byPeer, sessionKey, walletGlobalMetaId)
     const storedAssets = assetsForSessionIds(input.assetsBySession, [sessionId, workspaceId])
+    if (!sessionCorrelationId && messages.length === 0 && storedAssets.length === 0) {
+      continue
+    }
     const assets = deliveryAssetsForSession(messages, storedAssets)
 
     const existing = orderMap.get(workspaceId)

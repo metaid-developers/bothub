@@ -33,9 +33,30 @@ export function parseSessionKey(sessionKey: string): {
   }
 }
 
-function sortMessagesAsc(messages: DeliveryMessage[]): DeliveryMessage[] {
+function sameTimestampRank(message: DeliveryMessage, selfGlobalMetaId: string): number {
+  const self = selfGlobalMetaId.trim()
+  const isSelf = Boolean(self) && message.fromGlobalMetaId.trim() === self
+  if (isSelf && parseOrderMessage(message.content)) return 0
+  if (isSelf && message.orderCorrelationId?.trim()) return 1
+  if (protocolKindForMessage(message) !== 'plain') return 2
+  return 3
+}
+
+function protocolKindForMessage(message: DeliveryMessage): string {
+  const protocolTag = message.protocolTag?.trim()
+  if (protocolTag) return protocolTag
+  return parseDeliveryProtocol(message.content).kind
+}
+
+function sortMessagesAsc(
+  messages: DeliveryMessage[],
+  selfGlobalMetaId = '',
+): DeliveryMessage[] {
   return [...messages].sort((a, b) => {
     if (a.timestamp !== b.timestamp) return a.timestamp - b.timestamp
+    const aRank = sameTimestampRank(a, selfGlobalMetaId)
+    const bRank = sameTimestampRank(b, selfGlobalMetaId)
+    if (aRank !== bRank) return aRank - bRank
     return a.id.localeCompare(b.id)
   })
 }
@@ -138,43 +159,55 @@ export function groupPeerMessagesBySession(
 ): Map<string, DeliveryMessage[]> {
   const sorted = sortMessagesAsc(
     messages.filter((message) => isMessageForSelf(message, selfGlobalMetaId)),
+    selfGlobalMetaId,
   )
   const buckets = new Map<string, DeliveryMessage[]>()
   const knownCorrelations = new Set<string>()
   const self = selfGlobalMetaId.trim()
+  let lastCorrelatedSessionKey: string | null = null
 
   const peerDefaultKey = (peer: string) => buildSessionKey(peer, null)
+  const rememberCorrelatedKey = (key: string): string => {
+    lastCorrelatedSessionKey = key
+    return key
+  }
 
   const assignSessionKey = (message: DeliveryMessage): string => {
     const peer = message.peerGlobalMetaId.trim()
     const parsed = parseOrderMessage(message.content)
-    const protocolCorrelation = parseDeliveryProtocol(message.content).orderCorrelationId.trim()
+    const protocol = parseDeliveryProtocol(message.content)
+    const protocolKind = protocolKindForMessage(message)
+    const protocolCorrelation = protocol.orderCorrelationId.trim()
     const isSelf = message.fromGlobalMetaId.trim() === self
     const correlation = parsed ? getOrderCorrelationId(parsed) : protocolCorrelation
     const storedCorrelation = message.orderCorrelationId?.trim() ?? ''
 
     if (parsed && isSelf && correlation) {
       knownCorrelations.add(correlation)
-      return buildSessionKey(peer, correlation)
+      return rememberCorrelatedKey(buildSessionKey(peer, correlation))
     }
 
     if (storedCorrelation) {
       knownCorrelations.add(storedCorrelation)
-      return buildSessionKey(peer, storedCorrelation)
+      return rememberCorrelatedKey(buildSessionKey(peer, storedCorrelation))
     }
 
     if (protocolCorrelation) {
       knownCorrelations.add(protocolCorrelation)
-      return buildSessionKey(peer, protocolCorrelation)
+      return rememberCorrelatedKey(buildSessionKey(peer, protocolCorrelation))
     }
 
     if (correlation && knownCorrelations.has(correlation)) {
-      return buildSessionKey(peer, correlation)
+      return rememberCorrelatedKey(buildSessionKey(peer, correlation))
     }
 
     const textMatch = findCorrelationInText(message.content, knownCorrelations)
     if (textMatch) {
-      return buildSessionKey(peer, textMatch)
+      return rememberCorrelatedKey(buildSessionKey(peer, textMatch))
+    }
+
+    if (!isSelf && protocolKind !== 'plain' && lastCorrelatedSessionKey) {
+      return lastCorrelatedSessionKey
     }
 
     return peerDefaultKey(peer)
@@ -209,7 +242,7 @@ export function buildGroupedSessionList(
   for (const [peerGlobalMetaId, messages] of Object.entries(byPeer)) {
     const grouped = groupPeerMessagesBySession(messages, selfGlobalMetaId)
     for (const [sessionKey, bucket] of grouped) {
-      const sorted = sortMessagesAsc(bucket)
+      const sorted = sortMessagesAsc(bucket, selfGlobalMetaId)
       const lastMessage = sorted[sorted.length - 1]
       if (!lastMessage) continue
 

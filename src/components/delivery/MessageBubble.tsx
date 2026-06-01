@@ -1,9 +1,11 @@
 import { useId, useState } from 'react'
 import { clsx } from 'clsx'
 import type { DeliveryMessage } from '@/delivery/messageStore'
-import { getMessageVariant } from '@/delivery/messageDisplay'
+import {
+  getMessageVariant,
+  protocolDisplayTextForMessage,
+} from '@/delivery/messageDisplay'
 import { parseOrderMessage } from '@/delivery/orderParser'
-import { parseDeliveryProtocol } from '@/delivery/protocol'
 import { deliveryAssetsFromMessage } from '@/delivery/sessionDisplay'
 import { AssetPreviewCard } from '@/components/delivery/AssetPreviewCard'
 import { PeerAvatar } from '@/components/delivery/PeerAvatar'
@@ -218,8 +220,8 @@ function TimelineEvent({
 }
 
 function DeliveryBubble({ message }: { message: DeliveryMessage }) {
-  const protocol = parseDeliveryProtocol(message.content)
   const assets = deliveryAssetsFromMessage(message)
+  const displayText = protocolDisplayTextForMessage(message)
 
   return (
     <div className="flex justify-start">
@@ -231,7 +233,7 @@ function DeliveryBubble({ message }: { message: DeliveryMessage }) {
           交付成果
         </p>
         <p className="mt-1 whitespace-pre-wrap break-words">
-          {protocol.displayText || '已收到交付'}
+          {displayText || '已收到交付'}
         </p>
         <p className="mt-2 text-xs text-hub-muted">
           {assets.length} 个成果
@@ -256,25 +258,32 @@ export function MessageBubble({ message, selfGlobalMetaId }: MessageBubbleProps)
     return <OrderBubble message={message} isSelf={isSelf} />
   }
   if (variant === 'status') {
-    const protocol = parseDeliveryProtocol(message.content)
-    return <TimelineEvent label="交付状态更新" body={protocol.displayText} />
+    return (
+      <TimelineEvent
+        label="交付状态更新"
+        body={protocolDisplayTextForMessage(message)}
+      />
+    )
   }
   if (variant === 'delivery') {
     return <DeliveryBubble message={message} />
   }
   if (variant === 'completion') {
-    const protocol = parseDeliveryProtocol(message.content)
     return (
       <TimelineEvent
         label="订单已完成"
-        body={protocol.displayText || '订单已完成'}
+        body={protocolDisplayTextForMessage(message) || '订单已完成'}
         tone="success"
       />
     )
   }
   if (variant === 'rating_reserved') {
-    const protocol = parseDeliveryProtocol(message.content)
-    return <TimelineEvent label="评价待开放" body={protocol.displayText} />
+    return (
+      <TimelineEvent
+        label="评价待开放"
+        body={protocolDisplayTextForMessage(message)}
+      />
+    )
   }
   if (message.decryptError) {
     return <DecryptFailedBubble message={message} />
