@@ -1,15 +1,70 @@
 # Release Closeout Private Beta Run Log
 
+Checked from Bothub `main` at `15eeb19` on 2026-06-02 00:52 CST.
+Local dev server was started with:
+
+```bash
+VITE_META_SOCKET_BASE_URL=/meta-socket VITE_USE_AGGREGATOR_MOCK=false VITE_USE_WS_MOCK=false pnpm dev -- --host 127.0.0.1
+```
+
+Vite reported `http://localhost:5177/`; in the Codex in-app Browser the
+reachable URL was `http://[::1]:5177/`.
+
 ## Automated Gates
+
+| Command | Result | Evidence |
+| --- | --- | --- |
+| `pnpm test` | passed | 57 files / 440 tests passed. Existing React Router and local diagnostic warnings were observed. |
+| `pnpm build` | passed | TypeScript build and Vite production build completed. Vite reported the existing large-chunk warning for `dist/assets/index-0MEgXZqy.js`. |
+| `pnpm lint` | passed | ESLint completed with `--max-warnings 0`. |
+| `git diff --check` | passed | No whitespace errors before recording this run-log evidence. |
 
 ## Local Meta-Socket Smoke
 
+| Check | Result | Evidence |
+| --- | --- | --- |
+| `pnpm smoke:meta-socket` | passed | `baseUrl: http://127.0.0.1:18091`, health `ok`, skill-service list `count: 3`, Socket heartbeat ack `true`. |
+| Canonical private chat | passed | Smoke used `/api/private-chat/homes/...` and `/api/private-chat/messages?...`; `routeMode.homes` and `routeMode.privateChatList` were both `canonical`. Homes returned `count: 6`; messages returned `count: 5`. |
+
 ## Browser UI Copy Smoke
+
+| Check | Result | Evidence |
+| --- | --- | --- |
+| Hub real services | passed | In-app Browser at `http://[::1]:5177/` loaded real service cards, including `紫微斗数算命 v2`, free beta services, and Chinese buyer CTA `下单请求`. Screenshot: `/tmp/bothub-release-closeout-hub.png`. |
+| Buyer-safe normal copy | passed | Visible normal state had no `Socket.IO`, `chat pubkey`, `CreatePin`, `Pay & Request`, `Unknown Bot`, `No chat pubkey`, `/api/`, or `/chat-api/`. Provider-authored service names/descriptions remained in their original language. |
+| Delivery wallet-gated state | passed | `/delivery` showed `我的交付`, wallet-gated copy, `成果库`, and `还没有收到成果` without raw transport terms. Screenshot: `/tmp/bothub-release-closeout-delivery-empty.png`. |
+| Browser console | passed | In-app Browser `tab.dev.logs({ levels: ['error'] })` returned `[]` for the Delivery smoke page. |
 
 ## Chrome + Metalet Acceptance
 
+Not run in Task 5. This section is reserved for the independent Chrome +
+Metalet buyer-flow acceptance in Task 6.
+
 ## Asset Acceptance
+
+Task 5 used a controlled IndexedDB seed in a temporary Playwright Chromium
+context with a stubbed wallet bridge. The image asset used the real metafile pin
+`b081b32c2891f0e2b2b8dccc22b3256ebf54957aaa43053f712d90646f377ed6i0`.
+Video, audio, document, and archive assets used controlled metafile-style URIs
+to verify fallback cards and actions.
+
+| Check | Result | Evidence |
+| --- | --- | --- |
+| Cached order restores | passed | `/delivery?order=...release-closeout-assets` showed `Release Closeout Controlled Assets`, provider `AI_Sunny`, status `已交付`, and `5 个成果`. Screenshot: `/tmp/bothub-release-closeout-assets-desktop.png`. |
+| Image preview/open/download | passed | The first preview control opened a dialog with `打开` and `下载` actions. Screenshot: `/tmp/bothub-release-closeout-assets-preview.png`. |
+| Video/audio/document/archive fallback | passed | Asset library rendered fallback cards with `预览暂不可用，可打开文件`; UI exposed 5 open links and 5 download links. |
+| Copy one/copy all | passed | `复制链接` copied the real image content URL; `复制全部链接` copied 5 download URLs and included the real image pin URL. |
+| Refresh recovery | passed | After reload the selected order, `已交付`, and `5 个成果` were restored from IndexedDB. Screenshot: `/tmp/bothub-release-closeout-assets-refresh.png`. |
+| Mobile viewport | passed | At `390x844`, the asset view still showed the order and `5 个成果`; `document.body.scrollWidth` equaled `390`, so no horizontal overflow was observed. Screenshot: `/tmp/bothub-release-closeout-assets-mobile.png`. |
 
 ## Remaining Blockers
 
+- Strict production readiness is still not passed because no non-local
+  meta-socket deployment base URL has been assigned and verified.
+- Chrome + Metalet real free/paid order acceptance is still pending Task 6.
+
 ## Final Readiness Decision
+
+Pending Task 6. After the local gates and Browser/asset checks above, the
+remaining question is real Chrome + Metalet buyer-flow acceptance against local
+meta-socket.
