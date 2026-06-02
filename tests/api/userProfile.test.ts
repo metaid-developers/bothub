@@ -7,8 +7,8 @@ async function loadUserProfile() {
 describe('user profile API client', () => {
   const avatarPin = `${'a'.repeat(64)}i0`
   const fallbackAvatarPin = `${'b'.repeat(64)}i0`
-  const expectedAvatarContent = `https://file.metaid.io/metafile-indexer/api/v1/files/accelerate/content/${avatarPin}`
-  const expectedFallbackAvatarContent = `https://file.metaid.io/metafile-indexer/api/v1/files/accelerate/content/${fallbackAvatarPin}`
+  const expectedAvatarContent = `https://manapi.metaid.io/content/${avatarPin}`
+  const expectedFallbackAvatarContent = `https://manapi.metaid.io/content/${fallbackAvatarPin}`
 
   beforeEach(() => {
     vi.stubEnv('VITE_META_SOCKET_BASE_URL', '/meta-socket/')
@@ -112,7 +112,7 @@ describe('user profile API client', () => {
 
   it('normalizes delivery avatar URL variants to MetaID content URLs', async () => {
     const pinId = `${'c'.repeat(64)}i0`
-    const expected = `https://file.metaid.io/metafile-indexer/api/v1/files/accelerate/content/${pinId}`
+    const expected = `https://manapi.metaid.io/content/${pinId}`
 
     const { normalizeAvatarUrl } = await loadUserProfile()
 

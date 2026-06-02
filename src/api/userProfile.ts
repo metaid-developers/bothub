@@ -1,12 +1,6 @@
 import { getNormalizedMetaSocketBaseUrl } from '@/api/config'
 
-/** Primary CDN for avatar images — same accelerate content endpoint used for delivery assets. */
-const DEFAULT_METAID_AVATAR_CONTENT_BASE =
-  'https://file.metaid.io/metafile-indexer/api/v1/files/accelerate/content'
-
-/** Fallback CDN when the accelerate endpoint is unavailable. */
-const DEFAULT_METAID_AVATAR_FALLBACK_CONTENT_BASE =
-  'https://file.metaid.io/metafile-indexer/api/v1/files/content'
+const DEFAULT_METAID_AVATAR_CONTENT_BASE = 'https://manapi.metaid.io/content'
 
 export interface UserProfile {
   metaid?: string
@@ -149,7 +143,6 @@ function avatarNeedsAddressFallback(profile: UserProfile): boolean {
   const avatarUrl = profile.avatarUrl?.trim().toLowerCase()
   if (!avatarUrl) return true
   if (/\/content\/?$/.test(avatarUrl)) return true
-  if (avatarUrl.includes('manapi.metaid.io/content/')) return true
   if (avatarUrl.includes('/users/avatar/accelerate/')) return true
   if (avatarUrl.includes('file.metaid.io/metafile-indexer/content/')) return true
   if (avatarUrl.includes('file.metaid.io/metafile-indexer/api/v1/files/content/')) return true
