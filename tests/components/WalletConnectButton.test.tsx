@@ -64,7 +64,7 @@ describe('WalletConnectButton', () => {
 
     render(<WalletConnectButton />)
 
-    expect(screen.getByText('A')).toBeInTheDocument()
+    expect(screen.getByText('AD')).toBeInTheDocument()
     expect(screen.getByText('Ada')).toBeInTheDocument()
   })
 

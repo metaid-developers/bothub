@@ -3,6 +3,7 @@ import { clsx } from 'clsx'
 import type { SkillServiceListItem } from '@/api/aggregator.types'
 import { EmptyState } from '@/components/common/EmptyState'
 import { t } from '@/i18n'
+import { avatarColor, avatarInitials } from '@/lib/avatar'
 
 export interface OnlineBotGroup {
   providerGlobalMetaId: string
@@ -44,7 +45,8 @@ function groupProviders(services: SkillServiceListItem[]): OnlineBotGroup[] {
 }
 
 function BotAvatar({ name, avatar }: { name: string; avatar: string | null }) {
-  const initial = name.trim().charAt(0).toUpperCase() || '?'
+  const initials = avatarInitials(name)
+  const bgColor = avatarColor(name)
   if (avatar) {
     return (
       <span className="relative inline-flex shrink-0">
@@ -62,8 +64,11 @@ function BotAvatar({ name, avatar }: { name: string; avatar: string | null }) {
   }
   return (
     <span className="relative inline-flex shrink-0">
-      <span className="flex h-9 w-9 items-center justify-center rounded-full border border-hub-border bg-hub-surface2 text-xs font-semibold text-hub-muted">
-        {initial}
+      <span
+        className="flex h-9 w-9 items-center justify-center rounded-full text-[11px] font-semibold text-white/90"
+        style={{ backgroundColor: bgColor }}
+      >
+        {initials}
       </span>
       <span
         className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-hub-surface bg-hub-online"

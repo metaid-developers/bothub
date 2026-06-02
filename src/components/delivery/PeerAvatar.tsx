@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { clsx } from 'clsx'
 import { peerDisplayName } from '@/components/delivery/peerDisplay'
+import { avatarColor, avatarInitials } from '@/lib/avatar'
 
 export interface PeerAvatarProps {
   name?: string | null
@@ -10,8 +11,8 @@ export interface PeerAvatarProps {
 }
 
 const sizeClass = {
-  sm: 'h-8 w-8 text-xs',
-  md: 'h-10 w-10 text-sm',
+  sm: 'h-8 w-8 text-[11px]',
+  md: 'h-10 w-10 text-[13px]',
 }
 
 export function PeerAvatar({
@@ -21,8 +22,10 @@ export function PeerAvatar({
   size = 'sm',
 }: PeerAvatarProps) {
   const [imageFailed, setImageFailed] = useState(false)
-  const label = `${peerDisplayName({ name, globalMetaId })} 头像`
-  const initial = peerDisplayName({ name, globalMetaId }).charAt(0).toUpperCase() || '?'
+  const displayName = peerDisplayName({ name, globalMetaId })
+  const label = `${displayName} 头像`
+  const initials = avatarInitials(displayName)
+  const bgColor = avatarColor(displayName)
   const imageUrl = avatarUrl?.trim()
 
   if (imageUrl && !imageFailed) {
@@ -43,11 +46,12 @@ export function PeerAvatar({
     <div
       aria-label={label}
       className={clsx(
-        'flex shrink-0 items-center justify-center rounded-full border border-hub-border bg-hub-surface2 font-semibold text-hub-muted',
+        'flex shrink-0 items-center justify-center rounded-full font-semibold text-white/90',
         sizeClass[size],
       )}
+      style={{ backgroundColor: bgColor }}
     >
-      {initial}
+      {initials}
     </div>
   )
 }

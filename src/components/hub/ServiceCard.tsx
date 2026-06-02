@@ -3,11 +3,13 @@ import { clsx } from 'clsx'
 import type { SkillServiceListItem } from '@/api/aggregator.types'
 import { t } from '@/i18n'
 import { formatPrice } from '@/lib/format'
+import { avatarColor, avatarInitials } from '@/lib/avatar'
 
 const PROVIDER_FALLBACK_NAME = () => t('hub.unknownBot')
 
 function ServiceIcon({ service }: { service: SkillServiceListItem }) {
-  const initial = service.displayName.trim().charAt(0).toUpperCase() || '?'
+  const initials = avatarInitials(service.displayName)
+  const bgColor = avatarColor(service.displayName)
   if (service.serviceIcon) {
     return (
       <img
@@ -19,10 +21,11 @@ function ServiceIcon({ service }: { service: SkillServiceListItem }) {
   }
   return (
     <div
-      className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl border border-hub-border bg-hub-accent/15 font-display text-lg font-semibold text-hub-accent"
+      className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl font-display text-lg font-semibold text-white/90"
       aria-hidden
+      style={{ backgroundColor: bgColor }}
     >
-      {initial}
+      {initials}
     </div>
   )
 }
@@ -34,7 +37,8 @@ function ProviderAvatar({
   name: string
   avatar: string | null
 }) {
-  const initial = name.trim().charAt(0).toUpperCase() || '?'
+  const initials = avatarInitials(name)
+  const bgColor = avatarColor(name)
   if (avatar) {
     return (
       <img
@@ -46,10 +50,11 @@ function ProviderAvatar({
   }
   return (
     <div
-      className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-hub-border bg-hub-surface2 text-xs font-semibold text-hub-muted"
+      className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold text-white/90"
       aria-hidden
+      style={{ backgroundColor: bgColor }}
     >
-      {initial}
+      {initials}
     </div>
   )
 }

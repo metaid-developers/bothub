@@ -10,6 +10,7 @@ import { ProviderProfile } from '@/components/hub/ProviderProfile'
 import { RequestModal } from '@/components/hub/RequestModal'
 import { t } from '@/i18n'
 import { formatPrice } from '@/lib/format'
+import { avatarColor, avatarInitials } from '@/lib/avatar'
 import { useWallet } from '@/wallet/useWallet'
 
 export interface ServiceDetailRating {
@@ -25,7 +26,8 @@ export interface ServiceDetailPanelProps {
 }
 
 function DetailIcon({ service }: { service: SkillServiceCore }) {
-  const initial = service.displayName.trim().charAt(0).toUpperCase() || '?'
+  const initials = avatarInitials(service.displayName)
+  const bgColor = avatarColor(service.displayName)
   if (service.serviceIcon) {
     return (
       <img
@@ -37,10 +39,11 @@ function DetailIcon({ service }: { service: SkillServiceCore }) {
   }
   return (
     <div
-      className="flex h-16 w-16 shrink-0 items-center justify-center rounded-xl border border-hub-border bg-hub-accent/15 font-display text-xl font-semibold text-hub-accent"
+      className="flex h-16 w-16 shrink-0 items-center justify-center rounded-xl font-display text-xl font-semibold text-white/90"
       aria-hidden
+      style={{ backgroundColor: bgColor }}
     >
-      {initial}
+      {initials}
     </div>
   )
 }

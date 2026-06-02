@@ -2,6 +2,7 @@ import { t } from '@/i18n'
 import { useWallet } from '@/wallet/useWallet'
 import { truncateGlobalMetaId } from '@/wallet/format'
 import { MetaletNotInstalledError } from '@/wallet/metalet'
+import { avatarColor, avatarInitials } from '@/lib/avatar'
 
 export function WalletConnectButton() {
   const { identity, status, errorMessage, connect, disconnect } = useWallet()
@@ -19,7 +20,8 @@ export function WalletConnectButton() {
   if (status === 'connected' && identity) {
     const displayName = identity.name?.trim() || truncateGlobalMetaId(identity.globalMetaId)
     const shortGlobalMetaId = truncateGlobalMetaId(identity.globalMetaId)
-    const avatarInitial = displayName.slice(0, 1).toUpperCase()
+    const initials = avatarInitials(displayName)
+    const bgColor = avatarColor(displayName)
 
     return (
       <div className="flex items-center gap-3">
@@ -32,10 +34,11 @@ export function WalletConnectButton() {
             />
           ) : (
             <span
-              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-hub-border bg-hub-accent/20 text-xs font-semibold text-white"
+              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[11px] font-semibold text-white/90"
               aria-label={`${displayName} avatar`}
+              style={{ backgroundColor: bgColor }}
             >
-              {avatarInitial}
+              {initials}
             </span>
           )}
           <span className="hidden min-w-0 flex-col sm:flex">

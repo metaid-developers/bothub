@@ -1,6 +1,7 @@
 import { clsx } from 'clsx'
 import type { ProviderInfo } from '@/api/aggregator.types'
 import { formatAddress } from '@/lib/format'
+import { avatarColor, avatarInitials } from '@/lib/avatar'
 
 import { t } from '@/i18n'
 
@@ -12,7 +13,8 @@ export interface ProviderProfileProps {
 }
 
 function ProviderAvatar({ name, avatar }: { name: string; avatar: string | null }) {
-  const initial = name.trim().charAt(0).toUpperCase() || '?'
+  const initials = avatarInitials(name)
+  const bgColor = avatarColor(name)
   if (avatar) {
     return (
       <img
@@ -24,10 +26,11 @@ function ProviderAvatar({ name, avatar }: { name: string; avatar: string | null 
   }
   return (
     <div
-      className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-hub-border bg-hub-surface2 text-sm font-semibold text-hub-muted"
+      className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-[13px] font-semibold text-white/90"
       aria-hidden
+      style={{ backgroundColor: bgColor }}
     >
-      {initial}
+      {initials}
     </div>
   )
 }
