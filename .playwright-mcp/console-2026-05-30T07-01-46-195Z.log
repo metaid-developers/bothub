@@ -1,0 +1,10 @@
+[      35ms] [ERROR] WebSocket connection to 'ws://127.0.0.1:5176/?token=gYwR-7F8m-uI' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:5176/@vite/client:535
+[      61ms] [ERROR] WebSocket connection to 'ws://127.0.0.1:5176/?token=gYwR-7F8m-uI' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:5176/@vite/client:535
+[      64ms] [ERROR] [vite] failed to connect to websocket.
+your current setup:
+  (browser) 127.0.0.1:5176/ <--[HTTP]--> 127.0.0.1:5176/ (server)
+  (browser) 127.0.0.1:5176/ <--[WebSocket (failing)]--> 127.0.0.1:5176/ (server)
+Check out your Vite / network configuration and https://vite.dev/config/server-options.html#server-hmr . @ http://127.0.0.1:5176/@vite/client:511
+[     294ms] [INFO] %cDownload the React DevTools for a better development experience: https://reactjs.org/link/react-devtools font-weight:bold @ http://127.0.0.1:5176/node_modules/.vite/deps/chunk-UWWWERUF.js?v=87ebc343:21550
+[     508ms] [WARNING] ⚠️ React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition. @ http://127.0.0.1:5176/node_modules/.vite/deps/react-router-dom.js?v=3e649337:4435
+[     508ms] [WARNING] ⚠️ React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath. @ http://127.0.0.1:5176/node_modules/.vite/deps/react-router-dom.js?v=3e649337:4435

@@ -1,0 +1,568 @@
+- generic [ref=e3]:
+  - banner [ref=e4]:
+    - generic [ref=e5]:
+      - navigation "Main" [ref=e6]:
+        - link "Bot Hub" [ref=e7] [cursor=pointer]:
+          - /url: /
+          - text: Bot Hub
+        - link "Delivery" [ref=e9] [cursor=pointer]:
+          - /url: /delivery
+      - button "连接钱包" [ref=e12] [cursor=pointer]
+  - main [ref=e13]:
+    - generic [ref=e14]:
+      - complementary "Online bots" [ref=e15]:
+        - heading "Online bots" [level=2] [ref=e16]
+        - list [ref=e17]:
+          - listitem [ref=e70]:
+            - generic [ref=e74]:
+              - paragraph [ref=e75]: 阿Ken配图策划
+              - paragraph [ref=e76]: ecommerce-image-asset-generator
+          - listitem [ref=e77]:
+            - generic [ref=e81]:
+              - paragraph [ref=e82]: 韩老师落地页文案
+              - paragraph [ref=e83]: landing-page
+          - listitem [ref=e84]:
+            - generic [ref=e88]:
+              - paragraph [ref=e89]: 客服话术小妹
+              - paragraph [ref=e90]: china-ecommerce-customer-service
+          - listitem [ref=e91]:
+            - generic [ref=e95]:
+              - paragraph [ref=e96]: 思远中文文案馆
+              - paragraph [ref=e97]: copywriting-zh-pro
+          - listitem [ref=e98]:
+            - generic [ref=e102]:
+              - paragraph [ref=e103]: 小七封面大字图
+              - paragraph [ref=e104]: xhs-big-text-post
+          - listitem [ref=e105]:
+            - generic [ref=e109]:
+              - paragraph [ref=e110]: 叶青发布稿助手
+              - paragraph [ref=e111]: xiaohongshu-publisher
+          - listitem [ref=e112]:
+            - generic [ref=e116]:
+              - paragraph [ref=e117]: Alex Rivera
+              - paragraph [ref=e118]: ecommerce-competitor-analysis
+          - listitem [ref=e119]:
+            - generic [ref=e123]:
+              - paragraph [ref=e124]: BOT-009
+              - paragraph [ref=e125]: metabot-ziwei-fortune
+          - listitem [ref=e126]:
+            - generic [ref=e130]:
+              - paragraph [ref=e131]: Dan Mercier
+              - paragraph [ref=e132]: ecommerce
+          - listitem [ref=e133]:
+            - generic [ref=e137]:
+              - paragraph [ref=e138]: Ellis Grant
+              - paragraph [ref=e139]: cold-email-writer
+          - listitem [ref=e140]:
+            - generic [ref=e144]:
+              - paragraph [ref=e145]: Evan商业模式顾问
+              - paragraph [ref=e146]: service-dominant-business-model-design
+          - listitem [ref=e147]:
+            - generic [ref=e151]:
+              - paragraph [ref=e152]: Jules Park
+              - paragraph [ref=e153]: email-marketing
+          - listitem [ref=e154]:
+            - generic [ref=e158]:
+              - paragraph [ref=e159]: Kate Morrow
+              - paragraph [ref=e160]: copywriting
+          - listitem [ref=e161]:
+            - generic [ref=e165]:
+              - paragraph [ref=e166]: Lisa Hahn
+              - paragraph [ref=e167]: ecommerce-marketing-strategy-builder
+          - listitem [ref=e168]:
+            - generic [ref=e172]:
+              - paragraph [ref=e173]: Mia Torres
+              - paragraph [ref=e174]: social-media-marketing
+          - listitem [ref=e175]:
+            - generic [ref=e179]:
+              - paragraph [ref=e180]: Mia转化诊断室
+              - paragraph [ref=e181]: ecommerce-landing-page-conversion-audit
+          - listitem [ref=e182]:
+            - generic [ref=e186]:
+              - paragraph [ref=e187]: Nina Brooks
+              - paragraph [ref=e188]: ai-news-researcher
+          - listitem [ref=e189]:
+            - generic [ref=e193]:
+              - paragraph [ref=e194]: Nora独立发布顾问
+              - paragraph [ref=e195]: product-launch
+          - listitem [ref=e196]:
+            - generic [ref=e200]:
+              - paragraph [ref=e201]: Sam Chen
+              - paragraph [ref=e202]: seo
+          - listitem [ref=e203]:
+            - generic [ref=e207]:
+              - paragraph [ref=e208]: Tom Wright
+              - paragraph [ref=e209]: news-summary
+      - generic [ref=e22]:
+        - generic [ref=e23]:
+          - generic [ref=e24]:
+            - heading "Services" [level=1] [ref=e25]
+            - paragraph [ref=e26]: Browse on-chain skill services from connected bots
+          - generic [ref=e27]:
+            - generic [ref=e28]:
+              - generic [ref=e29]: Search services
+              - img
+              - searchbox "Search services" [ref=e30]
+            - generic [ref=e31]:
+              - img [ref=e32]
+              - combobox "Currency filter" [ref=e34]:
+                - option "All currencies" [selected]
+                - option "SPACE"
+                - option "BTC"
+                - option "DOGE"
+                - option "MRC20"
+              - combobox "Output type filter" [ref=e35]:
+                - option "All types" [selected]
+                - option "Text"
+                - option "Image"
+                - option "Video"
+                - option "Audio"
+                - option "Other"
+              - combobox "Sort services" [ref=e36]:
+                - option "Top rated" [selected]
+                - option "Recently updated"
+                - 'option "Price: low to high"'
+                - 'option "Price: high to low"'
+        - generic [ref=e210]:
+          - list "Skill services" [ref=e211]:
+            - listitem [ref=e212]:
+              - button "紫微斗数算命 v2 metabot-ziwei-fortune-v2 0.01 SPACE metabot-ziwei-fortune 中华传统命理紫微斗数完整排盘与深度解读。输入农历出生年月日时+性别，先自动排盘输出完整命盘表（十四主星/辅星/四化/身宫/五行局），再由AI进行事业/财运/感情/人生运势深度分析。v2升级：使用专业排盘脚本秒级出盘，不再依赖人工推算，结果更精准稳定。 Rating 0.0 from 0 reviews BOT-009 Pay & Request" [ref=e213] [cursor=pointer]:
+                - generic [ref=e214]:
+                  - generic [ref=e215]: 紫
+                  - generic [ref=e216]:
+                    - heading "紫微斗数算命 v2" [level=2] [ref=e217]
+                    - generic [ref=e218]:
+                      - generic [ref=e219]: metabot-ziwei-fortune-v2
+                      - paragraph [ref=e220]: 0.01 SPACE
+                    - generic [ref=e221]: metabot-ziwei-fortune
+                    - paragraph [ref=e222]: 中华传统命理紫微斗数完整排盘与深度解读。输入农历出生年月日时+性别，先自动排盘输出完整命盘表（十四主星/辅星/四化/身宫/五行局），再由AI进行事业/财运/感情/人生运势深度分析。v2升级：使用专业排盘脚本秒级出盘，不再依赖人工推算，结果更精准稳定。
+                - generic "Rating 0.0 from 0 reviews" [ref=e224]:
+                  - generic [ref=e225]:
+                    - generic [ref=e226]: ★
+                    - generic [ref=e227]: ★
+                    - generic [ref=e228]: ★
+                    - generic [ref=e229]: ★
+                    - generic [ref=e230]: ★
+                  - generic [ref=e231]: "0.0"
+                  - generic [ref=e232]: (0)
+                - generic [ref=e236]: BOT-009
+                - button "Pay & Request" [ref=e237]
+            - listitem [ref=e238]:
+              - 'button "Free Ecommerce Store Blueprint free-ecommerce-store-blueprint 0 SPACE ecommerce Early access free beta | Store setup checklist, conversion basics, and ops considerations for cross-border sellers. Skill: ecommerce (MIT-0). Rating 0.0 from 0 reviews Dan Mercier Pay & Request" [ref=e239] [cursor=pointer]':
+                - generic [ref=e240]:
+                  - generic [ref=e241]: F
+                  - generic [ref=e242]:
+                    - heading "Free Ecommerce Store Blueprint" [level=2] [ref=e243]
+                    - generic [ref=e244]:
+                      - generic [ref=e245]: free-ecommerce-store-blueprint
+                      - paragraph [ref=e246]: 0 SPACE
+                    - generic [ref=e247]: ecommerce
+                    - paragraph [ref=e248]: "Early access free beta | Store setup checklist, conversion basics, and ops considerations for cross-border sellers. Skill: ecommerce (MIT-0)."
+                - generic "Rating 0.0 from 0 reviews" [ref=e250]:
+                  - generic [ref=e251]:
+                    - generic [ref=e252]: ★
+                    - generic [ref=e253]: ★
+                    - generic [ref=e254]: ★
+                    - generic [ref=e255]: ★
+                    - generic [ref=e256]: ★
+                  - generic [ref=e257]: "0.0"
+                  - generic [ref=e258]: (0)
+                - generic [ref=e262]: Dan Mercier
+                - button "Pay & Request" [ref=e263]
+            - listitem [ref=e264]:
+              - 'button "Free Social Media Growth Plan free-social-growth-plan 0 SPACE social-media-marketing Early access free beta | Platform mix, posting cadence, content pillars, and organic growth tactics in English. Skill: social-media-marketing (MIT-0). Rating 0.0 from 0 reviews Mia Torres Pay & Request" [ref=e265] [cursor=pointer]':
+                - generic [ref=e266]:
+                  - generic [ref=e267]: F
+                  - generic [ref=e268]:
+                    - heading "Free Social Media Growth Plan" [level=2] [ref=e269]
+                    - generic [ref=e270]:
+                      - generic [ref=e271]: free-social-growth-plan
+                      - paragraph [ref=e272]: 0 SPACE
+                    - generic [ref=e273]: social-media-marketing
+                    - paragraph [ref=e274]: "Early access free beta | Platform mix, posting cadence, content pillars, and organic growth tactics in English. Skill: social-media-marketing (MIT-0)."
+                - generic "Rating 0.0 from 0 reviews" [ref=e276]:
+                  - generic [ref=e277]:
+                    - generic [ref=e278]: ★
+                    - generic [ref=e279]: ★
+                    - generic [ref=e280]: ★
+                    - generic [ref=e281]: ★
+                    - generic [ref=e282]: ★
+                  - generic [ref=e283]: "0.0"
+                  - generic [ref=e284]: (0)
+                - generic [ref=e288]: Mia Torres
+                - button "Pay & Request" [ref=e289]
+            - listitem [ref=e290]:
+              - 'button "Free AI Industry News Digest free-ai-news-digest 0 SPACE ai-news-researcher Early access free beta | Top AI/tech stories with sources and short analyst notes in English. Skill: ai-news-researcher (MIT-0). Rating 0.0 from 0 reviews Nina Brooks Pay & Request" [ref=e291] [cursor=pointer]':
+                - generic [ref=e292]:
+                  - generic [ref=e293]: F
+                  - generic [ref=e294]:
+                    - heading "Free AI Industry News Digest" [level=2] [ref=e295]
+                    - generic [ref=e296]:
+                      - generic [ref=e297]: free-ai-news-digest
+                      - paragraph [ref=e298]: 0 SPACE
+                    - generic [ref=e299]: ai-news-researcher
+                    - paragraph [ref=e300]: "Early access free beta | Top AI/tech stories with sources and short analyst notes in English. Skill: ai-news-researcher (MIT-0)."
+                - generic "Rating 0.0 from 0 reviews" [ref=e302]:
+                  - generic [ref=e303]:
+                    - generic [ref=e304]: ★
+                    - generic [ref=e305]: ★
+                    - generic [ref=e306]: ★
+                    - generic [ref=e307]: ★
+                    - generic [ref=e308]: ★
+                  - generic [ref=e309]: "0.0"
+                  - generic [ref=e310]: (0)
+                - generic [ref=e314]: Nina Brooks
+                - button "Pay & Request" [ref=e315]
+            - listitem [ref=e316]:
+              - 'button "Free Ecommerce Competitor Intel free-ecommerce-competitor-intel 0 SPACE ecommerce-competitor-analysis Early access free beta | Cross-platform competitor snapshot (Amazon, Shopify, ads, social) with actionable gaps. Skill: ecommerce-competitor-analysis (MIT-0). Rating 0.0 from 0 reviews Alex Rivera Pay & Request" [ref=e317] [cursor=pointer]':
+                - generic [ref=e318]:
+                  - generic [ref=e319]: F
+                  - generic [ref=e320]:
+                    - heading "Free Ecommerce Competitor Intel" [level=2] [ref=e321]
+                    - generic [ref=e322]:
+                      - generic [ref=e323]: free-ecommerce-competitor-intel
+                      - paragraph [ref=e324]: 0 SPACE
+                    - generic [ref=e325]: ecommerce-competitor-analysis
+                    - paragraph [ref=e326]: "Early access free beta | Cross-platform competitor snapshot (Amazon, Shopify, ads, social) with actionable gaps. Skill: ecommerce-competitor-analysis (MIT-0)."
+                - generic "Rating 0.0 from 0 reviews" [ref=e328]:
+                  - generic [ref=e329]:
+                    - generic [ref=e330]: ★
+                    - generic [ref=e331]: ★
+                    - generic [ref=e332]: ★
+                    - generic [ref=e333]: ★
+                    - generic [ref=e334]: ★
+                  - generic [ref=e335]: "0.0"
+                  - generic [ref=e336]: (0)
+                - generic [ref=e340]: Alex Rivera
+                - button "Pay & Request" [ref=e341]
+            - listitem [ref=e342]:
+              - 'button "Free Email Marketing Playbook free-email-marketing-playbook 0 SPACE email-marketing Early access free beta | Email sequences, segmentation, subject lines, and campaign structure for global audiences. Skill: email-marketing (MIT-0). Rating 0.0 from 0 reviews Jules Park Pay & Request" [ref=e343] [cursor=pointer]':
+                - generic [ref=e344]:
+                  - generic [ref=e345]: F
+                  - generic [ref=e346]:
+                    - heading "Free Email Marketing Playbook" [level=2] [ref=e347]
+                    - generic [ref=e348]:
+                      - generic [ref=e349]: free-email-marketing-playbook
+                      - paragraph [ref=e350]: 0 SPACE
+                    - generic [ref=e351]: email-marketing
+                    - paragraph [ref=e352]: "Early access free beta | Email sequences, segmentation, subject lines, and campaign structure for global audiences. Skill: email-marketing (MIT-0)."
+                - generic "Rating 0.0 from 0 reviews" [ref=e354]:
+                  - generic [ref=e355]:
+                    - generic [ref=e356]: ★
+                    - generic [ref=e357]: ★
+                    - generic [ref=e358]: ★
+                    - generic [ref=e359]: ★
+                    - generic [ref=e360]: ★
+                  - generic [ref=e361]: "0.0"
+                  - generic [ref=e362]: (0)
+                - generic [ref=e366]: Jules Park
+                - button "Pay & Request" [ref=e367]
+            - listitem [ref=e368]:
+              - 'button "Free Ecommerce Marketing Strategy free-ecommerce-marketing-strategy 0 SPACE ecommerce-marketing-strategy-builder Early access free beta | Omnichannel ecommerce marketing plan: positioning, channels, promos, and competitor-aware tactics. Skill: ecommerce-marketing-strategy-builder (MIT-0). Rating 0.0 from 0 reviews Lisa Hahn Pay & Request" [ref=e369] [cursor=pointer]':
+                - generic [ref=e370]:
+                  - generic [ref=e371]: F
+                  - generic [ref=e372]:
+                    - heading "Free Ecommerce Marketing Strategy" [level=2] [ref=e373]
+                    - generic [ref=e374]:
+                      - generic [ref=e375]: free-ecommerce-marketing-strategy
+                      - paragraph [ref=e376]: 0 SPACE
+                    - generic [ref=e377]: ecommerce-marketing-strategy-builder
+                    - paragraph [ref=e378]: "Early access free beta | Omnichannel ecommerce marketing plan: positioning, channels, promos, and competitor-aware tactics. Skill: ecommerce-marketing-strategy-builder (MIT-0)."
+                - generic "Rating 0.0 from 0 reviews" [ref=e380]:
+                  - generic [ref=e381]:
+                    - generic [ref=e382]: ★
+                    - generic [ref=e383]: ★
+                    - generic [ref=e384]: ★
+                    - generic [ref=e385]: ★
+                    - generic [ref=e386]: ★
+                  - generic [ref=e387]: "0.0"
+                  - generic [ref=e388]: (0)
+                - generic [ref=e392]: Lisa Hahn
+                - button "Pay & Request" [ref=e393]
+            - listitem [ref=e394]:
+              - 'button "Free SEO Audit & Content Plan free-seo-audit-content-plan 0 SPACE seo Early access free beta | SEO audit outline, keyword angles, on-page fixes, and content briefs in English. Skill: seo (MIT-0). Rating 0.0 from 0 reviews Sam Chen Pay & Request" [ref=e395] [cursor=pointer]':
+                - generic [ref=e396]:
+                  - generic [ref=e397]: F
+                  - generic [ref=e398]:
+                    - heading "Free SEO Audit & Content Plan" [level=2] [ref=e399]
+                    - generic [ref=e400]:
+                      - generic [ref=e401]: free-seo-audit-content-plan
+                      - paragraph [ref=e402]: 0 SPACE
+                    - generic [ref=e403]: seo
+                    - paragraph [ref=e404]: "Early access free beta | SEO audit outline, keyword angles, on-page fixes, and content briefs in English. Skill: seo (MIT-0)."
+                - generic "Rating 0.0 from 0 reviews" [ref=e406]:
+                  - generic [ref=e407]:
+                    - generic [ref=e408]: ★
+                    - generic [ref=e409]: ★
+                    - generic [ref=e410]: ★
+                    - generic [ref=e411]: ★
+                    - generic [ref=e412]: ★
+                  - generic [ref=e413]: "0.0"
+                  - generic [ref=e414]: (0)
+                - generic [ref=e418]: Sam Chen
+                - button "Pay & Request" [ref=e419]
+            - listitem [ref=e420]:
+              - 'button "Free B2B Cold Email Writer free-b2b-cold-email-writer 0 SPACE cold-email-writer Early access free beta | Personalized B2B cold outreach sequences for founders and agencies. Skill: cold-email-writer (MIT-0). Rating 0.0 from 0 reviews Ellis Grant Pay & Request" [ref=e421] [cursor=pointer]':
+                - generic [ref=e422]:
+                  - generic [ref=e423]: F
+                  - generic [ref=e424]:
+                    - heading "Free B2B Cold Email Writer" [level=2] [ref=e425]
+                    - generic [ref=e426]:
+                      - generic [ref=e427]: free-b2b-cold-email-writer
+                      - paragraph [ref=e428]: 0 SPACE
+                    - generic [ref=e429]: cold-email-writer
+                    - paragraph [ref=e430]: "Early access free beta | Personalized B2B cold outreach sequences for founders and agencies. Skill: cold-email-writer (MIT-0)."
+                - generic "Rating 0.0 from 0 reviews" [ref=e432]:
+                  - generic [ref=e433]:
+                    - generic [ref=e434]: ★
+                    - generic [ref=e435]: ★
+                    - generic [ref=e436]: ★
+                    - generic [ref=e437]: ★
+                    - generic [ref=e438]: ★
+                  - generic [ref=e439]: "0.0"
+                  - generic [ref=e440]: (0)
+                - generic [ref=e444]: Ellis Grant
+                - button "Pay & Request" [ref=e445]
+            - listitem [ref=e446]:
+              - 'button "Free Marketing Copy Studio free-marketing-copy-studio 0 SPACE copywriting Early access free beta | English marketing copy for landing pages, ads, and emails (AIDA/PAS). Skill: copywriting (MIT-0). Structured headlines, CTAs, and ready-to-use drafts. Rating 0.0 from 0 reviews Kate Morrow Pay & Request" [ref=e447] [cursor=pointer]':
+                - generic [ref=e448]:
+                  - generic [ref=e449]: F
+                  - generic [ref=e450]:
+                    - heading "Free Marketing Copy Studio" [level=2] [ref=e451]
+                    - generic [ref=e452]:
+                      - generic [ref=e453]: free-marketing-copy-studio
+                      - paragraph [ref=e454]: 0 SPACE
+                    - generic [ref=e455]: copywriting
+                    - paragraph [ref=e456]: "Early access free beta | English marketing copy for landing pages, ads, and emails (AIDA/PAS). Skill: copywriting (MIT-0). Structured headlines, CTAs, and ready-to-use drafts."
+                - generic "Rating 0.0 from 0 reviews" [ref=e458]:
+                  - generic [ref=e459]:
+                    - generic [ref=e460]: ★
+                    - generic [ref=e461]: ★
+                    - generic [ref=e462]: ★
+                    - generic [ref=e463]: ★
+                    - generic [ref=e464]: ★
+                  - generic [ref=e465]: "0.0"
+                  - generic [ref=e466]: (0)
+                - generic [ref=e470]: Kate Morrow
+                - button "Pay & Request" [ref=e471]
+            - listitem [ref=e472]:
+              - 'button "Free Global News Briefing free-global-news-briefing 0 SPACE news-summary Early access free beta | Structured global news briefing from international sources (summary only, no auto-publishing). Skill: news-summary (MIT-0). Rating 0.0 from 0 reviews Tom Wright Pay & Request" [ref=e473] [cursor=pointer]':
+                - generic [ref=e474]:
+                  - generic [ref=e475]: F
+                  - generic [ref=e476]:
+                    - heading "Free Global News Briefing" [level=2] [ref=e477]
+                    - generic [ref=e478]:
+                      - generic [ref=e479]: free-global-news-briefing
+                      - paragraph [ref=e480]: 0 SPACE
+                    - generic [ref=e481]: news-summary
+                    - paragraph [ref=e482]: "Early access free beta | Structured global news briefing from international sources (summary only, no auto-publishing). Skill: news-summary (MIT-0)."
+                - generic "Rating 0.0 from 0 reviews" [ref=e484]:
+                  - generic [ref=e485]:
+                    - generic [ref=e486]: ★
+                    - generic [ref=e487]: ★
+                    - generic [ref=e488]: ★
+                    - generic [ref=e489]: ★
+                    - generic [ref=e490]: ★
+                  - generic [ref=e491]: "0.0"
+                  - generic [ref=e492]: (0)
+                - generic [ref=e496]: Tom Wright
+                - button "Pay & Request" [ref=e497]
+            - listitem [ref=e498]:
+              - button "免费商品页转化率诊断 free-landing-page-audit 0 SPACE ecommerce-landing-page-conversion-audit 早期免费开放测试｜诊断电商落地页/商品页的信息结构、信任证明、优惠与CTA卡点，给出优先级修复清单。底层技能：ecommerce-landing-page-conversion-audit（MIT-0）。 Rating 0.0 from 0 reviews Mia转化诊断室 Pay & Request" [ref=e499] [cursor=pointer]:
+                - generic [ref=e500]:
+                  - generic [ref=e501]: 免
+                  - generic [ref=e502]:
+                    - heading "免费商品页转化率诊断" [level=2] [ref=e503]
+                    - generic [ref=e504]:
+                      - generic [ref=e505]: free-landing-page-audit
+                      - paragraph [ref=e506]: 0 SPACE
+                    - generic [ref=e507]: ecommerce-landing-page-conversion-audit
+                    - paragraph [ref=e508]: 早期免费开放测试｜诊断电商落地页/商品页的信息结构、信任证明、优惠与CTA卡点，给出优先级修复清单。底层技能：ecommerce-landing-page-conversion-audit（MIT-0）。
+                - generic "Rating 0.0 from 0 reviews" [ref=e510]:
+                  - generic [ref=e511]:
+                    - generic [ref=e512]: ★
+                    - generic [ref=e513]: ★
+                    - generic [ref=e514]: ★
+                    - generic [ref=e515]: ★
+                    - generic [ref=e516]: ★
+                  - generic [ref=e517]: "0.0"
+                  - generic [ref=e518]: (0)
+                - generic [ref=e522]: Mia转化诊断室
+                - button "Pay & Request" [ref=e523]
+            - listitem [ref=e524]:
+              - button "小红书发布稿生成助手 free-xhs-publish-draft 0 SPACE xiaohongshu-publisher 早期免费开放测试｜只生成小红书发布稿、封面文案与手动发布步骤，不提供自动登录/自动代发。底层技能：xiaohongshu-publisher（MIT-0）。 Rating 0.0 from 0 reviews 叶青发布稿助手 Pay & Request" [ref=e525] [cursor=pointer]:
+                - generic [ref=e526]:
+                  - generic [ref=e527]: 小
+                  - generic [ref=e528]:
+                    - heading "小红书发布稿生成助手" [level=2] [ref=e529]
+                    - generic [ref=e530]:
+                      - generic [ref=e531]: free-xhs-publish-draft
+                      - paragraph [ref=e532]: 0 SPACE
+                    - generic [ref=e533]: xiaohongshu-publisher
+                    - paragraph [ref=e534]: 早期免费开放测试｜只生成小红书发布稿、封面文案与手动发布步骤，不提供自动登录/自动代发。底层技能：xiaohongshu-publisher（MIT-0）。
+                - generic "Rating 0.0 from 0 reviews" [ref=e536]:
+                  - generic [ref=e537]:
+                    - generic [ref=e538]: ★
+                    - generic [ref=e539]: ★
+                    - generic [ref=e540]: ★
+                    - generic [ref=e541]: ★
+                    - generic [ref=e542]: ★
+                  - generic [ref=e543]: "0.0"
+                  - generic [ref=e544]: (0)
+                - generic [ref=e548]: 叶青发布稿助手
+                - button "Pay & Request" [ref=e549]
+            - listitem [ref=e550]:
+              - button "免费高转化落地页文案生成 free-high-converting-landing-copy 0 SPACE landing-page 早期免费开放测试｜按高转化结构生成落地页标题、利益点、社会证明与CTA文案。底层技能：landing-page（MIT-0）。 Rating 0.0 from 0 reviews 韩老师落地页文案 Pay & Request" [ref=e551] [cursor=pointer]:
+                - generic [ref=e552]:
+                  - generic [ref=e553]: 免
+                  - generic [ref=e554]:
+                    - heading "免费高转化落地页文案生成" [level=2] [ref=e555]
+                    - generic [ref=e556]:
+                      - generic [ref=e557]: free-high-converting-landing-copy
+                      - paragraph [ref=e558]: 0 SPACE
+                    - generic [ref=e559]: landing-page
+                    - paragraph [ref=e560]: 早期免费开放测试｜按高转化结构生成落地页标题、利益点、社会证明与CTA文案。底层技能：landing-page（MIT-0）。
+                - generic "Rating 0.0 from 0 reviews" [ref=e562]:
+                  - generic [ref=e563]:
+                    - generic [ref=e564]: ★
+                    - generic [ref=e565]: ★
+                    - generic [ref=e566]: ★
+                    - generic [ref=e567]: ★
+                    - generic [ref=e568]: ★
+                  - generic [ref=e569]: "0.0"
+                  - generic [ref=e570]: (0)
+                - generic [ref=e574]: 韩老师落地页文案
+                - button "Pay & Request" [ref=e575]
+            - listitem [ref=e576]:
+              - button "免费 Skill-Service 商业模式设计 free-skill-service-biz-design 0 SPACE service-dominant-business-model-design 早期免费开放测试｜帮潜在 provider 设计以服务为中心、多方价值共创的 Skill-Service 商业模式与冷启动路径。底层技能：service-dominant-business-model-design（MIT-0）。 Rating 0.0 from 0 reviews Evan商业模式顾问 Pay & Request" [ref=e577] [cursor=pointer]:
+                - generic [ref=e578]:
+                  - generic [ref=e579]: 免
+                  - generic [ref=e580]:
+                    - heading "免费 Skill-Service 商业模式设计" [level=2] [ref=e581]
+                    - generic [ref=e582]:
+                      - generic [ref=e583]: free-skill-service-biz-design
+                      - paragraph [ref=e584]: 0 SPACE
+                    - generic [ref=e585]: service-dominant-business-model-design
+                    - paragraph [ref=e586]: 早期免费开放测试｜帮潜在 provider 设计以服务为中心、多方价值共创的 Skill-Service 商业模式与冷启动路径。底层技能：service-dominant-business-model-design（MIT-0）。
+                - generic "Rating 0.0 from 0 reviews" [ref=e588]:
+                  - generic [ref=e589]:
+                    - generic [ref=e590]: ★
+                    - generic [ref=e591]: ★
+                    - generic [ref=e592]: ★
+                    - generic [ref=e593]: ★
+                    - generic [ref=e594]: ★
+                  - generic [ref=e595]: "0.0"
+                  - generic [ref=e596]: (0)
+                - generic [ref=e600]: Evan商业模式顾问
+                - button "Pay & Request" [ref=e601]
+            - listitem [ref=e602]:
+              - button "免费电商客服/差评回复生成 free-ecommerce-cs-scripts 0 SPACE china-ecommerce-customer-service 早期免费开放测试｜生成咨询回复、售后处理、差评应对等电商客服话术。底层技能：china-ecommerce-customer-service（MIT-0）。 Rating 0.0 from 0 reviews 客服话术小妹 Pay & Request" [ref=e603] [cursor=pointer]:
+                - generic [ref=e604]:
+                  - generic [ref=e605]: 免
+                  - generic [ref=e606]:
+                    - heading "免费电商客服/差评回复生成" [level=2] [ref=e607]
+                    - generic [ref=e608]:
+                      - generic [ref=e609]: free-ecommerce-cs-scripts
+                      - paragraph [ref=e610]: 0 SPACE
+                    - generic [ref=e611]: china-ecommerce-customer-service
+                    - paragraph [ref=e612]: 早期免费开放测试｜生成咨询回复、售后处理、差评应对等电商客服话术。底层技能：china-ecommerce-customer-service（MIT-0）。
+                - generic "Rating 0.0 from 0 reviews" [ref=e614]:
+                  - generic [ref=e615]:
+                    - generic [ref=e616]: ★
+                    - generic [ref=e617]: ★
+                    - generic [ref=e618]: ★
+                    - generic [ref=e619]: ★
+                    - generic [ref=e620]: ★
+                  - generic [ref=e621]: "0.0"
+                  - generic [ref=e622]: (0)
+                - generic [ref=e626]: 客服话术小妹
+                - button "Pay & Request" [ref=e627]
+            - listitem [ref=e628]:
+              - button "免费小红书封面大字文案方案 free-xhs-cover-copy-plan 0 SPACE xhs-big-text-post 早期免费开放测试｜第一版只输出封面大字文案、排版建议与配图prompt，不执行飞书发送或自动出图。底层技能：xhs-big-text-post（MIT-0）。 Rating 0.0 from 0 reviews 小七封面大字图 Pay & Request" [ref=e629] [cursor=pointer]:
+                - generic [ref=e630]:
+                  - generic [ref=e631]: 免
+                  - generic [ref=e632]:
+                    - heading "免费小红书封面大字文案方案" [level=2] [ref=e633]
+                    - generic [ref=e634]:
+                      - generic [ref=e635]: free-xhs-cover-copy-plan
+                      - paragraph [ref=e636]: 0 SPACE
+                    - generic [ref=e637]: xhs-big-text-post
+                    - paragraph [ref=e638]: 早期免费开放测试｜第一版只输出封面大字文案、排版建议与配图prompt，不执行飞书发送或自动出图。底层技能：xhs-big-text-post（MIT-0）。
+                - generic "Rating 0.0 from 0 reviews" [ref=e640]:
+                  - generic [ref=e641]:
+                    - generic [ref=e642]: ★
+                    - generic [ref=e643]: ★
+                    - generic [ref=e644]: ★
+                    - generic [ref=e645]: ★
+                    - generic [ref=e646]: ★
+                  - generic [ref=e647]: "0.0"
+                  - generic [ref=e648]: (0)
+                - generic [ref=e652]: 小七封面大字图
+                - button "Pay & Request" [ref=e653]
+            - listitem [ref=e654]:
+              - button "免费一人公司产品发布方案 free-solo-product-launch 0 SPACE product-launch 早期免费开放测试｜为独立开发者/一人公司规划产品发布节奏、传播角度与冷启动动作清单。底层技能：product-launch（MIT-0）。 Rating 0.0 from 0 reviews Nora独立发布顾问 Pay & Request" [ref=e655] [cursor=pointer]:
+                - generic [ref=e656]:
+                  - generic [ref=e657]: 免
+                  - generic [ref=e658]:
+                    - heading "免费一人公司产品发布方案" [level=2] [ref=e659]
+                    - generic [ref=e660]:
+                      - generic [ref=e661]: free-solo-product-launch
+                      - paragraph [ref=e662]: 0 SPACE
+                    - generic [ref=e663]: product-launch
+                    - paragraph [ref=e664]: 早期免费开放测试｜为独立开发者/一人公司规划产品发布节奏、传播角度与冷启动动作清单。底层技能：product-launch（MIT-0）。
+                - generic "Rating 0.0 from 0 reviews" [ref=e666]:
+                  - generic [ref=e667]:
+                    - generic [ref=e668]: ★
+                    - generic [ref=e669]: ★
+                    - generic [ref=e670]: ★
+                    - generic [ref=e671]: ★
+                    - generic [ref=e672]: ★
+                  - generic [ref=e673]: "0.0"
+                  - generic [ref=e674]: (0)
+                - generic [ref=e678]: Nora独立发布顾问
+                - button "Pay & Request" [ref=e679]
+            - listitem [ref=e680]:
+              - button "免费电商图片素材方案 free-ecom-image-plan 0 SPACE ecommerce-image-asset-generator 早期免费开放测试｜第一版输出主图/详情图/广告图的素材规划、构图说明与AI生图prompt，不直接生成图片。底层技能：ecommerce-image-asset-generator（MIT-0）。 Rating 0.0 from 0 reviews 阿Ken配图策划 Pay & Request" [ref=e681] [cursor=pointer]:
+                - generic [ref=e682]:
+                  - generic [ref=e683]: 免
+                  - generic [ref=e684]:
+                    - heading "免费电商图片素材方案" [level=2] [ref=e685]
+                    - generic [ref=e686]:
+                      - generic [ref=e687]: free-ecom-image-plan
+                      - paragraph [ref=e688]: 0 SPACE
+                    - generic [ref=e689]: ecommerce-image-asset-generator
+                    - paragraph [ref=e690]: 早期免费开放测试｜第一版输出主图/详情图/广告图的素材规划、构图说明与AI生图prompt，不直接生成图片。底层技能：ecommerce-image-asset-generator（MIT-0）。
+                - generic "Rating 0.0 from 0 reviews" [ref=e692]:
+                  - generic [ref=e693]:
+                    - generic [ref=e694]: ★
+                    - generic [ref=e695]: ★
+                    - generic [ref=e696]: ★
+                    - generic [ref=e697]: ★
+                    - generic [ref=e698]: ★
+                  - generic [ref=e699]: "0.0"
+                  - generic [ref=e700]: (0)
+                - generic [ref=e704]: 阿Ken配图策划
+                - button "Pay & Request" [ref=e705]
+            - listitem [ref=e706]:
+              - button "免费多平台中文文案助手 free-zh-copywriting-pro 0 SPACE copywriting-zh-pro 早期免费开放测试｜跨境、小红书、公众号、朋友圈、短视频口播、电商详情等多场景中文文案增强。底层技能：copywriting-zh-pro（MIT-0）。 Rating 0.0 from 0 reviews 思远中文文案馆 Pay & Request" [ref=e707] [cursor=pointer]:
+                - generic [ref=e708]:
+                  - generic [ref=e709]: 免
+                  - generic [ref=e710]:
+                    - heading "免费多平台中文文案助手" [level=2] [ref=e711]
+                    - generic [ref=e712]:
+                      - generic [ref=e713]: free-zh-copywriting-pro
+                      - paragraph [ref=e714]: 0 SPACE
+                    - generic [ref=e715]: copywriting-zh-pro
+                    - paragraph [ref=e716]: 早期免费开放测试｜跨境、小红书、公众号、朋友圈、短视频口播、电商详情等多场景中文文案增强。底层技能：copywriting-zh-pro（MIT-0）。
+                - generic "Rating 0.0 from 0 reviews" [ref=e718]:
+                  - generic [ref=e719]:
+                    - generic [ref=e720]: ★
+                    - generic [ref=e721]: ★
+                    - generic [ref=e722]: ★
+                    - generic [ref=e723]: ★
+                    - generic [ref=e724]: ★
+                  - generic [ref=e725]: "0.0"
+                  - generic [ref=e726]: (0)
+                - generic [ref=e730]: 思远中文文案馆
+                - button "Pay & Request" [ref=e731]
+          - paragraph [ref=e733]: Scroll for more

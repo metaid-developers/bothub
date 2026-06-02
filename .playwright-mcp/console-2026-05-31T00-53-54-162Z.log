@@ -1,0 +1,195 @@
+[     404ms] [INFO] %cDownload the React DevTools for a better development experience: https://reactjs.org/link/react-devtools font-weight:bold @ http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:21550
+[     622ms] [WARNING] ⚠️ React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition. @ http://127.0.0.1:5177/node_modules/.vite/deps/react-router-dom.js?v=b1fa66fc:4435
+[     622ms] [WARNING] ⚠️ React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath. @ http://127.0.0.1:5177/node_modules/.vite/deps/react-router-dom.js?v=b1fa66fc:4435
+[     700ms] [ERROR] Warning: Encountered two children with the same key, `%s`. Keys should be unique so that components maintain their identity across updates. Non-unique keys may cause children to be duplicated and/or omitted — the behavior is unsupported and could change in a future version.%s pin-zhuwei-current-001-1774530374000
+    at ul
+    at div
+    at ServicesPanel (http://127.0.0.1:5177/src/components/hub/ServicesPanel.tsx:26:3)
+    at div
+    at div
+    at BotHubPage (http://127.0.0.1:5177/src/routes/BotHub.tsx:41:33)
+    at RenderedRoute (http://127.0.0.1:5177/node_modules/.vite/deps/react-router-dom.js?v=b1fa66fc:4131:5)
+    at Routes (http://127.0.0.1:5177/node_modules/.vite/deps/react-router-dom.js?v=b1fa66fc:4601:5)
+    at main
+    at div
+    at AppShell (http://127.0.0.1:5177/src/components/AppShell.tsx:44:28)
+    at App
+    at ErrorBoundary (http://127.0.0.1:5177/src/components/common/ErrorBoundary.tsx:6:8)
+    at WalletHydrator (http://127.0.0.1:5177/src/components/WalletHydrator.tsx:25:34)
+    at Router (http://127.0.0.1:5177/node_modules/.vite/deps/react-router-dom.js?v=b1fa66fc:4544:15)
+    at BrowserRouter (http://127.0.0.1:5177/node_modules/.vite/deps/react-router-dom.js?v=b1fa66fc:5290:5)
+    at QueryClientProvider (http://127.0.0.1:5177/node_modules/.vite/deps/@tanstack_react-query.js?v=b1fa66fc:3235:3) @ http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:520
+[     700ms] [ERROR] Warning: Encountered two children with the same key, `%s`. Keys should be unique so that components maintain their identity across updates. Non-unique keys may cause children to be duplicated and/or omitted — the behavior is unsupported and could change in a future version.%s pin-anon-image-002-1774525000000
+    at ul
+    at div
+    at ServicesPanel (http://127.0.0.1:5177/src/components/hub/ServicesPanel.tsx:26:3)
+    at div
+    at div
+    at BotHubPage (http://127.0.0.1:5177/src/routes/BotHub.tsx:41:33)
+    at RenderedRoute (http://127.0.0.1:5177/node_modules/.vite/deps/react-router-dom.js?v=b1fa66fc:4131:5)
+    at Routes (http://127.0.0.1:5177/node_modules/.vite/deps/react-router-dom.js?v=b1fa66fc:4601:5)
+    at main
+    at div
+    at AppShell (http://127.0.0.1:5177/src/components/AppShell.tsx:44:28)
+    at App
+    at ErrorBoundary (http://127.0.0.1:5177/src/components/common/ErrorBoundary.tsx:6:8)
+    at WalletHydrator (http://127.0.0.1:5177/src/components/WalletHydrator.tsx:25:34)
+    at Router (http://127.0.0.1:5177/node_modules/.vite/deps/react-router-dom.js?v=b1fa66fc:4544:15)
+    at BrowserRouter (http://127.0.0.1:5177/node_modules/.vite/deps/react-router-dom.js?v=b1fa66fc:5290:5)
+    at QueryClientProvider (http://127.0.0.1:5177/node_modules/.vite/deps/@tanstack_react-query.js?v=b1fa66fc:3235:3) @ http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:520
+[     700ms] [ERROR] Warning: Encountered two children with the same key, `%s`. Keys should be unique so that components maintain their identity across updates. Non-unique keys may cause children to be duplicated and/or omitted — the behavior is unsupported and could change in a future version.%s pin-mrc20-audio-003-1774530800000
+    at ul
+    at div
+    at ServicesPanel (http://127.0.0.1:5177/src/components/hub/ServicesPanel.tsx:26:3)
+    at div
+    at div
+    at BotHubPage (http://127.0.0.1:5177/src/routes/BotHub.tsx:41:33)
+    at RenderedRoute (http://127.0.0.1:5177/node_modules/.vite/deps/react-router-dom.js?v=b1fa66fc:4131:5)
+    at Routes (http://127.0.0.1:5177/node_modules/.vite/deps/react-router-dom.js?v=b1fa66fc:4601:5)
+    at main
+    at div
+    at AppShell (http://127.0.0.1:5177/src/components/AppShell.tsx:44:28)
+    at App
+    at ErrorBoundary (http://127.0.0.1:5177/src/components/common/ErrorBoundary.tsx:6:8)
+    at WalletHydrator (http://127.0.0.1:5177/src/components/WalletHydrator.tsx:25:34)
+    at Router (http://127.0.0.1:5177/node_modules/.vite/deps/react-router-dom.js?v=b1fa66fc:4544:15)
+    at BrowserRouter (http://127.0.0.1:5177/node_modules/.vite/deps/react-router-dom.js?v=b1fa66fc:5290:5)
+    at QueryClientProvider (http://127.0.0.1:5177/node_modules/.vite/deps/@tanstack_react-query.js?v=b1fa66fc:3235:3) @ http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:520
+[     703ms] [ERROR] Warning: Encountered two children with the same key, `%s`. Keys should be unique so that components maintain their identity across updates. Non-unique keys may cause children to be duplicated and/or omitted — the behavior is unsupported and could change in a future version.%s pin-zhuwei-current-001-1774530374000
+    at ul
+    at div
+    at ServicesPanel (http://127.0.0.1:5177/src/components/hub/ServicesPanel.tsx:26:3)
+    at div
+    at div
+    at BotHubPage (http://127.0.0.1:5177/src/routes/BotHub.tsx:41:33)
+    at RenderedRoute (http://127.0.0.1:5177/node_modules/.vite/deps/react-router-dom.js?v=b1fa66fc:4131:5)
+    at Routes (http://127.0.0.1:5177/node_modules/.vite/deps/react-router-dom.js?v=b1fa66fc:4601:5)
+    at main
+    at div
+    at AppShell (http://127.0.0.1:5177/src/components/AppShell.tsx:44:28)
+    at App
+    at ErrorBoundary (http://127.0.0.1:5177/src/components/common/ErrorBoundary.tsx:6:8)
+    at WalletHydrator (http://127.0.0.1:5177/src/components/WalletHydrator.tsx:25:34)
+    at Router (http://127.0.0.1:5177/node_modules/.vite/deps/react-router-dom.js?v=b1fa66fc:4544:15)
+    at BrowserRouter (http://127.0.0.1:5177/node_modules/.vite/deps/react-router-dom.js?v=b1fa66fc:5290:5)
+    at QueryClientProvider (http://127.0.0.1:5177/node_modules/.vite/deps/@tanstack_react-query.js?v=b1fa66fc:3235:3) @ http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:520
+[     703ms] [ERROR] Warning: Encountered two children with the same key, `%s`. Keys should be unique so that components maintain their identity across updates. Non-unique keys may cause children to be duplicated and/or omitted — the behavior is unsupported and could change in a future version.%s pin-anon-image-002-1774525000000
+    at ul
+    at div
+    at ServicesPanel (http://127.0.0.1:5177/src/components/hub/ServicesPanel.tsx:26:3)
+    at div
+    at div
+    at BotHubPage (http://127.0.0.1:5177/src/routes/BotHub.tsx:41:33)
+    at RenderedRoute (http://127.0.0.1:5177/node_modules/.vite/deps/react-router-dom.js?v=b1fa66fc:4131:5)
+    at Routes (http://127.0.0.1:5177/node_modules/.vite/deps/react-router-dom.js?v=b1fa66fc:4601:5)
+    at main
+    at div
+    at AppShell (http://127.0.0.1:5177/src/components/AppShell.tsx:44:28)
+    at App
+    at ErrorBoundary (http://127.0.0.1:5177/src/components/common/ErrorBoundary.tsx:6:8)
+    at WalletHydrator (http://127.0.0.1:5177/src/components/WalletHydrator.tsx:25:34)
+    at Router (http://127.0.0.1:5177/node_modules/.vite/deps/react-router-dom.js?v=b1fa66fc:4544:15)
+    at BrowserRouter (http://127.0.0.1:5177/node_modules/.vite/deps/react-router-dom.js?v=b1fa66fc:5290:5)
+    at QueryClientProvider (http://127.0.0.1:5177/node_modules/.vite/deps/@tanstack_react-query.js?v=b1fa66fc:3235:3) @ http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:520
+[     703ms] [ERROR] Warning: Encountered two children with the same key, `%s`. Keys should be unique so that components maintain their identity across updates. Non-unique keys may cause children to be duplicated and/or omitted — the behavior is unsupported and could change in a future version.%s pin-mrc20-audio-003-1774530800000
+    at ul
+    at div
+    at ServicesPanel (http://127.0.0.1:5177/src/components/hub/ServicesPanel.tsx:26:3)
+    at div
+    at div
+    at BotHubPage (http://127.0.0.1:5177/src/routes/BotHub.tsx:41:33)
+    at RenderedRoute (http://127.0.0.1:5177/node_modules/.vite/deps/react-router-dom.js?v=b1fa66fc:4131:5)
+    at Routes (http://127.0.0.1:5177/node_modules/.vite/deps/react-router-dom.js?v=b1fa66fc:4601:5)
+    at main
+    at div
+    at AppShell (http://127.0.0.1:5177/src/components/AppShell.tsx:44:28)
+    at App
+    at ErrorBoundary (http://127.0.0.1:5177/src/components/common/ErrorBoundary.tsx:6:8)
+    at WalletHydrator (http://127.0.0.1:5177/src/components/WalletHydrator.tsx:25:34)
+    at Router (http://127.0.0.1:5177/node_modules/.vite/deps/react-router-dom.js?v=b1fa66fc:4544:15)
+    at BrowserRouter (http://127.0.0.1:5177/node_modules/.vite/deps/react-router-dom.js?v=b1fa66fc:5290:5)
+    at QueryClientProvider (http://127.0.0.1:5177/node_modules/.vite/deps/@tanstack_react-query.js?v=b1fa66fc:3235:3) @ http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:520
+[    1021ms] [ERROR] Failed to load resource: net::ERR_NAME_NOT_RESOLVED @ https://cdn.example.com/icons/audio-dub.png:0
+[    1023ms] [ERROR] Failed to load resource: net::ERR_NAME_NOT_RESOLVED @ https://cdn.example.com/icons/zhuwei.png:0
+[    1023ms] [ERROR] Failed to load resource: net::ERR_NAME_NOT_RESOLVED @ https://cdn.example.com/avatars/audio-bot.png:0
+[    1024ms] [ERROR] Failed to load resource: net::ERR_NAME_NOT_RESOLVED @ https://cdn.example.com/icons/anon-image.png:0
+[    1024ms] [ERROR] Failed to load resource: net::ERR_NAME_NOT_RESOLVED @ https://cdn.example.com/avatars/fortune-bot.png:0
+[  151648ms] [LOG] [vite] server connection lost. Polling for restart... @ http://127.0.0.1:5177/@vite/client:559
+[  151667ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_RESET @ http://127.0.0.1:5177/:0
+[  152670ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:5177/:0
+[  153763ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:5177/:0
+[  154768ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:5177/:0
+[  155771ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:5177/:0
+[  156776ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:5177/:0
+[  157806ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:5177/:0
+[  158934ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:5177/:0
+[  159943ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:5177/:0
+[  161132ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:5177/:0
+[  162248ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:5177/:0
+[  163259ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:5177/:0
+[  164273ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:5177/:0
+[  165279ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:5177/:0
+[  166286ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:5177/:0
+[  167374ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:5177/:0
+[  168420ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:5177/:0
+[  169426ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:5177/:0
+[  170430ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:5177/:0
+[  171438ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:5177/:0
+[  172444ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:5177/:0
+[  173448ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:5177/:0
+[  174458ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:5177/:0
+[  175461ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:5177/:0
+[  176466ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:5177/:0
+[  177469ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:5177/:0
+[  178475ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:5177/:0
+[  179478ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:5177/:0
+[  180483ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:5177/:0
+[  181501ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:5177/:0
+[  182534ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:5177/:0
+[  183545ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:5177/:0
+[  184552ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:5177/:0
+[  185557ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:5177/:0
+[  186566ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:5177/:0
+[  187569ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:5177/:0
+[  188572ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:5177/:0
+[  189577ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:5177/:0
+[  190580ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:5177/:0
+[  191583ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:5177/:0
+[  192587ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:5177/:0
+[  193589ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:5177/:0
+[  194593ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:5177/:0
+[  195597ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:5177/:0
+[  196600ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:5177/:0
+[  197603ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:5177/:0
+[  198607ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:5177/:0
+[  199629ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:5177/:0
+[  200632ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:5177/:0
+[  201635ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:5177/:0
+[  202638ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:5177/:0
+[  203643ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:5177/:0
+[  204646ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:5177/:0
+[  205656ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:5177/:0
+[  206664ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:5177/:0
+[  207669ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:5177/:0
+[  208673ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:5177/:0
+[  209677ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:5177/:0
+[  210681ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:5177/:0
+[  211683ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:5177/:0
+[  212686ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:5177/:0
+[  213689ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:5177/:0
+[  214692ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:5177/:0
+[  215697ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:5177/:0
+[  216700ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:5177/:0
+[  217702ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:5177/:0
+[  218704ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:5177/:0
+[  219708ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:5177/:0
+[  220711ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:5177/:0
+[  221715ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:5177/:0
+[  222717ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:5177/:0
+[  223720ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:5177/:0
+[  224723ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:5177/:0
+[  225725ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:5177/:0
+[  226729ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:5177/:0
+[  233610ms] [INFO] %cDownload the React DevTools for a better development experience: https://reactjs.org/link/react-devtools font-weight:bold @ http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:21550
+[  233701ms] [WARNING] ⚠️ React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition. @ http://127.0.0.1:5177/node_modules/.vite/deps/react-router-dom.js?v=b1fa66fc:4435
+[  233702ms] [WARNING] ⚠️ React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath. @ http://127.0.0.1:5177/node_modules/.vite/deps/react-router-dom.js?v=b1fa66fc:4435

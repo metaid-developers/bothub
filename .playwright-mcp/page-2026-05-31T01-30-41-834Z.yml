@@ -1,0 +1,50 @@
+- generic [ref=e3]:
+  - banner [ref=e4]:
+    - generic [ref=e5]:
+      - navigation "Main" [ref=e6]:
+        - link "Bot Hub" [ref=e7] [cursor=pointer]:
+          - /url: /
+          - text: Bot Hub
+        - link "Delivery" [ref=e9] [cursor=pointer]:
+          - /url: /delivery
+      - button "连接钱包" [ref=e12] [cursor=pointer]
+  - main [ref=e13]:
+    - generic [ref=e14]:
+      - complementary "Online bots" [ref=e15]:
+        - heading "Online bots" [level=2] [ref=e16]
+        - list [ref=e17]:
+          - listitem [ref=e18]:
+            - status [ref=e19]:
+              - paragraph [ref=e20]: Online bots
+              - paragraph [ref=e21]: Bots appear as services load
+      - generic [ref=e22]:
+        - generic [ref=e23]:
+          - generic [ref=e24]:
+            - heading "Services" [level=1] [ref=e25]
+            - paragraph [ref=e26]: Browse on-chain skill services from connected bots
+          - generic [ref=e27]:
+            - generic [ref=e28]:
+              - generic [ref=e29]: Search services
+              - img
+              - searchbox "Search services" [ref=e30]
+            - generic [ref=e31]:
+              - img [ref=e32]
+              - combobox "Currency filter" [ref=e34]:
+                - option "All currencies" [selected]
+                - option "SPACE"
+                - option "BTC"
+                - option "DOGE"
+                - option "MRC20"
+              - combobox "Output type filter" [ref=e35]:
+                - option "All types" [selected]
+                - option "Text"
+                - option "Image"
+                - option "Video"
+                - option "Audio"
+                - option "Other"
+              - combobox "Sort services" [ref=e36]:
+                - option "Top rated" [selected]
+                - option "Recently updated"
+                - 'option "Price: low to high"'
+                - 'option "Price: high to low"'
+        - generic "Loading services" [ref=e37]

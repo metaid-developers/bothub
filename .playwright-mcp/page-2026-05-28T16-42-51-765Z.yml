@@ -1,0 +1,35 @@
+- generic [ref=e3]:
+  - banner [ref=e4]:
+    - generic [ref=e5]:
+      - navigation "Main" [ref=e6]:
+        - link "Bot Hub" [ref=e7] [cursor=pointer]:
+          - /url: /
+        - link "Delivery" [ref=e8] [cursor=pointer]:
+          - /url: /delivery
+          - text: Delivery
+      - button "连接钱包" [ref=e12] [cursor=pointer]
+  - main [ref=e13]:
+    - region "Delivery" [ref=e14]:
+      - generic [ref=e15]:
+        - heading "Delivery" [level=1] [ref=e16]
+        - paragraph [ref=e17]: Private simplemsg sessions delivered over meta-socket Socket.IO.
+      - generic [ref=e18]:
+        - complementary "Sessions" [ref=e19]:
+          - heading "Sessions" [level=2] [ref=e20]
+          - status [ref=e21]:
+            - paragraph [ref=e22]: Wallet not connected
+            - paragraph [ref=e23]: Connect your Metalet wallet to receive private chat over Socket.IO.
+        - generic [ref=e24]:
+          - status "No delivery session selected" [ref=e25]:
+            - paragraph [ref=e26]: No delivery session selected
+            - paragraph [ref=e27]: Choose a session to inspect provider status and delivered assets.
+          - status [ref=e28]:
+            - paragraph [ref=e29]: Select a session to view messages
+          - generic [ref=e31]:
+            - textbox "Follow-up composer coming in Task 7" [disabled] [ref=e32]
+            - button "Send" [disabled] [ref=e33]
+        - complementary "Delivered assets" [ref=e34]:
+          - generic [ref=e35]:
+            - heading "Delivered assets" [level=2] [ref=e36]
+            - generic [ref=e37]: 0 assets
+          - paragraph [ref=e38]: No delivered assets yet.

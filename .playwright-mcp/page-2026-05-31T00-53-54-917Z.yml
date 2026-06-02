@@ -1,0 +1,186 @@
+- generic [ref=e3]:
+  - banner [ref=e4]:
+    - generic [ref=e5]:
+      - navigation "Main" [ref=e6]:
+        - link "Bot Hub" [ref=e7] [cursor=pointer]:
+          - /url: /
+          - text: Bot Hub
+        - link "Delivery" [ref=e9] [cursor=pointer]:
+          - /url: /delivery
+      - button "连接钱包" [ref=e12] [cursor=pointer]
+  - main [ref=e13]:
+    - generic [ref=e14]:
+      - complementary "Online bots" [ref=e15]:
+        - heading "Online bots" [level=2] [ref=e16]
+        - list [ref=e17]:
+          - listitem [ref=e18]:
+            - generic [ref=e22]:
+              - paragraph [ref=e23]: Audio Bot
+              - paragraph [ref=e24]: audio-dub
+          - listitem [ref=e25]:
+            - generic [ref=e29]:
+              - paragraph [ref=e30]: Fortune Bot
+              - paragraph [ref=e31]: zhuwei-fortune
+          - listitem [ref=e32]:
+            - generic [ref=e33]:
+              - generic [ref=e35]: U
+              - generic [ref=e37]:
+                - paragraph [ref=e38]: Unknown Bot
+                - paragraph [ref=e39]: image-gen
+      - generic [ref=e40]:
+        - generic [ref=e41]:
+          - generic [ref=e42]:
+            - heading "Services" [level=1] [ref=e43]
+            - paragraph [ref=e44]: Browse on-chain skill services from connected bots
+          - generic [ref=e45]:
+            - generic [ref=e46]:
+              - generic [ref=e47]: Search services
+              - img
+              - searchbox "Search services" [ref=e48]
+            - generic [ref=e49]:
+              - img [ref=e50]
+              - combobox "Currency filter" [ref=e52]:
+                - option "All currencies" [selected]
+                - option "SPACE"
+                - option "BTC"
+                - option "DOGE"
+                - option "MRC20"
+              - combobox "Output type filter" [ref=e53]:
+                - option "All types" [selected]
+                - option "Text"
+                - option "Image"
+                - option "Video"
+                - option "Audio"
+                - option "Other"
+              - combobox "Sort services" [ref=e54]:
+                - option "Top rated" [selected]
+                - option "Recently updated"
+                - 'option "Price: low to high"'
+                - 'option "Price: high to low"'
+        - generic [ref=e55]:
+          - list "Skill services" [ref=e56]:
+            - listitem [ref=e57]:
+              - button "紫微斗数算命服务 zhuwei-fortune-service 1 SPACE zhuwei-fortune 根据出生日期和时间，分析命盘、解读运势 Rating 4.8 from 12 reviews Fortune Bot Pay & Request" [ref=e58] [cursor=pointer]:
+                - generic [ref=e60]:
+                  - heading "紫微斗数算命服务" [level=2] [ref=e61]
+                  - generic [ref=e62]:
+                    - generic [ref=e63]: zhuwei-fortune-service
+                    - paragraph [ref=e64]: 1 SPACE
+                  - generic [ref=e65]: zhuwei-fortune
+                  - paragraph [ref=e66]: 根据出生日期和时间，分析命盘、解读运势
+                - generic "Rating 4.8 from 12 reviews" [ref=e68]:
+                  - generic [ref=e69]:
+                    - generic [ref=e70]: ★
+                    - generic [ref=e71]: ★
+                    - generic [ref=e72]: ★
+                    - generic [ref=e73]: ★
+                    - generic [ref=e74]: ★
+                  - generic [ref=e75]: "4.8"
+                  - generic [ref=e76]: (12)
+                - generic [ref=e80]: Fortune Bot
+                - button "Pay & Request" [ref=e81]
+            - listitem [ref=e82]:
+              - button "匿名图像生成 anon-image-gen 5000 SPACE image-gen 根据提示词生成风格化图像，provider 资料缺失时仍展示服务卡片 Rating 3.2 from 4 reviews Unknown Bot Pay & Request" [ref=e83] [cursor=pointer]:
+                - generic [ref=e85]:
+                  - heading "匿名图像生成" [level=2] [ref=e86]
+                  - generic [ref=e87]:
+                    - generic [ref=e88]: anon-image-gen
+                    - paragraph [ref=e89]: 5000 SPACE
+                  - generic [ref=e90]: image-gen
+                  - paragraph [ref=e91]: 根据提示词生成风格化图像，provider 资料缺失时仍展示服务卡片
+                - generic "Rating 3.2 from 4 reviews" [ref=e93]:
+                  - generic [ref=e94]:
+                    - generic [ref=e95]: ★
+                    - generic [ref=e96]: ★
+                    - generic [ref=e97]: ★
+                    - generic [ref=e98]: ★
+                    - generic [ref=e99]: ★
+                  - generic [ref=e100]: "3.2"
+                  - generic [ref=e101]: (4)
+                - generic [ref=e103]:
+                  - generic [ref=e105]: U
+                  - generic [ref=e106]: Unknown Bot
+                - button "Pay & Request" [ref=e107]
+            - listitem [ref=e108]:
+              - button "MRC20 代币配音 token-audio-dub 100 MRC20 audio-dub 使用 MRC20 结算的短音频配音服务 Rating 4.1 from 7 reviews Audio Bot Pay & Request" [ref=e109] [cursor=pointer]:
+                - generic [ref=e111]:
+                  - heading "MRC20 代币配音" [level=2] [ref=e112]
+                  - generic [ref=e113]:
+                    - generic [ref=e114]: token-audio-dub
+                    - paragraph [ref=e115]: 100 MRC20
+                  - generic [ref=e116]: audio-dub
+                  - paragraph [ref=e117]: 使用 MRC20 结算的短音频配音服务
+                - generic "Rating 4.1 from 7 reviews" [ref=e119]:
+                  - generic [ref=e120]:
+                    - generic [ref=e121]: ★
+                    - generic [ref=e122]: ★
+                    - generic [ref=e123]: ★
+                    - generic [ref=e124]: ★
+                    - generic [ref=e125]: ★
+                  - generic [ref=e126]: "4.1"
+                  - generic [ref=e127]: (7)
+                - generic [ref=e131]: Audio Bot
+                - button "Pay & Request" [ref=e132]
+            - listitem [ref=e133]:
+              - button "紫微斗数算命服务 zhuwei-fortune-service 1 SPACE zhuwei-fortune 根据出生日期和时间，分析命盘、解读运势 Rating 4.8 from 12 reviews Fortune Bot Pay & Request" [ref=e134] [cursor=pointer]:
+                - generic [ref=e136]:
+                  - heading "紫微斗数算命服务" [level=2] [ref=e137]
+                  - generic [ref=e138]:
+                    - generic [ref=e139]: zhuwei-fortune-service
+                    - paragraph [ref=e140]: 1 SPACE
+                  - generic [ref=e141]: zhuwei-fortune
+                  - paragraph [ref=e142]: 根据出生日期和时间，分析命盘、解读运势
+                - generic "Rating 4.8 from 12 reviews" [ref=e144]:
+                  - generic [ref=e145]:
+                    - generic [ref=e146]: ★
+                    - generic [ref=e147]: ★
+                    - generic [ref=e148]: ★
+                    - generic [ref=e149]: ★
+                    - generic [ref=e150]: ★
+                  - generic [ref=e151]: "4.8"
+                  - generic [ref=e152]: (12)
+                - generic [ref=e156]: Fortune Bot
+                - button "Pay & Request" [ref=e157]
+            - listitem [ref=e158]:
+              - button "匿名图像生成 anon-image-gen 5000 SPACE image-gen 根据提示词生成风格化图像，provider 资料缺失时仍展示服务卡片 Rating 3.2 from 4 reviews Unknown Bot Pay & Request" [ref=e159] [cursor=pointer]:
+                - generic [ref=e161]:
+                  - heading "匿名图像生成" [level=2] [ref=e162]
+                  - generic [ref=e163]:
+                    - generic [ref=e164]: anon-image-gen
+                    - paragraph [ref=e165]: 5000 SPACE
+                  - generic [ref=e166]: image-gen
+                  - paragraph [ref=e167]: 根据提示词生成风格化图像，provider 资料缺失时仍展示服务卡片
+                - generic "Rating 3.2 from 4 reviews" [ref=e169]:
+                  - generic [ref=e170]:
+                    - generic [ref=e171]: ★
+                    - generic [ref=e172]: ★
+                    - generic [ref=e173]: ★
+                    - generic [ref=e174]: ★
+                    - generic [ref=e175]: ★
+                  - generic [ref=e176]: "3.2"
+                  - generic [ref=e177]: (4)
+                - generic [ref=e179]:
+                  - generic [ref=e181]: U
+                  - generic [ref=e182]: Unknown Bot
+                - button "Pay & Request" [ref=e183]
+            - listitem [ref=e184]:
+              - button "MRC20 代币配音 token-audio-dub 100 MRC20 audio-dub 使用 MRC20 结算的短音频配音服务 Rating 4.1 from 7 reviews Audio Bot Pay & Request" [ref=e185] [cursor=pointer]:
+                - generic [ref=e187]:
+                  - heading "MRC20 代币配音" [level=2] [ref=e188]
+                  - generic [ref=e189]:
+                    - generic [ref=e190]: token-audio-dub
+                    - paragraph [ref=e191]: 100 MRC20
+                  - generic [ref=e192]: audio-dub
+                  - paragraph [ref=e193]: 使用 MRC20 结算的短音频配音服务
+                - generic "Rating 4.1 from 7 reviews" [ref=e195]:
+                  - generic [ref=e196]:
+                    - generic [ref=e197]: ★
+                    - generic [ref=e198]: ★
+                    - generic [ref=e199]: ★
+                    - generic [ref=e200]: ★
+                    - generic [ref=e201]: ★
+                  - generic [ref=e202]: "4.1"
+                  - generic [ref=e203]: (7)
+                - generic [ref=e207]: Audio Bot
+                - button "Pay & Request" [ref=e208]
+          - paragraph [ref=e210]: Scroll for more

@@ -1,0 +1,491 @@
+[     899ms] [INFO] %cDownload the React DevTools for a better development experience: https://reactjs.org/link/react-devtools font-weight:bold @ http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:21550
+[     989ms] [WARNING] ⚠️ React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition. @ http://127.0.0.1:5177/node_modules/.vite/deps/react-router-dom.js?v=b1fa66fc:4435
+[     989ms] [WARNING] ⚠️ React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath. @ http://127.0.0.1:5177/node_modules/.vite/deps/react-router-dom.js?v=b1fa66fc:4435
+[ 3894882ms] ReferenceError: selectedSessionFromStore is not defined
+    at DeliveryPage (http://127.0.0.1:5177/src/routes/Delivery.tsx?t=1780199059114:151:37)
+    at renderWithHooks (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:11548:26)
+    at mountIndeterminateComponent (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:14926:21)
+    at beginWork (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:15914:22)
+    at HTMLUnknownElement.callCallback2 (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:3674:22)
+    at Object.invokeGuardedCallbackDev (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:3699:24)
+    at invokeGuardedCallback (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:3733:39)
+    at beginWork$1 (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:19765:15)
+    at performUnitOfWork (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:19198:20)
+    at workLoopSync (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:19137:13)
+[ 3894924ms] ReferenceError: selectedSessionFromStore is not defined
+    at DeliveryPage (http://127.0.0.1:5177/src/routes/Delivery.tsx?t=1780199059114:151:37)
+    at renderWithHooks (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:11548:26)
+    at mountIndeterminateComponent (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:14926:21)
+    at beginWork (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:15914:22)
+    at HTMLUnknownElement.callCallback2 (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:3674:22)
+    at Object.invokeGuardedCallbackDev (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:3699:24)
+    at invokeGuardedCallback (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:3733:39)
+    at beginWork$1 (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:19765:15)
+    at performUnitOfWork (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:19198:20)
+    at workLoopSync (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:19137:13)
+[ 3894084ms] [ERROR] The above error occurred in the <DeliveryPage> component:
+
+    at DeliveryPage (http://127.0.0.1:5177/src/routes/Delivery.tsx?t=1780199059114:78:43)
+    at RenderedRoute (http://127.0.0.1:5177/node_modules/.vite/deps/react-router-dom.js?v=b1fa66fc:4131:5)
+    at Routes (http://127.0.0.1:5177/node_modules/.vite/deps/react-router-dom.js?v=b1fa66fc:4601:5)
+    at main
+    at div
+    at AppShell (http://127.0.0.1:5177/src/components/AppShell.tsx?t=1780198842122:44:28)
+    at App
+    at ErrorBoundary (http://127.0.0.1:5177/src/components/common/ErrorBoundary.tsx?t=1780198842122:6:8)
+    at WalletHydrator (http://127.0.0.1:5177/src/components/WalletHydrator.tsx?t=1780198719221:26:34)
+    at Router (http://127.0.0.1:5177/node_modules/.vite/deps/react-router-dom.js?v=b1fa66fc:4544:15)
+    at BrowserRouter (http://127.0.0.1:5177/node_modules/.vite/deps/react-router-dom.js?v=b1fa66fc:5290:5)
+    at QueryClientProvider (http://127.0.0.1:5177/node_modules/.vite/deps/@tanstack_react-query.js?v=b1fa66fc:3235:3)
+
+React will try to recreate this component tree from scratch using the error boundary you provided, ErrorBoundary. @ http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:14031
+[ 3894084ms] [ERROR] [ErrorBoundary] ReferenceError: selectedSessionFromStore is not defined
+    at DeliveryPage (http://127.0.0.1:5177/src/routes/Delivery.tsx?t=1780199059114:151:37)
+    at renderWithHooks (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:11548:26)
+    at mountIndeterminateComponent (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:14926:21)
+    at beginWork (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:15914:22)
+    at beginWork$1 (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:19753:22)
+    at performUnitOfWork (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:19198:20)
+    at workLoopSync (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:19137:13)
+    at renderRootSync (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:19116:15)
+    at recoverFromConcurrentError (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:18736:28)
+    at performSyncWorkOnRoot (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:18879:28)
+    at DeliveryPage (http://127.0.0.1:5177/src/routes/Delivery.tsx?t=1780199059114:78:43)
+    at RenderedRoute (http://127.0.0.1:5177/node_modules/.vite/deps/react-router-dom.js?v=b1fa66fc:4131:5)
+    at Routes (http://127.0.0.1:5177/node_modules/.vite/deps/react-router-dom.js?v=b1fa66fc:4601:5)
+    at main
+    at div
+    at AppShell (http://127.0.0.1:5177/src/components/AppShell.tsx?t=1780198842122:44:28)
+    at App
+    at ErrorBoundary (http://127.0.0.1:5177/src/components/common/ErrorBoundary.tsx?t=1780198842122:6:8)
+    at WalletHydrator (http://127.0.0.1:5177/src/components/WalletHydrator.tsx?t=1780198719221:26:34)
+    at Router (http://127.0.0.1:5177/node_modules/.vite/deps/react-router-dom.js?v=b1fa66fc:4544:15)
+    at BrowserRouter (http://127.0.0.1:5177/node_modules/.vite/deps/react-router-dom.js?v=b1fa66fc:5290:5)
+    at QueryClientProvider (http://127.0.0.1:5177/node_modules/.vite/deps/@tanstack_react-query.js?v=b1fa66fc:3235:3) @ http://127.0.0.1:5177/src/components/common/ErrorBoundary.tsx?t=1780198842122:12
+[ 3902390ms] ReferenceError: selectedSessionFromStore is not defined
+    at DeliveryPage (http://127.0.0.1:5177/src/routes/Delivery.tsx?t=1780199066961:151:37)
+    at renderWithHooks (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:11548:26)
+    at mountIndeterminateComponent (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:14926:21)
+    at beginWork (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:15914:22)
+    at HTMLUnknownElement.callCallback2 (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:3674:22)
+    at Object.invokeGuardedCallbackDev (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:3699:24)
+    at invokeGuardedCallback (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:3733:39)
+    at beginWork$1 (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:19765:15)
+    at performUnitOfWork (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:19198:20)
+    at workLoopSync (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:19137:13)
+[ 3902408ms] ReferenceError: selectedSessionFromStore is not defined
+    at DeliveryPage (http://127.0.0.1:5177/src/routes/Delivery.tsx?t=1780199066961:151:37)
+    at renderWithHooks (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:11548:26)
+    at mountIndeterminateComponent (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:14926:21)
+    at beginWork (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:15914:22)
+    at HTMLUnknownElement.callCallback2 (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:3674:22)
+    at Object.invokeGuardedCallbackDev (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:3699:24)
+    at invokeGuardedCallback (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:3733:39)
+    at beginWork$1 (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:19765:15)
+    at performUnitOfWork (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:19198:20)
+    at workLoopSync (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:19137:13)
+[ 3902149ms] [ERROR] The above error occurred in the <DeliveryPage> component:
+
+    at DeliveryPage (http://127.0.0.1:5177/src/routes/Delivery.tsx?t=1780199066961:78:43)
+    at RenderedRoute (http://127.0.0.1:5177/node_modules/.vite/deps/react-router-dom.js?v=b1fa66fc:4131:5)
+    at Routes (http://127.0.0.1:5177/node_modules/.vite/deps/react-router-dom.js?v=b1fa66fc:4601:5)
+    at main
+    at div
+    at AppShell (http://127.0.0.1:5177/src/components/AppShell.tsx?t=1780198842122:44:28)
+    at App
+    at ErrorBoundary (http://127.0.0.1:5177/src/components/common/ErrorBoundary.tsx?t=1780198842122:6:8)
+    at WalletHydrator (http://127.0.0.1:5177/src/components/WalletHydrator.tsx?t=1780198719221:26:34)
+    at Router (http://127.0.0.1:5177/node_modules/.vite/deps/react-router-dom.js?v=b1fa66fc:4544:15)
+    at BrowserRouter (http://127.0.0.1:5177/node_modules/.vite/deps/react-router-dom.js?v=b1fa66fc:5290:5)
+    at QueryClientProvider (http://127.0.0.1:5177/node_modules/.vite/deps/@tanstack_react-query.js?v=b1fa66fc:3235:3)
+
+React will try to recreate this component tree from scratch using the error boundary you provided, ErrorBoundary. @ http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:14031
+[ 3902149ms] [ERROR] [ErrorBoundary] ReferenceError: selectedSessionFromStore is not defined
+    at DeliveryPage (http://127.0.0.1:5177/src/routes/Delivery.tsx?t=1780199066961:151:37)
+    at renderWithHooks (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:11548:26)
+    at mountIndeterminateComponent (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:14926:21)
+    at beginWork (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:15914:22)
+    at beginWork$1 (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:19753:22)
+    at performUnitOfWork (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:19198:20)
+    at workLoopSync (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:19137:13)
+    at renderRootSync (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:19116:15)
+    at recoverFromConcurrentError (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:18736:28)
+    at performSyncWorkOnRoot (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:18879:28)
+    at DeliveryPage (http://127.0.0.1:5177/src/routes/Delivery.tsx?t=1780199066961:78:43)
+    at RenderedRoute (http://127.0.0.1:5177/node_modules/.vite/deps/react-router-dom.js?v=b1fa66fc:4131:5)
+    at Routes (http://127.0.0.1:5177/node_modules/.vite/deps/react-router-dom.js?v=b1fa66fc:4601:5)
+    at main
+    at div
+    at AppShell (http://127.0.0.1:5177/src/components/AppShell.tsx?t=1780198842122:44:28)
+    at App
+    at ErrorBoundary (http://127.0.0.1:5177/src/components/common/ErrorBoundary.tsx?t=1780198842122:6:8)
+    at WalletHydrator (http://127.0.0.1:5177/src/components/WalletHydrator.tsx?t=1780198719221:26:34)
+    at Router (http://127.0.0.1:5177/node_modules/.vite/deps/react-router-dom.js?v=b1fa66fc:4544:15)
+    at BrowserRouter (http://127.0.0.1:5177/node_modules/.vite/deps/react-router-dom.js?v=b1fa66fc:5290:5)
+    at QueryClientProvider (http://127.0.0.1:5177/node_modules/.vite/deps/@tanstack_react-query.js?v=b1fa66fc:3235:3) @ http://127.0.0.1:5177/src/components/common/ErrorBoundary.tsx?t=1780198842122:12
+[ 3910968ms] ReferenceError: selectedSessionFromStore is not defined
+    at DeliveryPage (http://127.0.0.1:5177/src/routes/Delivery.tsx?t=1780199075734:151:37)
+    at renderWithHooks (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:11548:26)
+    at mountIndeterminateComponent (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:14926:21)
+    at beginWork (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:15914:22)
+    at HTMLUnknownElement.callCallback2 (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:3674:22)
+    at Object.invokeGuardedCallbackDev (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:3699:24)
+    at invokeGuardedCallback (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:3733:39)
+    at beginWork$1 (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:19765:15)
+    at performUnitOfWork (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:19198:20)
+    at workLoopSync (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:19137:13)
+[ 3911201ms] ReferenceError: selectedSessionFromStore is not defined
+    at DeliveryPage (http://127.0.0.1:5177/src/routes/Delivery.tsx?t=1780199075734:151:37)
+    at renderWithHooks (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:11548:26)
+    at mountIndeterminateComponent (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:14926:21)
+    at beginWork (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:15914:22)
+    at HTMLUnknownElement.callCallback2 (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:3674:22)
+    at Object.invokeGuardedCallbackDev (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:3699:24)
+    at invokeGuardedCallback (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:3733:39)
+    at beginWork$1 (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:19765:15)
+    at performUnitOfWork (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:19198:20)
+    at workLoopSync (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:19137:13)
+[ 3910845ms] [ERROR] The above error occurred in the <DeliveryPage> component:
+
+    at DeliveryPage (http://127.0.0.1:5177/src/routes/Delivery.tsx?t=1780199075734:78:43)
+    at RenderedRoute (http://127.0.0.1:5177/node_modules/.vite/deps/react-router-dom.js?v=b1fa66fc:4131:5)
+    at Routes (http://127.0.0.1:5177/node_modules/.vite/deps/react-router-dom.js?v=b1fa66fc:4601:5)
+    at main
+    at div
+    at AppShell (http://127.0.0.1:5177/src/components/AppShell.tsx?t=1780198842122:44:28)
+    at App
+    at ErrorBoundary (http://127.0.0.1:5177/src/components/common/ErrorBoundary.tsx?t=1780198842122:6:8)
+    at WalletHydrator (http://127.0.0.1:5177/src/components/WalletHydrator.tsx?t=1780198719221:26:34)
+    at Router (http://127.0.0.1:5177/node_modules/.vite/deps/react-router-dom.js?v=b1fa66fc:4544:15)
+    at BrowserRouter (http://127.0.0.1:5177/node_modules/.vite/deps/react-router-dom.js?v=b1fa66fc:5290:5)
+    at QueryClientProvider (http://127.0.0.1:5177/node_modules/.vite/deps/@tanstack_react-query.js?v=b1fa66fc:3235:3)
+
+React will try to recreate this component tree from scratch using the error boundary you provided, ErrorBoundary. @ http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:14031
+[ 3910846ms] [ERROR] [ErrorBoundary] ReferenceError: selectedSessionFromStore is not defined
+    at DeliveryPage (http://127.0.0.1:5177/src/routes/Delivery.tsx?t=1780199075734:151:37)
+    at renderWithHooks (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:11548:26)
+    at mountIndeterminateComponent (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:14926:21)
+    at beginWork (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:15914:22)
+    at beginWork$1 (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:19753:22)
+    at performUnitOfWork (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:19198:20)
+    at workLoopSync (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:19137:13)
+    at renderRootSync (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:19116:15)
+    at recoverFromConcurrentError (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:18736:28)
+    at performSyncWorkOnRoot (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:18879:28)
+    at DeliveryPage (http://127.0.0.1:5177/src/routes/Delivery.tsx?t=1780199075734:78:43)
+    at RenderedRoute (http://127.0.0.1:5177/node_modules/.vite/deps/react-router-dom.js?v=b1fa66fc:4131:5)
+    at Routes (http://127.0.0.1:5177/node_modules/.vite/deps/react-router-dom.js?v=b1fa66fc:4601:5)
+    at main
+    at div
+    at AppShell (http://127.0.0.1:5177/src/components/AppShell.tsx?t=1780198842122:44:28)
+    at App
+    at ErrorBoundary (http://127.0.0.1:5177/src/components/common/ErrorBoundary.tsx?t=1780198842122:6:8)
+    at WalletHydrator (http://127.0.0.1:5177/src/components/WalletHydrator.tsx?t=1780198719221:26:34)
+    at Router (http://127.0.0.1:5177/node_modules/.vite/deps/react-router-dom.js?v=b1fa66fc:4544:15)
+    at BrowserRouter (http://127.0.0.1:5177/node_modules/.vite/deps/react-router-dom.js?v=b1fa66fc:5290:5)
+    at QueryClientProvider (http://127.0.0.1:5177/node_modules/.vite/deps/@tanstack_react-query.js?v=b1fa66fc:3235:3) @ http://127.0.0.1:5177/src/components/common/ErrorBoundary.tsx?t=1780198842122:12
+[ 3929985ms] ReferenceError: selectedSessionFromStore is not defined
+    at DeliveryPage (http://127.0.0.1:5177/src/routes/Delivery.tsx?t=1780199094433:151:37)
+    at renderWithHooks (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:11548:26)
+    at mountIndeterminateComponent (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:14926:21)
+    at beginWork (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:15914:22)
+    at HTMLUnknownElement.callCallback2 (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:3674:22)
+    at Object.invokeGuardedCallbackDev (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:3699:24)
+    at invokeGuardedCallback (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:3733:39)
+    at beginWork$1 (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:19765:15)
+    at performUnitOfWork (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:19198:20)
+    at workLoopSync (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:19137:13)
+[ 3930001ms] ReferenceError: selectedSessionFromStore is not defined
+    at DeliveryPage (http://127.0.0.1:5177/src/routes/Delivery.tsx?t=1780199094433:151:37)
+    at renderWithHooks (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:11548:26)
+    at mountIndeterminateComponent (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:14926:21)
+    at beginWork (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:15914:22)
+    at HTMLUnknownElement.callCallback2 (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:3674:22)
+    at Object.invokeGuardedCallbackDev (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:3699:24)
+    at invokeGuardedCallback (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:3733:39)
+    at beginWork$1 (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:19765:15)
+    at performUnitOfWork (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:19198:20)
+    at workLoopSync (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:19137:13)
+[ 3929467ms] [ERROR] The above error occurred in the <DeliveryPage> component:
+
+    at DeliveryPage (http://127.0.0.1:5177/src/routes/Delivery.tsx?t=1780199094433:78:43)
+    at RenderedRoute (http://127.0.0.1:5177/node_modules/.vite/deps/react-router-dom.js?v=b1fa66fc:4131:5)
+    at Routes (http://127.0.0.1:5177/node_modules/.vite/deps/react-router-dom.js?v=b1fa66fc:4601:5)
+    at main
+    at div
+    at AppShell (http://127.0.0.1:5177/src/components/AppShell.tsx?t=1780198842122:44:28)
+    at App
+    at ErrorBoundary (http://127.0.0.1:5177/src/components/common/ErrorBoundary.tsx?t=1780198842122:6:8)
+    at WalletHydrator (http://127.0.0.1:5177/src/components/WalletHydrator.tsx?t=1780198719221:26:34)
+    at Router (http://127.0.0.1:5177/node_modules/.vite/deps/react-router-dom.js?v=b1fa66fc:4544:15)
+    at BrowserRouter (http://127.0.0.1:5177/node_modules/.vite/deps/react-router-dom.js?v=b1fa66fc:5290:5)
+    at QueryClientProvider (http://127.0.0.1:5177/node_modules/.vite/deps/@tanstack_react-query.js?v=b1fa66fc:3235:3)
+
+React will try to recreate this component tree from scratch using the error boundary you provided, ErrorBoundary. @ http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:14031
+[ 3929467ms] [ERROR] [ErrorBoundary] ReferenceError: selectedSessionFromStore is not defined
+    at DeliveryPage (http://127.0.0.1:5177/src/routes/Delivery.tsx?t=1780199094433:151:37)
+    at renderWithHooks (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:11548:26)
+    at mountIndeterminateComponent (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:14926:21)
+    at beginWork (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:15914:22)
+    at beginWork$1 (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:19753:22)
+    at performUnitOfWork (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:19198:20)
+    at workLoopSync (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:19137:13)
+    at renderRootSync (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:19116:15)
+    at recoverFromConcurrentError (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:18736:28)
+    at performSyncWorkOnRoot (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:18879:28)
+    at DeliveryPage (http://127.0.0.1:5177/src/routes/Delivery.tsx?t=1780199094433:78:43)
+    at RenderedRoute (http://127.0.0.1:5177/node_modules/.vite/deps/react-router-dom.js?v=b1fa66fc:4131:5)
+    at Routes (http://127.0.0.1:5177/node_modules/.vite/deps/react-router-dom.js?v=b1fa66fc:4601:5)
+    at main
+    at div
+    at AppShell (http://127.0.0.1:5177/src/components/AppShell.tsx?t=1780198842122:44:28)
+    at App
+    at ErrorBoundary (http://127.0.0.1:5177/src/components/common/ErrorBoundary.tsx?t=1780198842122:6:8)
+    at WalletHydrator (http://127.0.0.1:5177/src/components/WalletHydrator.tsx?t=1780198719221:26:34)
+    at Router (http://127.0.0.1:5177/node_modules/.vite/deps/react-router-dom.js?v=b1fa66fc:4544:15)
+    at BrowserRouter (http://127.0.0.1:5177/node_modules/.vite/deps/react-router-dom.js?v=b1fa66fc:5290:5)
+    at QueryClientProvider (http://127.0.0.1:5177/node_modules/.vite/deps/@tanstack_react-query.js?v=b1fa66fc:3235:3) @ http://127.0.0.1:5177/src/components/common/ErrorBoundary.tsx?t=1780198842122:12
+[ 3965883ms] ReferenceError: selectedSessionFromStore is not defined
+    at DeliveryPage (http://127.0.0.1:5177/src/routes/Delivery.tsx?t=1780199127271:151:37)
+    at renderWithHooks (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:11548:26)
+    at mountIndeterminateComponent (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:14926:21)
+    at beginWork (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:15914:22)
+    at HTMLUnknownElement.callCallback2 (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:3674:22)
+    at Object.invokeGuardedCallbackDev (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:3699:24)
+    at invokeGuardedCallback (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:3733:39)
+    at beginWork$1 (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:19765:15)
+    at performUnitOfWork (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:19198:20)
+    at workLoopSync (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:19137:13)
+[ 3965893ms] ReferenceError: selectedSessionFromStore is not defined
+    at DeliveryPage (http://127.0.0.1:5177/src/routes/Delivery.tsx?t=1780199127271:151:37)
+    at renderWithHooks (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:11548:26)
+    at mountIndeterminateComponent (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:14926:21)
+    at beginWork (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:15914:22)
+    at HTMLUnknownElement.callCallback2 (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:3674:22)
+    at Object.invokeGuardedCallbackDev (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:3699:24)
+    at invokeGuardedCallback (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:3733:39)
+    at beginWork$1 (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:19765:15)
+    at performUnitOfWork (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:19198:20)
+    at workLoopSync (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:19137:13)
+[ 3963979ms] [ERROR] The above error occurred in the <DeliveryPage> component:
+
+    at DeliveryPage (http://127.0.0.1:5177/src/routes/Delivery.tsx?t=1780199127271:78:43)
+    at RenderedRoute (http://127.0.0.1:5177/node_modules/.vite/deps/react-router-dom.js?v=b1fa66fc:4131:5)
+    at Routes (http://127.0.0.1:5177/node_modules/.vite/deps/react-router-dom.js?v=b1fa66fc:4601:5)
+    at main
+    at div
+    at AppShell (http://127.0.0.1:5177/src/components/AppShell.tsx?t=1780198842122:44:28)
+    at App
+    at ErrorBoundary (http://127.0.0.1:5177/src/components/common/ErrorBoundary.tsx?t=1780198842122:6:8)
+    at WalletHydrator (http://127.0.0.1:5177/src/components/WalletHydrator.tsx?t=1780198719221:26:34)
+    at Router (http://127.0.0.1:5177/node_modules/.vite/deps/react-router-dom.js?v=b1fa66fc:4544:15)
+    at BrowserRouter (http://127.0.0.1:5177/node_modules/.vite/deps/react-router-dom.js?v=b1fa66fc:5290:5)
+    at QueryClientProvider (http://127.0.0.1:5177/node_modules/.vite/deps/@tanstack_react-query.js?v=b1fa66fc:3235:3)
+
+React will try to recreate this component tree from scratch using the error boundary you provided, ErrorBoundary. @ http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:14031
+[ 3963979ms] [ERROR] [ErrorBoundary] ReferenceError: selectedSessionFromStore is not defined
+    at DeliveryPage (http://127.0.0.1:5177/src/routes/Delivery.tsx?t=1780199127271:151:37)
+    at renderWithHooks (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:11548:26)
+    at mountIndeterminateComponent (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:14926:21)
+    at beginWork (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:15914:22)
+    at beginWork$1 (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:19753:22)
+    at performUnitOfWork (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:19198:20)
+    at workLoopSync (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:19137:13)
+    at renderRootSync (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:19116:15)
+    at recoverFromConcurrentError (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:18736:28)
+    at performSyncWorkOnRoot (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:18879:28)
+    at DeliveryPage (http://127.0.0.1:5177/src/routes/Delivery.tsx?t=1780199127271:78:43)
+    at RenderedRoute (http://127.0.0.1:5177/node_modules/.vite/deps/react-router-dom.js?v=b1fa66fc:4131:5)
+    at Routes (http://127.0.0.1:5177/node_modules/.vite/deps/react-router-dom.js?v=b1fa66fc:4601:5)
+    at main
+    at div
+    at AppShell (http://127.0.0.1:5177/src/components/AppShell.tsx?t=1780198842122:44:28)
+    at App
+    at ErrorBoundary (http://127.0.0.1:5177/src/components/common/ErrorBoundary.tsx?t=1780198842122:6:8)
+    at WalletHydrator (http://127.0.0.1:5177/src/components/WalletHydrator.tsx?t=1780198719221:26:34)
+    at Router (http://127.0.0.1:5177/node_modules/.vite/deps/react-router-dom.js?v=b1fa66fc:4544:15)
+    at BrowserRouter (http://127.0.0.1:5177/node_modules/.vite/deps/react-router-dom.js?v=b1fa66fc:5290:5)
+    at QueryClientProvider (http://127.0.0.1:5177/node_modules/.vite/deps/@tanstack_react-query.js?v=b1fa66fc:3235:3) @ http://127.0.0.1:5177/src/components/common/ErrorBoundary.tsx?t=1780198842122:12
+[ 4015991ms] ReferenceError: workspaceOrdersWithProfiles is not defined
+    at DeliveryPage (http://127.0.0.1:5177/src/routes/Delivery.tsx?t=1780199180377:360:25)
+    at renderWithHooks (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:11548:26)
+    at mountIndeterminateComponent (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:14926:21)
+    at beginWork (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:15914:22)
+    at HTMLUnknownElement.callCallback2 (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:3674:22)
+    at Object.invokeGuardedCallbackDev (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:3699:24)
+    at invokeGuardedCallback (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:3733:39)
+    at beginWork$1 (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:19765:15)
+    at performUnitOfWork (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:19198:20)
+    at workLoopSync (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:19137:13)
+[ 4015991ms] ReferenceError: workspaceOrdersWithProfiles is not defined
+    at DeliveryPage (http://127.0.0.1:5177/src/routes/Delivery.tsx?t=1780199180377:360:25)
+    at renderWithHooks (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:11548:26)
+    at mountIndeterminateComponent (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:14926:21)
+    at beginWork (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:15914:22)
+    at HTMLUnknownElement.callCallback2 (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:3674:22)
+    at Object.invokeGuardedCallbackDev (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:3699:24)
+    at invokeGuardedCallback (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:3733:39)
+    at beginWork$1 (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:19765:15)
+    at performUnitOfWork (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:19198:20)
+    at workLoopSync (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:19137:13)
+[ 4015846ms] [ERROR] The above error occurred in the <DeliveryPage> component:
+
+    at DeliveryPage (http://127.0.0.1:5177/src/routes/Delivery.tsx?t=1780199180377:78:43)
+    at RenderedRoute (http://127.0.0.1:5177/node_modules/.vite/deps/react-router-dom.js?v=b1fa66fc:4131:5)
+    at Routes (http://127.0.0.1:5177/node_modules/.vite/deps/react-router-dom.js?v=b1fa66fc:4601:5)
+    at main
+    at div
+    at AppShell (http://127.0.0.1:5177/src/components/AppShell.tsx?t=1780198842122:44:28)
+    at App
+    at ErrorBoundary (http://127.0.0.1:5177/src/components/common/ErrorBoundary.tsx?t=1780198842122:6:8)
+    at WalletHydrator (http://127.0.0.1:5177/src/components/WalletHydrator.tsx?t=1780198719221:26:34)
+    at Router (http://127.0.0.1:5177/node_modules/.vite/deps/react-router-dom.js?v=b1fa66fc:4544:15)
+    at BrowserRouter (http://127.0.0.1:5177/node_modules/.vite/deps/react-router-dom.js?v=b1fa66fc:5290:5)
+    at QueryClientProvider (http://127.0.0.1:5177/node_modules/.vite/deps/@tanstack_react-query.js?v=b1fa66fc:3235:3)
+
+React will try to recreate this component tree from scratch using the error boundary you provided, ErrorBoundary. @ http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:14031
+[ 4015846ms] [ERROR] [ErrorBoundary] ReferenceError: workspaceOrdersWithProfiles is not defined
+    at DeliveryPage (http://127.0.0.1:5177/src/routes/Delivery.tsx?t=1780199180377:360:25)
+    at renderWithHooks (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:11548:26)
+    at mountIndeterminateComponent (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:14926:21)
+    at beginWork (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:15914:22)
+    at beginWork$1 (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:19753:22)
+    at performUnitOfWork (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:19198:20)
+    at workLoopSync (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:19137:13)
+    at renderRootSync (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:19116:15)
+    at recoverFromConcurrentError (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:18736:28)
+    at performSyncWorkOnRoot (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:18879:28)
+    at DeliveryPage (http://127.0.0.1:5177/src/routes/Delivery.tsx?t=1780199180377:78:43)
+    at RenderedRoute (http://127.0.0.1:5177/node_modules/.vite/deps/react-router-dom.js?v=b1fa66fc:4131:5)
+    at Routes (http://127.0.0.1:5177/node_modules/.vite/deps/react-router-dom.js?v=b1fa66fc:4601:5)
+    at main
+    at div
+    at AppShell (http://127.0.0.1:5177/src/components/AppShell.tsx?t=1780198842122:44:28)
+    at App
+    at ErrorBoundary (http://127.0.0.1:5177/src/components/common/ErrorBoundary.tsx?t=1780198842122:6:8)
+    at WalletHydrator (http://127.0.0.1:5177/src/components/WalletHydrator.tsx?t=1780198719221:26:34)
+    at Router (http://127.0.0.1:5177/node_modules/.vite/deps/react-router-dom.js?v=b1fa66fc:4544:15)
+    at BrowserRouter (http://127.0.0.1:5177/node_modules/.vite/deps/react-router-dom.js?v=b1fa66fc:5290:5)
+    at QueryClientProvider (http://127.0.0.1:5177/node_modules/.vite/deps/@tanstack_react-query.js?v=b1fa66fc:3235:3) @ http://127.0.0.1:5177/src/components/common/ErrorBoundary.tsx?t=1780198842122:12
+[ 5696858ms] ReferenceError: SessionHeader is not defined
+    at DeliveryPage (http://127.0.0.1:5177/src/routes/Delivery.tsx?t=1780200861843:413:11)
+    at renderWithHooks (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:11548:26)
+    at updateFunctionComponent (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:14582:28)
+    at beginWork (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:15924:22)
+    at HTMLUnknownElement.callCallback2 (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:3674:22)
+    at Object.invokeGuardedCallbackDev (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:3699:24)
+    at invokeGuardedCallback (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:3733:39)
+    at beginWork$1 (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:19765:15)
+    at performUnitOfWork (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:19198:20)
+    at workLoopSync (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:19137:13)
+[ 5696915ms] ReferenceError: SessionHeader is not defined
+    at DeliveryPage (http://127.0.0.1:5177/src/routes/Delivery.tsx?t=1780200861843:413:11)
+    at renderWithHooks (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:11548:26)
+    at updateFunctionComponent (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:14582:28)
+    at beginWork (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:15924:22)
+    at HTMLUnknownElement.callCallback2 (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:3674:22)
+    at Object.invokeGuardedCallbackDev (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:3699:24)
+    at invokeGuardedCallback (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:3733:39)
+    at beginWork$1 (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:19765:15)
+    at performUnitOfWork (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:19198:20)
+    at workLoopSync (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:19137:13)
+[ 5696850ms] [ERROR] The above error occurred in the <DeliveryPage> component:
+
+    at DeliveryPage (http://127.0.0.1:5177/src/routes/Delivery.tsx?t=1780200861843:79:43)
+    at RenderedRoute (http://127.0.0.1:5177/node_modules/.vite/deps/react-router-dom.js?v=b1fa66fc:4131:5)
+    at Routes (http://127.0.0.1:5177/node_modules/.vite/deps/react-router-dom.js?v=b1fa66fc:4601:5)
+    at main
+    at div
+    at AppShell (http://127.0.0.1:5177/src/components/AppShell.tsx?t=1780198842122:44:28)
+    at App
+    at ErrorBoundary (http://127.0.0.1:5177/src/components/common/ErrorBoundary.tsx?t=1780198842122:6:8)
+    at WalletHydrator (http://127.0.0.1:5177/src/components/WalletHydrator.tsx?t=1780200848913:26:34)
+    at Router (http://127.0.0.1:5177/node_modules/.vite/deps/react-router-dom.js?v=b1fa66fc:4544:15)
+    at BrowserRouter (http://127.0.0.1:5177/node_modules/.vite/deps/react-router-dom.js?v=b1fa66fc:5290:5)
+    at QueryClientProvider (http://127.0.0.1:5177/node_modules/.vite/deps/@tanstack_react-query.js?v=b1fa66fc:3235:3)
+
+React will try to recreate this component tree from scratch using the error boundary you provided, ErrorBoundary. @ http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:14031
+[ 5696850ms] [ERROR] [ErrorBoundary] ReferenceError: SessionHeader is not defined
+    at DeliveryPage (http://127.0.0.1:5177/src/routes/Delivery.tsx?t=1780200861843:413:11)
+    at renderWithHooks (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:11548:26)
+    at updateFunctionComponent (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:14582:28)
+    at beginWork (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:15924:22)
+    at beginWork$1 (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:19753:22)
+    at performUnitOfWork (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:19198:20)
+    at workLoopSync (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:19137:13)
+    at renderRootSync (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:19116:15)
+    at recoverFromConcurrentError (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:18736:28)
+    at performSyncWorkOnRoot (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:18879:28)
+    at DeliveryPage (http://127.0.0.1:5177/src/routes/Delivery.tsx?t=1780200861843:79:43)
+    at RenderedRoute (http://127.0.0.1:5177/node_modules/.vite/deps/react-router-dom.js?v=b1fa66fc:4131:5)
+    at Routes (http://127.0.0.1:5177/node_modules/.vite/deps/react-router-dom.js?v=b1fa66fc:4601:5)
+    at main
+    at div
+    at AppShell (http://127.0.0.1:5177/src/components/AppShell.tsx?t=1780198842122:44:28)
+    at App
+    at ErrorBoundary (http://127.0.0.1:5177/src/components/common/ErrorBoundary.tsx?t=1780198842122:6:8)
+    at WalletHydrator (http://127.0.0.1:5177/src/components/WalletHydrator.tsx?t=1780200848913:26:34)
+    at Router (http://127.0.0.1:5177/node_modules/.vite/deps/react-router-dom.js?v=b1fa66fc:4544:15)
+    at BrowserRouter (http://127.0.0.1:5177/node_modules/.vite/deps/react-router-dom.js?v=b1fa66fc:5290:5)
+    at QueryClientProvider (http://127.0.0.1:5177/node_modules/.vite/deps/@tanstack_react-query.js?v=b1fa66fc:3235:3) @ http://127.0.0.1:5177/src/components/common/ErrorBoundary.tsx?t=1780198842122:12
+[ 6442305ms] ReferenceError: DeliveredAssetsPanel is not defined
+    at DeliveryPage (http://127.0.0.1:5177/src/routes/Delivery.tsx?t=1780201604433:439:9)
+    at renderWithHooks (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:11548:26)
+    at updateFunctionComponent (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:14582:28)
+    at beginWork (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:15924:22)
+    at HTMLUnknownElement.callCallback2 (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:3674:22)
+    at Object.invokeGuardedCallbackDev (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:3699:24)
+    at invokeGuardedCallback (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:3733:39)
+    at beginWork$1 (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:19765:15)
+    at performUnitOfWork (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:19198:20)
+    at workLoopSync (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:19137:13)
+[ 6442479ms] ReferenceError: DeliveredAssetsPanel is not defined
+    at DeliveryPage (http://127.0.0.1:5177/src/routes/Delivery.tsx?t=1780201604433:439:9)
+    at renderWithHooks (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:11548:26)
+    at updateFunctionComponent (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:14582:28)
+    at beginWork (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:15924:22)
+    at HTMLUnknownElement.callCallback2 (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:3674:22)
+    at Object.invokeGuardedCallbackDev (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:3699:24)
+    at invokeGuardedCallback (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:3733:39)
+    at beginWork$1 (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:19765:15)
+    at performUnitOfWork (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:19198:20)
+    at workLoopSync (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:19137:13)
+[ 6442311ms] [ERROR] The above error occurred in the <DeliveryPage> component:
+
+    at DeliveryPage (http://127.0.0.1:5177/src/routes/Delivery.tsx?t=1780201604433:80:43)
+    at RenderedRoute (http://127.0.0.1:5177/node_modules/.vite/deps/react-router-dom.js?v=b1fa66fc:4131:5)
+    at Routes (http://127.0.0.1:5177/node_modules/.vite/deps/react-router-dom.js?v=b1fa66fc:4601:5)
+    at main
+    at div
+    at AppShell (http://127.0.0.1:5177/src/components/AppShell.tsx?t=1780198842122:44:28)
+    at App
+    at ErrorBoundary (http://127.0.0.1:5177/src/components/common/ErrorBoundary.tsx?t=1780198842122:6:8)
+    at WalletHydrator (http://127.0.0.1:5177/src/components/WalletHydrator.tsx?t=1780200848913:26:34)
+    at Router (http://127.0.0.1:5177/node_modules/.vite/deps/react-router-dom.js?v=b1fa66fc:4544:15)
+    at BrowserRouter (http://127.0.0.1:5177/node_modules/.vite/deps/react-router-dom.js?v=b1fa66fc:5290:5)
+    at QueryClientProvider (http://127.0.0.1:5177/node_modules/.vite/deps/@tanstack_react-query.js?v=b1fa66fc:3235:3)
+
+React will try to recreate this component tree from scratch using the error boundary you provided, ErrorBoundary. @ http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:14031
+[ 6442324ms] [ERROR] [ErrorBoundary] ReferenceError: DeliveredAssetsPanel is not defined
+    at DeliveryPage (http://127.0.0.1:5177/src/routes/Delivery.tsx?t=1780201604433:439:9)
+    at renderWithHooks (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:11548:26)
+    at updateFunctionComponent (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:14582:28)
+    at beginWork (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:15924:22)
+    at beginWork$1 (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:19753:22)
+    at performUnitOfWork (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:19198:20)
+    at workLoopSync (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:19137:13)
+    at renderRootSync (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:19116:15)
+    at recoverFromConcurrentError (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:18736:28)
+    at performSyncWorkOnRoot (http://127.0.0.1:5177/node_modules/.vite/deps/chunk-UWWWERUF.js?v=b1fa66fc:18879:28)
+    at DeliveryPage (http://127.0.0.1:5177/src/routes/Delivery.tsx?t=1780201604433:80:43)
+    at RenderedRoute (http://127.0.0.1:5177/node_modules/.vite/deps/react-router-dom.js?v=b1fa66fc:4131:5)
+    at Routes (http://127.0.0.1:5177/node_modules/.vite/deps/react-router-dom.js?v=b1fa66fc:4601:5)
+    at main
+    at div
+    at AppShell (http://127.0.0.1:5177/src/components/AppShell.tsx?t=1780198842122:44:28)
+    at App
+    at ErrorBoundary (http://127.0.0.1:5177/src/components/common/ErrorBoundary.tsx?t=1780198842122:6:8)
+    at WalletHydrator (http://127.0.0.1:5177/src/components/WalletHydrator.tsx?t=1780200848913:26:34)
+    at Router (http://127.0.0.1:5177/node_modules/.vite/deps/react-router-dom.js?v=b1fa66fc:4544:15)
+    at BrowserRouter (http://127.0.0.1:5177/node_modules/.vite/deps/react-router-dom.js?v=b1fa66fc:5290:5)
+    at QueryClientProvider (http://127.0.0.1:5177/node_modules/.vite/deps/@tanstack_react-query.js?v=b1fa66fc:3235:3) @ http://127.0.0.1:5177/src/components/common/ErrorBoundary.tsx?t=1780198842122:12

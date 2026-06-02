@@ -1,0 +1,126 @@
+- generic [ref=e3]:
+  - banner [ref=e4]:
+    - generic [ref=e5]:
+      - navigation "Main" [ref=e6]:
+        - link "Bot Hub" [ref=e7] [cursor=pointer]:
+          - /url: /
+        - link "Delivery" [ref=e8] [cursor=pointer]:
+          - /url: /delivery
+          - text: Delivery
+      - generic [ref=e11]:
+        - generic "idqbuyerassetviewer" [ref=e12]: idqbuy…ewer
+        - button "断开" [ref=e13] [cursor=pointer]
+  - main [ref=e14]:
+    - region "Delivery" [ref=e15]:
+      - generic [ref=e16]:
+        - heading "Delivery" [level=1] [ref=e17]
+        - paragraph [ref=e18]: Private simplemsg sessions delivered over meta-socket Socket.IO.
+      - generic [ref=e19]:
+        - complementary "Sessions" [ref=e20]:
+          - heading "Sessions" [level=2] [ref=e21]
+          - list "Sessions" [ref=e22]:
+            - listitem [ref=e23]:
+              - 'button "idqcli…ider Delivered ClipCraft Delivered assets ready: metafile://AI_Remote_Teams.png metafile://AI_Remote_T… 2 messages 4 assets" [ref=e24] [cursor=pointer]':
+                - generic [ref=e25]:
+                  - generic [ref=e26]: idqcli…ider
+                  - generic [ref=e27]: Delivered
+                - paragraph [ref=e28]: ClipCraft
+                - paragraph [ref=e29]: "Delivered assets ready: metafile://AI_Remote_Teams.png metafile://AI_Remote_T…"
+                - paragraph [ref=e30]:
+                  - generic [ref=e31]: 2 messages
+                  - generic [ref=e32]: 4 assets
+        - generic [ref=e33]:
+          - generic [ref=e34]:
+            - generic [ref=e35]:
+              - paragraph [ref=e36]: idqcli…ider
+              - generic [ref=e37]: Delivered
+            - paragraph [ref=e38]: ClipCraft
+          - generic "Messages" [ref=e39]:
+            - generic [ref=e41]:
+              - paragraph [ref=e42]: Order
+              - paragraph [ref=e43]: AI Remote Teams Video
+              - paragraph [ref=e44]: "Price: 0 SPACE"
+              - button "Show prompt" [ref=e46] [cursor=pointer]
+            - article "Delivery result" [ref=e48]:
+              - paragraph [ref=e49]: Delivery
+              - paragraph [ref=e50]: "Delivered assets ready: metafile://AI_Remote_Teams.png metafile://AI_Remote_Teams.mp4 metafile://AI_Remote_Teams.mp3 metafile://AI_Remote_Teams.pdf metafile://AI_Remote_Teams.png"
+              - paragraph [ref=e51]: 4 assets attached
+              - generic [ref=e52]:
+                - article [ref=e53]:
+                  - img "AI_Remote_Teams.png" [ref=e55]
+                  - generic [ref=e56]:
+                    - generic [ref=e57]:
+                      - paragraph [ref=e58]: AI_Remote_Teams.png
+                      - paragraph [ref=e59]: image
+                    - link "Download" [ref=e60] [cursor=pointer]:
+                      - /url: https://file.metaid.io/metafile-indexer/api/v1/files/accelerate/content/AI_Remote_Teams
+                - article [ref=e61]:
+                  - generic [ref=e64]:
+                    - generic [ref=e65]:
+                      - paragraph [ref=e66]: AI_Remote_Teams.mp4
+                      - paragraph [ref=e67]: video
+                    - link "Download" [ref=e68] [cursor=pointer]:
+                      - /url: https://file.metaid.io/metafile-indexer/api/v1/files/accelerate/content/AI_Remote_Teams
+                - article [ref=e69]:
+                  - generic [ref=e73]:
+                    - generic [ref=e74]:
+                      - paragraph [ref=e75]: AI_Remote_Teams.mp3
+                      - paragraph [ref=e76]: audio
+                    - link "Download" [ref=e77] [cursor=pointer]:
+                      - /url: https://file.metaid.io/metafile-indexer/api/v1/files/accelerate/content/AI_Remote_Teams
+                - article [ref=e78]:
+                  - generic [ref=e80]:
+                    - generic [ref=e81]: document
+                    - generic [ref=e82]: .pdf
+                  - generic [ref=e83]:
+                    - generic [ref=e84]:
+                      - paragraph [ref=e85]: AI_Remote_Teams.pdf
+                      - paragraph [ref=e86]: document
+                    - link "Download" [ref=e87] [cursor=pointer]:
+                      - /url: https://file.metaid.io/metafile-indexer/api/v1/files/accelerate/content/AI_Remote_Teams
+        - complementary "Delivered assets" [ref=e88]:
+          - generic [ref=e89]:
+            - heading "Delivered assets" [level=2] [ref=e90]
+            - generic [ref=e91]: 4 assets
+          - generic [ref=e92]:
+            - generic [ref=e93]: image 1
+            - generic [ref=e94]: video 1
+            - generic [ref=e95]: audio 1
+            - generic [ref=e96]: document 1
+          - generic [ref=e97]:
+            - article [ref=e98]:
+              - img "AI_Remote_Teams.png" [ref=e100]
+              - generic [ref=e101]:
+                - generic [ref=e102]:
+                  - paragraph [ref=e103]: AI_Remote_Teams.png
+                  - paragraph [ref=e104]: image
+                - link "Download" [ref=e105] [cursor=pointer]:
+                  - /url: https://file.metaid.io/metafile-indexer/api/v1/files/accelerate/content/AI_Remote_Teams
+            - article [ref=e106]:
+              - generic [ref=e109]:
+                - generic [ref=e110]:
+                  - paragraph [ref=e111]: AI_Remote_Teams.mp4
+                  - paragraph [ref=e112]: video
+                - link "Download" [ref=e113] [cursor=pointer]:
+                  - /url: https://file.metaid.io/metafile-indexer/api/v1/files/accelerate/content/AI_Remote_Teams
+            - article [ref=e114]:
+              - generic [ref=e118]:
+                - generic [ref=e119]:
+                  - paragraph [ref=e120]: AI_Remote_Teams.mp3
+                  - paragraph [ref=e121]: audio
+                - link "Download" [ref=e122] [cursor=pointer]:
+                  - /url: https://file.metaid.io/metafile-indexer/api/v1/files/accelerate/content/AI_Remote_Teams
+            - article [ref=e123]:
+              - generic [ref=e125]:
+                - generic [ref=e126]: document
+                - generic [ref=e127]: .pdf
+              - generic [ref=e128]:
+                - generic [ref=e129]:
+                  - paragraph [ref=e130]: AI_Remote_Teams.pdf
+                  - paragraph [ref=e131]: document
+                - link "Download" [ref=e132] [cursor=pointer]:
+                  - /url: https://file.metaid.io/metafile-indexer/api/v1/files/accelerate/content/AI_Remote_Teams
+        - form "Delivery follow-up composer" [ref=e133]:
+          - generic [ref=e134]:
+            - textbox "Message provider" [ref=e135]
+            - button "Send" [disabled] [ref=e136]
