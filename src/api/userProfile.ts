@@ -132,10 +132,12 @@ function normalizeUserProfile(raw: unknown): UserProfile {
   }
 }
 
+/** meta-socket uses code 0 for success; legacy manapi used code 1. Accept both. */
 function unwrapLegacyInfoEnvelope(raw: unknown): unknown {
   const envelope = asRecord(raw)
   if (!envelope || !('code' in envelope)) return raw
-  if (envelope.code !== 1) {
+  const code = envelope.code
+  if (code !== 0 && code !== 1) {
     const message = typeof envelope.message === 'string' ? envelope.message : 'user profile request failed'
     throw new UserProfileApiError(message)
   }
