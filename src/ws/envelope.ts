@@ -27,7 +27,16 @@ function isKnownEventType(value: unknown): value is KnownPushEventType {
   )
 }
 
-/** Parse Socket.IO `message` payload `{ M, C, D }`; only `C === 0` push envelopes. */
+/** Parse Socket.IO `message` payload.
+ *
+ *  Accepted shapes (matching IDBots metaWebListener + demo-chat):
+ *  1.  `["WS_SERVER_NOTIFY_PRIVATE_CHAT", { … }]`        — Socket.IO array
+ *  2.  `{ M: "…", D: { … } }`                            — canonical envelope
+ *  3.  `{ M: "…", data: { … } }`                         — alternate key
+ *  4.  `{ M: "…", C: 0, D: { … } }`                      — with code (C is ignored)
+ *
+ *  The `C` field is NOT required — IDBots and demo-chat don't enforce it.
+ */
 export function parseSocketEnvelope(raw: unknown): SocketEnvelope | null {
   let value = raw
   if (typeof value === 'string') {
@@ -38,17 +47,30 @@ export function parseSocketEnvelope(raw: unknown): SocketEnvelope | null {
     }
   }
 
-  if (!isRecord(value)) return null
+  // Socket.IO array format: ["EVENT", payload]
+  if (Array.isArray(value) && value.length >= 2) {
+    const eventType = value[0]
+    const payload = value[1]
+    if (!isKnownEventType(eventType) || !isRecord(payload)) return null
+    return { M: eventType, C: 0, D: payload as SocketEnvelope['D'] }
+  }
 
-  const code = value.C
-  if (code !== 0 && code !== '0') return null
+  if (!isRecord(value)) return null
 
   const eventType = value.M
   if (!isKnownEventType(eventType)) return null
 
+  // Prefer `D`, fall back to `data` (demo-chat compatibility)
+  const payload = isRecord(value.D)
+    ? value.D
+    : isRecord(value.data)
+      ? value.data
+      : null
+  if (!payload) return null
+
   return {
     M: eventType,
     C: 0,
-    D: value.D,
+    D: payload as SocketEnvelope['D'],
   }
 }

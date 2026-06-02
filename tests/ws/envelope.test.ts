@@ -4,42 +4,44 @@ import {
   WS_SERVER_NOTIFY_PRIVATE_CHAT,
 } from '@/ws/envelope'
 
+const PAYLOAD = { content: 'hello', timestamp: 1 }
+
 describe('parseSocketEnvelope', () => {
-  it('parses valid private chat push envelope', () => {
-    const raw = {
-      M: WS_SERVER_NOTIFY_PRIVATE_CHAT,
-      C: 0,
-      D: { fromGlobalMetaId: 'a', toGlobalMetaId: 'b', content: 'x', timestamp: 1 },
-    }
+  it('parses { M, C, D } canonical envelope', () => {
+    const raw = { M: WS_SERVER_NOTIFY_PRIVATE_CHAT, C: 0, D: PAYLOAD }
     expect(parseSocketEnvelope(raw)).toEqual(raw)
   })
 
-  it('parses JSON string payloads', () => {
-    const envelope = {
-      M: WS_SERVER_NOTIFY_PRIVATE_CHAT,
-      C: 0,
-      D: { hello: true },
-    }
-    expect(parseSocketEnvelope(JSON.stringify(envelope))).toEqual(envelope)
+  it('parses { M, D } without C (accepts missing C)', () => {
+    const raw = { M: WS_SERVER_NOTIFY_PRIVATE_CHAT, D: PAYLOAD }
+    expect(parseSocketEnvelope(raw)).toEqual({ ...raw, C: 0 })
   })
 
-  it('rejects non-zero C codes', () => {
+  it('parses { M, data } alternate key', () => {
+    const raw = { M: WS_SERVER_NOTIFY_PRIVATE_CHAT, data: PAYLOAD }
+    expect(parseSocketEnvelope(raw)).toEqual({ M: WS_SERVER_NOTIFY_PRIVATE_CHAT, C: 0, D: PAYLOAD })
+  })
+
+  it('parses Socket.IO array format [event, payload]', () => {
+    expect(parseSocketEnvelope([WS_SERVER_NOTIFY_PRIVATE_CHAT, PAYLOAD])).toEqual({
+      M: WS_SERVER_NOTIFY_PRIVATE_CHAT,
+      C: 0,
+      D: PAYLOAD,
+    })
+  })
+
+  it('parses JSON string payloads', () => {
+    const envelope = { M: WS_SERVER_NOTIFY_PRIVATE_CHAT, D: PAYLOAD }
+    expect(parseSocketEnvelope(JSON.stringify(envelope))).toEqual({ ...envelope, C: 0 })
+  })
+
+  it('accepts C with any value (C is not enforced)', () => {
     expect(
-      parseSocketEnvelope({
-        M: WS_SERVER_NOTIFY_PRIVATE_CHAT,
-        C: 200,
-        D: {},
-      }),
-    ).toBeNull()
+      parseSocketEnvelope({ M: WS_SERVER_NOTIFY_PRIVATE_CHAT, C: 200, D: PAYLOAD }),
+    ).toEqual({ M: WS_SERVER_NOTIFY_PRIVATE_CHAT, C: 0, D: PAYLOAD })
   })
 
   it('rejects unknown event types', () => {
-    expect(
-      parseSocketEnvelope({
-        M: 'WS_UNKNOWN',
-        C: 0,
-        D: {},
-      }),
-    ).toBeNull()
+    expect(parseSocketEnvelope({ M: 'WS_UNKNOWN', D: {} })).toBeNull()
   })
 })
