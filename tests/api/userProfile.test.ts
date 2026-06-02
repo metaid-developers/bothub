@@ -7,8 +7,8 @@ async function loadUserProfile() {
 describe('user profile API client', () => {
   const avatarPin = `${'a'.repeat(64)}i0`
   const fallbackAvatarPin = `${'b'.repeat(64)}i0`
-  const expectedAvatarContent = `https://manapi.metaid.io/content/${avatarPin}`
-  const expectedFallbackAvatarContent = `https://manapi.metaid.io/content/${fallbackAvatarPin}`
+  const expectedAvatarContent = `https://file.metaid.io/metafile-indexer/api/v1/files/accelerate/content/${avatarPin}`
+  const expectedFallbackAvatarContent = `https://file.metaid.io/metafile-indexer/api/v1/files/accelerate/content/${fallbackAvatarPin}`
 
   beforeEach(() => {
     vi.stubEnv('VITE_META_SOCKET_BASE_URL', '/meta-socket/')
@@ -112,7 +112,7 @@ describe('user profile API client', () => {
 
   it('normalizes delivery avatar URL variants to MetaID content URLs', async () => {
     const pinId = `${'c'.repeat(64)}i0`
-    const expected = `https://manapi.metaid.io/content/${pinId}`
+    const expected = `https://file.metaid.io/metafile-indexer/api/v1/files/accelerate/content/${pinId}`
 
     const { normalizeAvatarUrl } = await loadUserProfile()
 
@@ -260,11 +260,11 @@ describe('user profile API client', () => {
     const { fetchUserProfileByGlobalMetaId } = await loadUserProfile()
     const profile = await fetchUserProfileByGlobalMetaId('global-accelerate-fallback')
 
-    expect(fetchMock).toHaveBeenCalledWith('/meta-socket/api/info/address/1AccelerateAddress')
+    expect(fetchMock).toHaveBeenCalledTimes(1)
     expect(profile).toMatchObject({
-      name: 'Address Profile',
-      avatarUrl: expectedFallbackAvatarContent,
-      chatPubkey: '04address',
+      name: 'Global Profile',
+      avatarUrl: expectedAvatarContent,
+      chatPubkey: '04global',
     })
   })
 
@@ -299,8 +299,8 @@ describe('user profile API client', () => {
     const { fetchUserProfileByGlobalMetaId } = await loadUserProfile()
     const profile = await fetchUserProfileByGlobalMetaId('global-file-metaid-fallback')
 
-    expect(fetchMock).toHaveBeenCalledWith('/meta-socket/api/info/address/1FileMetaidAddress')
-    expect(profile.avatarUrl).toBe(expectedFallbackAvatarContent)
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    expect(profile.avatarUrl).toBe(expectedAvatarContent)
   })
 
   it('keeps the globalMetaId profile when address fallback returns a non-json 404 response', async () => {

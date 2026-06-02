@@ -14,6 +14,18 @@ const sizeClass = {
   md: 'h-10 w-10 text-sm',
 }
 
+const ACCELERATE_PREFIX =
+  'https://file.metaid.io/metafile-indexer/api/v1/files/accelerate/content/'
+const FALLBACK_PREFIX =
+  'https://file.metaid.io/metafile-indexer/api/v1/files/content/'
+
+function fallbackUrl(url: string): string | null {
+  if (url.startsWith(ACCELERATE_PREFIX)) {
+    return FALLBACK_PREFIX + url.slice(ACCELERATE_PREFIX.length)
+  }
+  return null
+}
+
 export function PeerAvatar({
   name,
   avatarUrl,
@@ -21,16 +33,26 @@ export function PeerAvatar({
   size = 'sm',
 }: PeerAvatarProps) {
   const [imageFailed, setImageFailed] = useState(false)
+  const [fallbackFailed, setFallbackFailed] = useState(false)
   const label = `${peerDisplayName({ name, globalMetaId })} 头像`
   const initial = peerDisplayName({ name, globalMetaId }).charAt(0).toUpperCase() || '?'
   const imageUrl = avatarUrl?.trim()
+  const backupUrl = imageUrl && imageFailed ? fallbackUrl(imageUrl) : null
 
-  if (imageUrl && !imageFailed) {
+  if (imageUrl && !fallbackFailed) {
+    const src = backupUrl ?? imageUrl
     return (
       <img
-        src={imageUrl}
+        src={src}
         alt={label}
-        onError={() => setImageFailed(true)}
+        onError={() => {
+          if (backupUrl && !fallbackFailed) {
+            setFallbackFailed(true)
+          } else {
+            setImageFailed(true)
+            setFallbackFailed(true)
+          }
+        }}
         className={clsx(
           'shrink-0 rounded-full border border-hub-border object-cover',
           sizeClass[size],

@@ -1,6 +1,12 @@
 import { getNormalizedMetaSocketBaseUrl } from '@/api/config'
 
-const DEFAULT_METAID_AVATAR_CONTENT_BASE = 'https://manapi.metaid.io/content'
+/** Primary CDN for avatar images — same accelerate content endpoint used for delivery assets. */
+const DEFAULT_METAID_AVATAR_CONTENT_BASE =
+  'https://file.metaid.io/metafile-indexer/api/v1/files/accelerate/content'
+
+/** Fallback CDN when the accelerate endpoint is unavailable. */
+const DEFAULT_METAID_AVATAR_FALLBACK_CONTENT_BASE =
+  'https://file.metaid.io/metafile-indexer/api/v1/files/content'
 
 export interface UserProfile {
   metaid?: string

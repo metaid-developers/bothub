@@ -159,7 +159,7 @@ describe('aggregator client', () => {
       )
       expect(data.list[0]).toMatchObject({
         providerName: 'Fresh Profile Name',
-        providerAvatar: `https://manapi.metaid.io/content/${avatarPin}`,
+        providerAvatar: `https://file.metaid.io/metafile-indexer/api/v1/files/accelerate/content/${avatarPin}`,
         providerChatPubkey: '04fresh-chat-key',
       })
     })
@@ -205,7 +205,7 @@ describe('aggregator client', () => {
 
       expect(data.provider).toMatchObject({
         name: 'Fresh Detail Name',
-        avatar: `https://manapi.metaid.io/content/${avatarPin}`,
+        avatar: `https://file.metaid.io/metafile-indexer/api/v1/files/accelerate/content/${avatarPin}`,
         chatPubkey: '04fresh-detail-chat-key',
       })
     })
