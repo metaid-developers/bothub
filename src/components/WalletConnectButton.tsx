@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { t } from '@/i18n'
 import { useWallet } from '@/wallet/useWallet'
 import { truncateGlobalMetaId } from '@/wallet/format'
@@ -22,14 +23,16 @@ export function WalletConnectButton() {
     const shortGlobalMetaId = truncateGlobalMetaId(identity.globalMetaId)
     const initials = avatarInitials(displayName)
     const bgColor = avatarColor(displayName)
+    const [avatarFailed, setAvatarFailed] = useState(false)
 
     return (
       <div className="flex items-center gap-3">
         <div className="flex min-w-0 items-center gap-2">
-          {identity.avatarUrl ? (
+          {identity.avatarUrl && !avatarFailed ? (
             <img
               src={identity.avatarUrl}
               alt={`${displayName} avatar`}
+              onError={() => setAvatarFailed(true)}
               className="h-8 w-8 shrink-0 rounded-full border border-hub-border object-cover"
             />
           ) : (

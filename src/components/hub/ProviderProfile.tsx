@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { clsx } from 'clsx'
 import type { ProviderInfo } from '@/api/aggregator.types'
 import { formatAddress } from '@/lib/format'
@@ -15,11 +16,14 @@ export interface ProviderProfileProps {
 function ProviderAvatar({ name, avatar }: { name: string; avatar: string | null }) {
   const initials = avatarInitials(name)
   const bgColor = avatarColor(name)
-  if (avatar) {
+  const [failed, setFailed] = useState(false)
+
+  if (avatar && !failed) {
     return (
       <img
         src={avatar}
         alt=""
+        onError={() => setFailed(true)}
         className="h-10 w-10 shrink-0 rounded-full border border-hub-border object-cover"
       />
     )

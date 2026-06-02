@@ -28,11 +28,14 @@ export interface ServiceDetailPanelProps {
 function DetailIcon({ service }: { service: SkillServiceCore }) {
   const initials = avatarInitials(service.displayName)
   const bgColor = avatarColor(service.displayName)
-  if (service.serviceIcon) {
+  const [failed, setFailed] = useState(false)
+
+  if (service.serviceIcon && !failed) {
     return (
       <img
         src={service.serviceIcon}
         alt=""
+        onError={() => setFailed(true)}
         className="h-16 w-16 shrink-0 rounded-xl border border-hub-border object-cover"
       />
     )

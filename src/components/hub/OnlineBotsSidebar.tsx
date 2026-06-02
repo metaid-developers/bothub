@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { clsx } from 'clsx'
 import type { SkillServiceListItem } from '@/api/aggregator.types'
 import { EmptyState } from '@/components/common/EmptyState'
@@ -47,12 +47,15 @@ function groupProviders(services: SkillServiceListItem[]): OnlineBotGroup[] {
 function BotAvatar({ name, avatar }: { name: string; avatar: string | null }) {
   const initials = avatarInitials(name)
   const bgColor = avatarColor(name)
-  if (avatar) {
+  const [failed, setFailed] = useState(false)
+
+  if (avatar && !failed) {
     return (
       <span className="relative inline-flex shrink-0">
         <img
           src={avatar}
           alt=""
+          onError={() => setFailed(true)}
           className="h-9 w-9 rounded-full border border-hub-border object-cover"
         />
         <span

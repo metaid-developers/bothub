@@ -1,4 +1,4 @@
-import type { KeyboardEvent } from 'react'
+import { useState, type KeyboardEvent } from 'react'
 import { clsx } from 'clsx'
 import type { SkillServiceListItem } from '@/api/aggregator.types'
 import { t } from '@/i18n'
@@ -10,11 +10,14 @@ const PROVIDER_FALLBACK_NAME = () => t('hub.unknownBot')
 function ServiceIcon({ service }: { service: SkillServiceListItem }) {
   const initials = avatarInitials(service.displayName)
   const bgColor = avatarColor(service.displayName)
-  if (service.serviceIcon) {
+  const [failed, setFailed] = useState(false)
+
+  if (service.serviceIcon && !failed) {
     return (
       <img
         src={service.serviceIcon}
         alt=""
+        onError={() => setFailed(true)}
         className="h-14 w-14 shrink-0 rounded-xl border border-hub-border object-cover"
       />
     )
@@ -39,11 +42,14 @@ function ProviderAvatar({
 }) {
   const initials = avatarInitials(name)
   const bgColor = avatarColor(name)
-  if (avatar) {
+  const [failed, setFailed] = useState(false)
+
+  if (avatar && !failed) {
     return (
       <img
         src={avatar}
         alt=""
+        onError={() => setFailed(true)}
         className="h-7 w-7 shrink-0 rounded-full border border-hub-border object-cover"
       />
     )
