@@ -60,6 +60,13 @@ VITE_USE_WS_MOCK=false
 VITE_META_SOCKET_BASE_URL=/meta-socket VITE_USE_AGGREGATOR_MOCK=false VITE_USE_WS_MOCK=false pnpm dev -- --host 127.0.0.1
 ```
 
+公网 meta-socket 验收：
+
+```bash
+META_SOCKET_BASE_URL=https://socket.metaid.io pnpm smoke:meta-socket
+VITE_META_SOCKET_BASE_URL=https://socket.metaid.io VITE_USE_AGGREGATOR_MOCK=false VITE_USE_WS_MOCK=false pnpm dev -- --host 127.0.0.1
+```
+
 完整本地真实接口、Chrome + Metalet、Delivery 资产验收步骤见 [Buyer 产品化验收清单](./docs/qa/buyer-productization-acceptance.md)。
 
 ### 测试与构建
@@ -77,7 +84,7 @@ pnpm lint        # ESLint
 - 聚合 API 未上线前：`VITE_USE_AGGREGATOR_MOCK=true`（默认）使用本地 fixtures
 - WebSocket mock：`VITE_USE_WS_MOCK=true` 时 Delivery 不连真实 Socket.IO
 - 本地/private beta 推荐：`VITE_META_SOCKET_BASE_URL=/meta-socket`、`VITE_USE_AGGREGATOR_MOCK=false`、`VITE_USE_WS_MOCK=false`，由 Vite proxy 转发到 `http://127.0.0.1:18091`。
-- 生产/预发 meta-socket：`VITE_META_SOCKET_BASE_URL=https://<meta-socket-host>`，必须是 meta-socket 根域名，并直接提供 `/api/bot-hub/*`、canonical `/api/private-chat/*`、`/socket/socket.io`；不要指向 idchat `/chat-api/`。旧 `/api/group-chat/*` 私聊路由只作为兼容 fallback，不是新部署契约。
+- 生产/预发 meta-socket：当前已验证公网根域名为 `https://socket.metaid.io`。`VITE_META_SOCKET_BASE_URL` 必须是 meta-socket 根域名，并直接提供 `/api/bot-hub/*`、canonical `/api/private-chat/*`、`/socket/socket.io`；不要指向 idchat `/chat-api/`。旧 `/api/group-chat/*` 私聊路由只作为兼容 fallback，不是新部署契约。
 - Metafile 交付物读取：`VITE_METAFILE_ACCELERATE_CONTENT_BASE` 默认使用加速内容 API，`VITE_METAFILE_CONTENT_BASE` 作为普通内容 fallback。
 
 ## 当前基线（M8）

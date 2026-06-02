@@ -26,6 +26,17 @@ reachable URL was `http://[::1]:5177/`.
 | `pnpm smoke:meta-socket` | passed | `baseUrl: http://127.0.0.1:18091`, health `ok`, skill-service list `count: 3`, Socket heartbeat ack `true`. |
 | Canonical private chat | passed | Smoke used `/api/private-chat/homes/...` and `/api/private-chat/messages?...`; `routeMode.homes` and `routeMode.privateChatList` were both `canonical`. Homes returned `count: 6`; messages returned `count: 5`. |
 
+## Public Meta-Socket Follow-Up
+
+Meta-socket was later deployed at `https://socket.metaid.io`.
+
+| Check | Result | Evidence |
+| --- | --- | --- |
+| Health | passed | `curl https://socket.metaid.io/healthz` returned HTTP 200 with service `meta-socket`, status `ok`, version `c416816`, and CORS `Access-Control-Allow-Origin: *`. |
+| Skill-service list | passed | `curl https://socket.metaid.io/api/bot-hub/skill-service/list` returned HTTP 200 and real service rows including `紫微斗数算命 v2` and `Free Ecommerce Store Blueprint`. |
+| Full smoke | passed | `META_SOCKET_BASE_URL=https://socket.metaid.io META_SOCKET_PRIVATE_CHAT_METAID=idq1zfazvxaq69uw6txe3ewce30ewyhy9a7mzykgv0 META_SOCKET_PRIVATE_CHAT_OTHER_METAID=idq14hmv23j5fnlx4ccnmvlyldjd38xjsechzwg9xz pnpm smoke:meta-socket` returned `ok: true`, skill-service `count: 3`, Socket heartbeat ack `true`, `routeMode.homes: canonical`, and `routeMode.privateChatList: canonical`. |
+| Browser direct endpoint | passed | Dev server started with `VITE_META_SOCKET_BASE_URL=https://socket.metaid.io VITE_USE_AGGREGATOR_MOCK=false VITE_USE_WS_MOCK=false`; In-app Browser at `http://localhost:5176/` loaded real services and showed no service-loading error. Screenshot: `/tmp/bothub-public-meta-socket-home.png`. |
+
 ## Browser UI Copy Smoke
 
 | Check | Result | Evidence |
@@ -68,14 +79,14 @@ to verify fallback cards and actions.
 
 ## Remaining Blockers
 
-- Strict production readiness is still not passed because no non-local
-  meta-socket deployment base URL has been assigned and verified.
+- The non-local meta-socket endpoint blocker is resolved by
+  `https://socket.metaid.io`; smoke and browser checks passed against it.
 - Chrome + Metalet real free/paid order acceptance is blocked externally until
   the Metalet extension authorization can be manually approved and the Codex
   Chrome Extension backend is available again.
 
 ## Final Readiness Decision
 
-Local automated, meta-socket, Browser UI, and controlled asset acceptance passed.
-The real Chrome + Metalet buyer-flow acceptance did not complete, so this run
-does not yet prove the full private buyer-flow beta.
+Local automated, local/public meta-socket, Browser UI, and controlled asset
+acceptance passed. The real Chrome + Metalet buyer-flow acceptance did not
+complete, so this run does not yet prove the full private buyer-flow beta.
