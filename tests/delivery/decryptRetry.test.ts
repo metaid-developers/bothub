@@ -342,7 +342,7 @@ describe('decryptRetry', () => {
         content: 'U2FsdGVkX1+ciphertext-2',
       }),
     ])
-    mockedDecryptIncoming.mockResolvedValueOnce({
+    mockedDecryptIncoming.mockResolvedValue({
       plaintext: 'U2FsdGVkX1+ciphertext-1',
       error: 'wallet ecdh failed',
     })
@@ -380,7 +380,7 @@ describe('decryptRetry', () => {
         content: 'U2FsdGVkX1+throw-ciphertext-2',
       }),
     ])
-    mockedDecryptIncoming.mockRejectedValueOnce(new Error('wallet rejected ecdh'))
+    mockedDecryptIncoming.mockRejectedValue(new Error('wallet rejected ecdh'))
 
     const result = await retryDecryptPeerMessages({
       walletIdentity: wallet,
