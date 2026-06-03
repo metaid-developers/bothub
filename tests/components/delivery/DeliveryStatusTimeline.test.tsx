@@ -135,6 +135,80 @@ describe('DeliveryStatusTimeline', () => {
     expect(screen.queryByText('U2FsdGVkX1rawcipher')).not.toBeInTheDocument()
   })
 
+  it('renders an All conversation timeline without progress milestones', () => {
+    render(
+      <DeliveryStatusTimeline
+        order={null}
+        messages={[
+          message({
+            id: 'chat-1',
+            content: 'Can I try this first?',
+            orderCorrelationId: undefined,
+            timestamp: 1,
+          }),
+          message({
+            id: 'delivery-1',
+            content: '[DELIVERY:order-pin-1] Ready',
+            orderCorrelationId: 'order-pin-1',
+            timestamp: 2,
+          }),
+        ]}
+        selfGlobalMetaId="idqbuyer"
+        mode="all"
+      />,
+    )
+
+    expect(screen.getByText('Can I try this first?')).toBeInTheDocument()
+    expect(screen.getByText('[DELIVERY:order-pin-1] Ready')).toBeInTheDocument()
+    expect(screen.queryByText('交付进度')).not.toBeInTheDocument()
+  })
+
+  it('keeps raw ecdh content hidden behind diagnostics in All mode', () => {
+    render(
+      <DeliveryStatusTimeline
+        order={null}
+        messages={[
+          message({
+            id: 'raw-ecdh',
+            fromGlobalMetaId: 'idqprovider',
+            content: 'U2FsdGVkX1allcipher',
+            rawContent: 'U2FsdGVkX1allcipher',
+            encryption: 'ecdh',
+          }),
+        ]}
+        selfGlobalMetaId="idqbuyer"
+        mode="all"
+      />,
+    )
+
+    const detailsButton = screen.getByRole('button', { name: '技术详情' })
+    expect(detailsButton).toHaveAttribute('aria-expanded', 'false')
+    expect(screen.queryByText('U2FsdGVkX1allcipher')).not.toBeInTheDocument()
+
+    fireEvent.click(detailsButton)
+
+    expect(detailsButton).toHaveAttribute('aria-expanded', 'true')
+    expect(screen.getByText('这条交付记录暂时无法显示，已保留原始记录')).toBeInTheDocument()
+    expect(screen.queryByText('U2FsdGVkX1allcipher')).not.toBeInTheDocument()
+  })
+
+  it('shows conversation empty state in All mode', () => {
+    render(
+      <DeliveryStatusTimeline
+        order={null}
+        messages={[]}
+        selfGlobalMetaId="idqbuyer"
+        mode="all"
+      />,
+    )
+
+    expect(screen.getByText('还没有消息')).toBeInTheDocument()
+    expect(
+      screen.getByText('这个服务方的沟通和交付记录会显示在这里。'),
+    ).toBeInTheDocument()
+    expect(screen.queryByText('选择一个请求查看交付进度')).not.toBeInTheDocument()
+  })
+
   it('shows empty state when no order is selected', () => {
     render(<DeliveryStatusTimeline order={null} selfGlobalMetaId="idqbuyer" />)
 

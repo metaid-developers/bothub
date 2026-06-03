@@ -7,7 +7,9 @@ import { t } from '@/i18n'
 
 interface DeliveryStatusTimelineProps {
   order: WorkspaceOrder | null
+  messages?: DeliveryMessage[]
   selfGlobalMetaId: string
+  mode?: 'order' | 'all'
 }
 
 interface TimelineMilestone {
@@ -28,12 +30,108 @@ function isDecryptGapMessage(message: DeliveryMessage): boolean {
   )
 }
 
+function ConversationMessageBubble({
+  message,
+  selfGlobalMetaId,
+}: {
+  message: DeliveryMessage
+  selfGlobalMetaId: string
+}) {
+  const isSelf = message.fromGlobalMetaId.trim() === selfGlobalMetaId.trim()
+
+  return (
+    <div className={clsx('flex', isSelf ? 'justify-end' : 'justify-start')}>
+      <div
+        className={clsx(
+          'max-w-[min(100%,28rem)] rounded-card px-3 py-2 text-sm leading-relaxed',
+          isSelf
+            ? 'bg-hub-accent text-white'
+            : 'border border-hub-border bg-hub-surface2 text-white',
+        )}
+      >
+        <p className="whitespace-pre-wrap break-words">
+          {message.decryptError ? t('delivery.decryptFailedDefault') : message.content}
+        </p>
+      </div>
+    </div>
+  )
+}
+
 export function DeliveryStatusTimeline({
   order,
+  messages: allMessages,
   selfGlobalMetaId,
+  mode = 'order',
 }: DeliveryStatusTimelineProps) {
   const [showDetails, setShowDetails] = useState(false)
   const detailsId = useId()
+
+  if (mode === 'all') {
+    const messages = allMessages ?? []
+    const decryptGap = hasDecryptGap(messages)
+
+    if (messages.length === 0) {
+      return (
+        <div
+          role="status"
+          className="flex min-h-[320px] flex-col items-center justify-center rounded-card border border-dashed border-hub-border bg-hub-surface/50 px-6 py-16 text-center"
+        >
+          <p className="font-display text-lg font-semibold text-white">
+            {t('delivery.noMessagesTitle')}
+          </p>
+          <p className="mt-2 max-w-sm text-sm text-hub-muted">
+            {t('delivery.workspace.noConversationMessagesHint')}
+          </p>
+        </div>
+      )
+    }
+
+    return (
+      <div className="flex min-h-0 flex-col overflow-auto">
+        {decryptGap && (
+          <div className="px-4 py-3">
+            <div
+              role="status"
+              aria-label="交付记录需要同步"
+              className="rounded-card border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs"
+            >
+              <p className="text-amber-300/90">有交付记录暂时无法显示，已保留原始记录。</p>
+              <button
+                type="button"
+                aria-controls={detailsId}
+                aria-expanded={showDetails}
+                onClick={() => setShowDetails(!showDetails)}
+                className="mt-1 text-hub-accent underline-offset-2 hover:underline"
+              >
+                {t('delivery.technicalDetails')}
+              </button>
+            </div>
+          </div>
+        )}
+        <div id={detailsId} className="space-y-0.5 px-4 pb-3 pt-3">
+          {(showDetails
+            ? messages
+            : messages.filter((message) => !isDecryptGapMessage(message))
+          ).map((message) => {
+            const displayMessage =
+              !message.decryptError && isDecryptGapMessage(message)
+                ? {
+                    ...message,
+                    decryptError: '原始记录暂未显示',
+                  }
+                : message
+            return (
+              <ConversationMessageBubble
+                key={message.id}
+                message={displayMessage}
+                selfGlobalMetaId={selfGlobalMetaId}
+              />
+            )
+          })}
+        </div>
+      </div>
+    )
+  }
 
   if (!order) {
     return (
