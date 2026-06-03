@@ -181,6 +181,14 @@ describe('DeliveryPage layout', () => {
     vi.unstubAllGlobals()
   })
 
+  it('hides the delivery intro copy so the workspace is the first visible page area', () => {
+    renderDeliveryPage()
+
+    expect(screen.queryByRole('heading', { name: '我的交付' })).not.toBeInTheDocument()
+    expect(screen.getByText('查看请求进度，预览和保存服务方交付的数字成果。')).not.toBeVisible()
+    expect(screen.getByLabelText('我的交付工作区')).toBeVisible()
+  })
+
   it('orders the mobile workspace as conversations, header, timeline, assets, then composer', () => {
     renderDeliveryPage()
 
@@ -212,6 +220,10 @@ describe('DeliveryPage layout', () => {
     expect(conversationPane).toHaveClass('min-h-0', 'overflow-hidden')
     expect(conversationScroll).toHaveClass('min-h-0', 'flex-1', 'overflow-y-auto')
     expect(threadScroll).toHaveClass('min-h-0', 'flex-1', 'overflow-y-auto')
+    expect(conversationScroll).toHaveClass('hub-scrollbar')
+    expect(threadScroll).toHaveClass('hub-scrollbar')
+    expect(tabs).toHaveClass('hub-scrollbar')
+    expect(screen.getByLabelText('成果库')).toHaveClass('hub-scrollbar')
     expect(tabs).toHaveClass('shrink-0')
     expect(composer).toHaveClass('shrink-0')
   })
@@ -788,7 +800,7 @@ describe('DeliveryPage layout', () => {
   it('uses buyer-facing delivery copy instead of implementation copy', () => {
     renderDeliveryPage()
 
-    expect(screen.getByRole('heading', { name: '我的交付' })).toBeInTheDocument()
+    expect(screen.getByRole('region', { name: '我的交付' })).toBeInTheDocument()
     expect(
       screen.queryByText(/simplemsg|Socket\.IO|meta-socket|chat key|ciphertext|session/i),
     ).not.toBeInTheDocument()

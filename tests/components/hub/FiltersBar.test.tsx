@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, within } from '@testing-library/react'
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest'
 import { useState } from 'react'
 import { FiltersBar } from '@/components/hub/FiltersBar'
@@ -48,13 +48,22 @@ describe('FiltersBar', () => {
     )
   })
 
-  it('updates currency and sort immediately', () => {
+  it('updates payment type and sort immediately', () => {
     const onChange = vi.fn()
     render(<ControlledFiltersHarness onChange={onChange} />)
 
-    fireEvent.change(screen.getByLabelText('币种筛选'), { target: { value: 'BTC' } })
+    const paymentType = screen.getByLabelText('支付类型')
+    expect(within(paymentType).getByRole('option', { name: '免费' })).toBeInTheDocument()
+    expect(within(paymentType).queryByRole('option', { name: '全部币种' })).not.toBeInTheDocument()
+
+    fireEvent.change(paymentType, { target: { value: 'BTC' } })
     expect(onChange).toHaveBeenLastCalledWith(
-      expect.objectContaining({ currency: 'BTC' }),
+      expect.objectContaining({ currency: 'BTC', freeOnly: false }),
+    )
+
+    fireEvent.change(paymentType, { target: { value: 'free' } })
+    expect(onChange).toHaveBeenLastCalledWith(
+      expect.objectContaining({ currency: '', freeOnly: true }),
     )
 
     fireEvent.change(screen.getByLabelText('服务排序'), {

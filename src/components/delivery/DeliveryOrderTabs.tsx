@@ -45,7 +45,7 @@ export function DeliveryOrderTabs({
     <div
       role="tablist"
       aria-label={t('delivery.workspace.tabsAria')}
-      className="flex shrink-0 gap-1 overflow-x-auto border-b border-hub-border px-4 py-2"
+      className="hub-scrollbar flex shrink-0 gap-1 overflow-x-auto border-b border-hub-border px-4 py-2"
     >
       <button
         id={tabDomId('all')}

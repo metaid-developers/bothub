@@ -8,6 +8,7 @@ import type {
 export interface HubFilters {
   keyword: string
   currency: SkillServiceCurrency | ''
+  freeOnly: boolean
   outputType: SkillServiceOutputType | ''
   sortBy: SkillServiceSortBy
   order: SkillServiceOrder
@@ -16,6 +17,7 @@ export interface HubFilters {
 export const defaultHubFilters: HubFilters = {
   keyword: '',
   currency: '',
+  freeOnly: false,
   outputType: '',
   sortBy: 'rating',
   order: 'desc',

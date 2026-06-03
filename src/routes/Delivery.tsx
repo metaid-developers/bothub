@@ -547,10 +547,10 @@ export function DeliveryPage() {
 
   return (
     <section
-      aria-labelledby="delivery-heading"
+      aria-label={t('delivery.title')}
       className="flex h-[calc(100dvh-6.5rem)] min-h-0 flex-col gap-4 overflow-hidden"
     >
-      <div className="shrink-0">
+      <div hidden aria-hidden="true" className="hidden">
         <h1 id="delivery-heading" className="font-display text-2xl font-semibold">
           {t('delivery.title')}
         </h1>
@@ -570,7 +570,10 @@ export function DeliveryPage() {
           <h2 className="mb-2 shrink-0 text-xs font-semibold uppercase tracking-wide text-hub-muted">
             {t('delivery.workspace.conversations')}
           </h2>
-          <div data-delivery-conversation-scroll className="min-h-0 flex-1 overflow-y-auto pr-1">
+          <div
+            data-delivery-conversation-scroll
+            className="hub-scrollbar min-h-0 flex-1 overflow-y-auto pr-1"
+          >
             <DeliveryConversationList
               conversations={workspace.conversations.map((conversation) =>
                 mergeConversationProfile(
@@ -594,7 +597,7 @@ export function DeliveryPage() {
             selectedTabId={selectedTab.id}
             onSelectTab={selectTab}
           />
-          <div data-delivery-thread-scroll className="min-h-0 flex-1 overflow-y-auto">
+          <div data-delivery-thread-scroll className="hub-scrollbar min-h-0 flex-1 overflow-y-auto">
             {selectedTab.kind === 'order' ? (
               <>
                 <DeliveryWorkspaceHeader order={selectedOrderWithProfile} />

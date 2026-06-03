@@ -5,12 +5,15 @@ import type { SkillServiceCurrency, SkillServiceOutputType } from '@/api/aggrega
 import type { HubFilters } from '@/components/hub/filters'
 import { t } from '@/i18n'
 
-const CURRENCY_VALUES: Array<{
-  value: SkillServiceCurrency | ''
+type HubPaymentType = SkillServiceCurrency | 'free' | ''
+
+const PAYMENT_TYPE_VALUES: Array<{
+  value: HubPaymentType
   labelKey?: Parameters<typeof t>[0]
   label?: string
 }> = [
-  { value: '', labelKey: 'hub.currencyAll' },
+  { value: '', labelKey: 'hub.paymentTypeAll' },
+  { value: 'free', labelKey: 'hub.paymentTypeFree' },
   { value: 'SPACE', label: 'SPACE' },
   { value: 'BTC', label: 'BTC' },
   { value: 'DOGE', label: 'DOGE' },
@@ -63,6 +66,7 @@ export function FiltersBar({ value, onChange, className }: FiltersBarProps) {
   }, [keywordDraft, value, onChange])
 
   const sortKey = `${value.sortBy}:${value.order}`
+  const paymentTypeValue: HubPaymentType = value.freeOnly ? 'free' : value.currency
 
   return (
     <header
@@ -100,17 +104,19 @@ export function FiltersBar({ value, onChange, className }: FiltersBarProps) {
         <div className="flex flex-wrap items-center gap-2">
           <FunnelIcon className="hidden h-4 w-4 text-hub-muted sm:block" aria-hidden />
           <select
-            aria-label={t('filters.currency')}
-            value={value.currency}
-            onChange={(e) =>
+            aria-label={t('filters.paymentType')}
+            value={paymentTypeValue}
+            onChange={(e) => {
+              const paymentType = e.target.value as HubPaymentType
               onChange({
                 ...value,
-                currency: e.target.value as HubFilters['currency'],
+                currency: paymentType === 'free' ? '' : paymentType,
+                freeOnly: paymentType === 'free',
               })
-            }
+            }}
             className="rounded-xl border border-hub-border bg-hub-surface2 px-3 py-2.5 text-sm text-white focus:border-hub-accent/60 focus:outline-none focus:ring-2 focus:ring-hub-accent/25"
           >
-            {CURRENCY_VALUES.map((opt) => (
+            {PAYMENT_TYPE_VALUES.map((opt) => (
               <option key={opt.value || 'all'} value={opt.value}>
                 {opt.labelKey ? t(opt.labelKey) : opt.label}
               </option>

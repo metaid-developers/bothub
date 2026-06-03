@@ -13,15 +13,24 @@ const SERVICES_PAGE_SIZE = 30
 export interface ServicesPanelProps {
   queryParams: ServicesQueryParams
   className?: string
+  freeOnly?: boolean
   onServicesLoaded?: (items: SkillServiceListItem[]) => void
   onSelectService?: (service: SkillServiceListItem) => void
   onRequestService?: (service: SkillServiceListItem) => void
   selectedServiceId?: string
 }
 
+function isFreeService(service: SkillServiceListItem): boolean {
+  const price = service.price.trim()
+  if (!price) return false
+  const amount = Number(price)
+  return Number.isFinite(amount) && amount === 0
+}
+
 export function ServicesPanel({
   queryParams,
   className,
+  freeOnly = false,
   onServicesLoaded,
   onSelectService,
   onRequestService,
@@ -48,9 +57,13 @@ export function ServicesPanel({
   const maxLoadedPageIndex = Math.max(0, pages.length - 1)
   const safePageIndex = Math.min(pageIndex, maxLoadedPageIndex)
 
-  const services = useMemo(
+  const currentPageServices = useMemo(
     () => pages[safePageIndex]?.list.slice(0, SERVICES_PAGE_SIZE) ?? [],
     [pages, safePageIndex],
+  )
+  const services = useMemo(
+    () => (freeOnly ? currentPageServices.filter(isFreeService) : currentPageServices),
+    [currentPageServices, freeOnly],
   )
 
   const hasPreviousPage = safePageIndex > 0
@@ -63,7 +76,7 @@ export function ServicesPanel({
 
   useEffect(() => {
     setPageIndex(0)
-  }, [pagedQueryParams])
+  }, [freeOnly, pagedQueryParams])
 
   useEffect(() => {
     if (pageIndex > maxLoadedPageIndex) {
@@ -97,7 +110,7 @@ export function ServicesPanel({
     )
   }
 
-  if (services.length === 0) {
+  if (services.length === 0 && !hasPreviousPage && !canGoNext) {
     return (
       <EmptyState
         className={className}
@@ -109,21 +122,27 @@ export function ServicesPanel({
 
   return (
     <div className={className}>
-      <ul
-        className="grid list-none gap-4 p-0 lg:grid-cols-2 xl:grid-cols-3"
-        aria-label={t('hub.serviceList')}
-      >
-        {services.map((service) => (
-          <li key={`${service.id}-${service.updatedAt}`}>
-            <ServiceCard
-              service={service}
-              onSelect={onSelectService}
-              onRequest={onRequestService ?? onSelectService}
-              selected={selectedServiceId === service.id}
-            />
-          </li>
-        ))}
-      </ul>
+      {services.length > 0 ? (
+        <ul
+          className="grid list-none gap-4 p-0 lg:grid-cols-2 xl:grid-cols-3"
+          aria-label={t('hub.serviceList')}
+        >
+          {services.map((service) => (
+            <li key={`${service.id}-${service.updatedAt}`}>
+              <ServiceCard
+                service={service}
+                onSelect={onSelectService}
+                onRequest={onRequestService ?? onSelectService}
+                selected={selectedServiceId === service.id}
+              />
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="rounded-card border border-hub-border bg-hub-surface px-4 py-6 text-center text-sm text-hub-muted">
+          {t('hub.currentPageNoServices')}
+        </p>
+      )}
 
       <nav
         aria-label={t('hub.pagination')}

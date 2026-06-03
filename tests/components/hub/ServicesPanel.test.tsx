@@ -88,6 +88,32 @@ describe('ServicesPanel', () => {
     expect(screen.queryByText('继续滚动查看更多')).not.toBeInTheDocument()
   })
 
+  it('filters loaded services to free price when freeOnly is selected', () => {
+    const firstPage = [
+      { ...serviceAt(0), displayName: 'Free service', price: '0' },
+      { ...serviceAt(1), displayName: 'Paid service', price: '0.25' },
+      { ...serviceAt(2), displayName: 'Also free service', price: '0.00' },
+    ]
+    useServicesQuery.mockReturnValue({
+      data: { pages: [{ list: firstPage, nextCursor: null }] },
+      isLoading: false,
+      isError: false,
+      error: null,
+      fetchNextPage: vi.fn(),
+      hasNextPage: false,
+      isFetchingNextPage: false,
+      refetch: vi.fn(),
+      isRefetching: false,
+    })
+
+    const { container } = render(<ServicesPanel queryParams={{}} freeOnly />)
+
+    expect(container.querySelectorAll('[data-hub-service-card]')).toHaveLength(2)
+    expect(screen.getByText('Free service')).toBeInTheDocument()
+    expect(screen.getByText('Also free service')).toBeInTheDocument()
+    expect(screen.queryByText('Paid service')).not.toBeInTheDocument()
+  })
+
   it('uses a three-column grid when there is enough horizontal space', () => {
     const { container } = render(<ServicesPanel queryParams={{}} />)
 

@@ -18,7 +18,7 @@ const BOTS_SIDEBAR_ID = 'hub-online-bots'
 function toQueryParams(filters: HubFilters): ServicesQueryParams {
   return {
     ...(filters.keyword ? { keyword: filters.keyword } : {}),
-    ...(filters.currency ? { currency: filters.currency } : {}),
+    ...(!filters.freeOnly && filters.currency ? { currency: filters.currency } : {}),
     ...(filters.outputType ? { outputType: filters.outputType } : {}),
     sortBy: filters.sortBy,
     order: filters.order,
@@ -90,6 +90,7 @@ export function BotHubPage() {
           <FiltersBar value={filters} onChange={setFilters} />
           <ServicesPanel
             queryParams={queryParams}
+            freeOnly={filters.freeOnly}
             onServicesLoaded={handleServicesLoaded}
             onSelectService={handleSelectService}
             selectedServiceId={selectedServiceId}
