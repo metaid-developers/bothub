@@ -1,13 +1,21 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { t } from '@/i18n'
 import { useWallet } from '@/wallet/useWallet'
 import { truncateGlobalMetaId } from '@/wallet/format'
 import { MetaletNotInstalledError } from '@/wallet/metalet'
 import { avatarColor, avatarInitials } from '@/lib/avatar'
+import { normalizeAvatarUrl } from '@/api/userProfile'
 
 export function WalletConnectButton() {
   const { identity, status, errorMessage, connect, disconnect } = useWallet()
   const [avatarFailed, setAvatarFailed] = useState(false)
+  const avatarResetKey = identity
+    ? `${identity.globalMetaId}:${identity.avatarUrl ?? ''}:${identity.avatar ?? ''}`
+    : ''
+
+  useEffect(() => {
+    setAvatarFailed(false)
+  }, [avatarResetKey])
 
   const handleConnect = async () => {
     try {
@@ -24,13 +32,14 @@ export function WalletConnectButton() {
     const shortGlobalMetaId = truncateGlobalMetaId(identity.globalMetaId)
     const initials = avatarInitials(displayName)
     const bgColor = avatarColor(displayName)
+    const avatarSrc = identity.avatarUrl?.trim() || normalizeAvatarUrl(identity.avatar)
 
     return (
       <div className="flex items-center gap-3">
         <div className="flex min-w-0 items-center gap-2">
-          {identity.avatarUrl && !avatarFailed ? (
+          {avatarSrc && !avatarFailed ? (
             <img
-              src={identity.avatarUrl}
+              src={avatarSrc}
               alt={`${displayName} avatar`}
               onError={() => setAvatarFailed(true)}
               className="h-8 w-8 shrink-0 rounded-full border border-hub-border object-cover"

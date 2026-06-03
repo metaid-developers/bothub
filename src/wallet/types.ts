@@ -50,8 +50,8 @@ export interface MetaletWalletApi {
   ecdh?: (params: { externalPubKey: string; path?: string }) => Promise<EcdhResult>
   eciesEncrypt: (params: { message: string }) => Promise<{ encrypted: string }>
   eciesDecrypt: (params: { encrypted: string }) => Promise<{ message: string }>
-  on: (eventName: string, handler: (...args: unknown[]) => void) => void
-  removeListener: (eventName: string) => void
+  on?: (eventName: string, handler: (...args: unknown[]) => void) => void
+  removeListener?: (eventName: string, handler?: (...args: unknown[]) => void) => void
   isConnected?: () => Promise<{ connected?: boolean } | unknown>
 }
 

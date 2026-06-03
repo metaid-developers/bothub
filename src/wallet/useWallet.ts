@@ -1,6 +1,10 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-import { fetchUserProfileByGlobalMetaId, type UserProfile } from '@/api/userProfile'
+import {
+  fetchUserProfileByGlobalMetaId,
+  normalizeAvatarUrl,
+  type UserProfile,
+} from '@/api/userProfile'
 import * as metalet from './metalet'
 import type { GlobalMetaidResult, WalletIdentity, WalletStatus } from './types'
 
@@ -27,7 +31,14 @@ async function fetchProfileBestEffort(globalMetaId: string): Promise<UserProfile
   }
 }
 
-function buildWalletIdentity(gmid: GlobalMetaidResult, profile: UserProfile | null): WalletIdentity {
+function buildWalletIdentity(
+  gmid: GlobalMetaidResult,
+  profile: UserProfile | null,
+): WalletIdentity {
+  const avatarUrl =
+    profile?.avatarUrl ??
+    normalizeAvatarUrl(profile?.avatar, profile?.avatarId ?? profile?.avatarPinId)
+
   return {
     globalMetaId: gmid.globalMetaId,
     mvcAddress: gmid.mvcAddress,
@@ -36,7 +47,7 @@ function buildWalletIdentity(gmid: GlobalMetaidResult, profile: UserProfile | nu
     metaid: profile?.metaid,
     name: profile?.name,
     avatar: profile?.avatar,
-    avatarUrl: profile?.avatarUrl,
+    avatarUrl,
     chatPubkey: profile?.chatPubkey,
     chatPublicKey: profile?.chatPubkey,
     profileUpdatedAt: profile ? Date.now() : undefined,
@@ -107,12 +118,13 @@ export const useWallet = create<WalletState>()(
       hydrateFromMetalet: async () => {
         const { identity, status } = get()
         if (!identity || status !== 'connected') return
-        if (!metalet.isMetaletInstalled()) {
+        const installed = metalet.isMetaletInstalled() || (await metalet.waitForMetaletInstalled())
+        if (!installed) {
           set({ identity: null, status: 'disconnected', errorMessage: null })
           return
         }
         try {
-          const gmid = await metalet.ensureReady(identity.globalMetaId)
+          const gmid = await metalet.ensureReady()
           const profile = await fetchProfileBestEffort(gmid.globalMetaId)
           set({
             identity: buildWalletIdentity(gmid, profile),

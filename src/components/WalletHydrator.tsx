@@ -7,6 +7,7 @@ import { useMessageStore } from '@/delivery/messageStore'
 import { useDeliverySyncStatusStore } from '@/delivery/syncStatusStore'
 import { useSocket } from '@/ws/useSocket'
 import { useWallet } from '@/wallet/useWallet'
+import * as metalet from '@/wallet/metalet'
 
 export function WalletHydrator({ children }: { children: ReactNode }) {
   const hydrateFromMetalet = useWallet((s) => s.hydrateFromMetalet)
@@ -34,6 +35,30 @@ export function WalletHydrator({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (status === 'connected') {
       void hydrateFromMetalet()
+    }
+  }, [hydrateFromMetalet, status])
+
+  useEffect(() => {
+    if (status !== 'connected') return
+
+    let cancelled = false
+    let subscribed = false
+    const handleAccountChange = () => {
+      void hydrateFromMetalet()
+    }
+
+    void (async () => {
+      const installed = metalet.isMetaletInstalled() || (await metalet.waitForMetaletInstalled())
+      if (cancelled || !installed) return
+      metalet.on('accountsChanged', handleAccountChange)
+      subscribed = true
+    })()
+
+    return () => {
+      cancelled = true
+      if (subscribed) {
+        metalet.removeListener('accountsChanged', handleAccountChange)
+      }
     }
   }, [hydrateFromMetalet, status])
 

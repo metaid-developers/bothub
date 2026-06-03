@@ -7,8 +7,10 @@ export const METALET_COMMON_ECDH_WAIT_TIMEOUT_MS = 5_000
 export const METALET_QUERY_RESPONSE_TIMEOUT_MS = 5_000
 export const METALET_AUTHORIZE_RESPONSE_TIMEOUT_MS = 120_000
 export const METALET_ECDH_RESPONSE_TIMEOUT_MS = METALET_AUTHORIZE_RESPONSE_TIMEOUT_MS
+export const METALET_INSTALL_WAIT_TIMEOUT_MS = 2_000
 
 const METALET_COMMON_ECDH_POLL_INTERVAL_MS = 50
+const METALET_INSTALL_POLL_INTERVAL_MS = 100
 
 function authorizeTimeoutMessage(action: string): string {
   return `Confirm the ${action} request in Metalet, or retry from Bothub if the Metalet window closed.`
@@ -214,6 +216,35 @@ export function isMetaletInstalled(): boolean {
   return typeof window !== 'undefined' && Boolean(window.metaidwallet)
 }
 
+export function waitForMetaletInstalled(
+  timeoutMs = METALET_INSTALL_WAIT_TIMEOUT_MS,
+): Promise<boolean> {
+  if (isMetaletInstalled()) return Promise.resolve(true)
+  if (typeof window === 'undefined') return Promise.resolve(false)
+
+  return new Promise((resolve) => {
+    let settled = false
+
+    const finish = (installed: boolean) => {
+      if (settled) return
+      settled = true
+      clearTimeout(timeout)
+      clearInterval(interval)
+      resolve(installed)
+    }
+
+    const interval = setInterval(() => {
+      if (isMetaletInstalled()) {
+        finish(true)
+      }
+    }, METALET_INSTALL_POLL_INTERVAL_MS)
+
+    const timeout = setTimeout(() => {
+      finish(isMetaletInstalled())
+    }, timeoutMs)
+  })
+}
+
 export async function connect(): Promise<unknown> {
   const res = await withMetaletAuthorizeTimeout(
     Promise.resolve().then(() => getWallet().connect()),
@@ -308,9 +339,15 @@ export async function eciesDecrypt(params: { encrypted: string }): Promise<{ mes
 }
 
 export function on(eventName: string, handler: (...args: unknown[]) => void): void {
-  getWallet().on(eventName, handler)
+  const wallet = getWallet()
+  if (typeof wallet.on === 'function') {
+    wallet.on(eventName, handler)
+  }
 }
 
-export function removeListener(eventName: string): void {
-  getWallet().removeListener(eventName)
+export function removeListener(eventName: string, handler?: (...args: unknown[]) => void): void {
+  const wallet = getWallet()
+  if (typeof wallet.removeListener === 'function') {
+    wallet.removeListener(eventName, handler)
+  }
 }

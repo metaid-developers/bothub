@@ -11,14 +11,19 @@ vi.mock('@/wallet/metalet', () => ({
   ensureReady: vi.fn(),
   getGlobalMetaid: vi.fn(),
   isMetaletInstalled: vi.fn(() => true),
+  waitForMetaletInstalled: vi.fn(async () => true),
   MetaletNotInstalledError: class MetaletNotInstalledError extends Error {
     name = 'MetaletNotInstalledError'
   },
 }))
 
-vi.mock('@/api/userProfile', () => ({
-  fetchUserProfileByGlobalMetaId: vi.fn(),
-}))
+vi.mock('@/api/userProfile', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/api/userProfile')>()
+  return {
+    ...actual,
+    fetchUserProfileByGlobalMetaId: vi.fn(),
+  }
+})
 
 describe('useWallet store', () => {
   beforeEach(() => {
@@ -29,6 +34,8 @@ describe('useWallet store', () => {
       errorMessage: null,
     })
     vi.clearAllMocks()
+    vi.mocked(metalet.isMetaletInstalled).mockReturnValue(true)
+    vi.mocked(metalet.waitForMetaletInstalled).mockResolvedValue(true)
   })
 
   it('connect stores identity and sets connected status', async () => {
@@ -84,6 +91,33 @@ describe('useWallet store', () => {
       chatPubkey: 'chat-key',
     })
     expect(typeof result.current.identity?.profileUpdatedAt).toBe('number')
+  })
+
+  it('connect normalizes a raw profile avatar into a displayable avatar URL', async () => {
+    const avatarPin = `${'a'.repeat(64)}i0`
+    vi.mocked(metalet.connect).mockResolvedValue({})
+    vi.mocked(metalet.getGlobalMetaid).mockResolvedValue({
+      globalMetaId: 'idq1profile-avatar',
+      mvcAddress: '1mvc',
+      btcAddress: 'bc1',
+      dogeAddress: 'Ddoge',
+    })
+    vi.mocked(fetchUserProfileByGlobalMetaId).mockResolvedValue({
+      globalMetaId: 'idq1profile-avatar',
+      name: 'Ada',
+      avatar: `/content/${avatarPin}`,
+    })
+
+    const { result } = renderHook(() => useWallet())
+
+    await act(async () => {
+      await result.current.connect()
+    })
+
+    expect(result.current.identity).toMatchObject({
+      avatar: `/content/${avatarPin}`,
+      avatarUrl: `https://manapi.metaid.io/content/${avatarPin}`,
+    })
   })
 
   it('connect still succeeds when profile hydration fails', async () => {
@@ -184,12 +218,14 @@ describe('useWallet store', () => {
       useWallet
         .getState()
         .isWalletReadinessError(
-          new Error('Connected Metalet account changed. Reconnect your wallet before sending a request.'),
+          new Error(
+            'Connected Metalet account changed. Reconnect your wallet before sending a request.',
+          ),
         ),
     ).toBe(true)
-    expect(
-      useWallet.getState().isWalletReadinessError(new Error('Order encryption failed')),
-    ).toBe(false)
+    expect(useWallet.getState().isWalletReadinessError(new Error('Order encryption failed'))).toBe(
+      false,
+    )
   })
 
   it('hydrateFromMetalet clears stale connected identity when live wallet preflight fails', async () => {
@@ -213,10 +249,84 @@ describe('useWallet store', () => {
       await result.current.hydrateFromMetalet()
     })
 
-    expect(metalet.ensureReady).toHaveBeenCalledWith('idq1stale')
+    expect(metalet.ensureReady).toHaveBeenCalledWith()
     expect(metalet.getGlobalMetaid).not.toHaveBeenCalled()
     expect(result.current.identity).toBeNull()
     expect(result.current.status).toBe('disconnected')
     expect(result.current.errorMessage).toBeNull()
+  })
+
+  it('hydrateFromMetalet waits for delayed Metalet injection before restoring a persisted session', async () => {
+    useWallet.setState({
+      identity: {
+        globalMetaId: 'idq1persisted',
+        mvcAddress: '1oldmvc',
+        btcAddress: 'bc1old',
+        dogeAddress: 'Dold',
+      },
+      status: 'connected',
+      errorMessage: null,
+    })
+    vi.mocked(metalet.isMetaletInstalled).mockReturnValue(false)
+    vi.mocked(metalet.waitForMetaletInstalled).mockResolvedValue(true)
+    vi.mocked(metalet.ensureReady).mockResolvedValue({
+      globalMetaId: 'idq1persisted',
+      mvcAddress: '1livemvc',
+      btcAddress: 'bc1live',
+      dogeAddress: 'Dlive',
+    })
+
+    const { result } = renderHook(() => useWallet())
+
+    await act(async () => {
+      await result.current.hydrateFromMetalet()
+    })
+
+    expect(metalet.waitForMetaletInstalled).toHaveBeenCalledOnce()
+    expect(metalet.ensureReady).toHaveBeenCalledWith()
+    expect(result.current.status).toBe('connected')
+    expect(result.current.identity).toMatchObject({
+      globalMetaId: 'idq1persisted',
+      mvcAddress: '1livemvc',
+    })
+  })
+
+  it('hydrateFromMetalet follows the active Metalet account when it changed outside Bothub', async () => {
+    useWallet.setState({
+      identity: {
+        globalMetaId: 'idq1old',
+        mvcAddress: '1oldmvc',
+        btcAddress: 'bc1old',
+        dogeAddress: 'Dold',
+      },
+      status: 'connected',
+      errorMessage: null,
+    })
+    vi.mocked(metalet.waitForMetaletInstalled).mockResolvedValue(true)
+    vi.mocked(metalet.ensureReady).mockResolvedValue({
+      globalMetaId: 'idq1new',
+      mvcAddress: '1newmvc',
+      btcAddress: 'bc1new',
+      dogeAddress: 'Dnew',
+    })
+    vi.mocked(fetchUserProfileByGlobalMetaId).mockResolvedValue({
+      globalMetaId: 'idq1new',
+      name: 'New Wallet',
+    })
+
+    const { result } = renderHook(() => useWallet())
+
+    await act(async () => {
+      await result.current.hydrateFromMetalet()
+    })
+
+    expect(metalet.ensureReady).toHaveBeenCalledWith()
+    expect(fetchUserProfileByGlobalMetaId).toHaveBeenCalledWith('idq1new')
+    expect(result.current.identity).toMatchObject({
+      globalMetaId: 'idq1new',
+      mvcAddress: '1newmvc',
+      name: 'New Wallet',
+    })
+    expect(result.current.status).toBe('connected')
   })
 })
