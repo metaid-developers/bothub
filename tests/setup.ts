@@ -1,4 +1,6 @@
 import '@testing-library/jest-dom/vitest'
+import { beforeEach } from 'vitest'
+import { resetLanguageForTests } from '@/i18n'
 
 class ResizeObserverMock {
   observe() {}
@@ -56,6 +58,10 @@ Object.defineProperty(globalThis, 'sessionStorage', {
   value: sessionStorageMock,
   writable: true,
   configurable: true,
+})
+
+beforeEach(() => {
+  resetLanguageForTests('zh-CN')
 })
 
 export function clearTestLocalStorage() {

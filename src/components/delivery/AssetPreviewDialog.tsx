@@ -1,13 +1,12 @@
 import { useEffect, useState } from 'react'
 import type { ParsedDeliveryAsset } from '@/delivery/assetParser'
+import { t } from '@/i18n'
 
 interface AssetPreviewDialogProps {
   asset: ParsedDeliveryAsset
   open: boolean
   onClose: () => void
 }
-
-const PREVIEW_UNAVAILABLE_LABEL = '预览暂不可用，可打开文件'
 
 function canInlinePreview(kind: ParsedDeliveryAsset['kind']): boolean {
   return kind === 'image' || kind === 'video' || kind === 'audio'
@@ -57,7 +56,7 @@ export function AssetPreviewDialog({ asset, open, onClose }: AssetPreviewDialogP
               rel="noopener noreferrer"
               className="rounded-card border border-hub-border px-3 py-1 text-xs font-medium text-hub-muted hover:bg-hub-surface2"
             >
-              打开
+              {t('delivery.assetActions.open')}
             </a>
             <a
               href={asset.downloadUrl}
@@ -65,15 +64,15 @@ export function AssetPreviewDialog({ asset, open, onClose }: AssetPreviewDialogP
               rel="noopener noreferrer"
               className="rounded-card border border-hub-accent/50 px-3 py-1 text-xs font-medium text-hub-accent hover:bg-hub-accent/10"
             >
-              下载
+              {t('delivery.downloadAsset')}
             </a>
             <button
               type="button"
               onClick={onClose}
-              aria-label="关闭预览"
+              aria-label={t('delivery.assetActions.closePreview')}
               className="rounded-card border border-hub-border px-3 py-1 text-xs text-hub-muted hover:bg-hub-surface2"
             >
-              关闭
+              {t('delivery.assetActions.close')}
             </button>
           </div>
         </div>
@@ -99,11 +98,7 @@ export function AssetPreviewDialog({ asset, open, onClose }: AssetPreviewDialogP
           )}
           {asset.kind === 'audio' && !previewFailed && (
             <div className="py-8">
-              <audio
-                key={mediaSrc}
-                controls
-                onError={handlePreviewError}
-              >
+              <audio key={mediaSrc} controls onError={handlePreviewError}>
                 <source src={mediaSrc} type={asset.mimeType} onError={handlePreviewError} />
               </audio>
             </div>
@@ -114,7 +109,7 @@ export function AssetPreviewDialog({ asset, open, onClose }: AssetPreviewDialogP
                 {asset.extension?.toUpperCase() || 'FILE'}
               </span>
               <p className="text-sm text-hub-muted">
-                {PREVIEW_UNAVAILABLE_LABEL}
+                {t('delivery.assetActions.previewUnavailable')}
               </p>
               <p className="max-w-sm text-xs text-hub-muted">{asset.filename}</p>
             </div>

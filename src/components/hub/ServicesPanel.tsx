@@ -83,12 +83,7 @@ export function ServicesPanel({
   }
 
   if (isLoading) {
-    return (
-      <ServiceListSkeleton
-        className={className}
-        label={t('hub.loadingServices')}
-      />
-    )
+    return <ServiceListSkeleton className={className} label={t('hub.loadingServices')} />
   }
 
   if (isError) {
@@ -116,7 +111,7 @@ export function ServicesPanel({
     <div className={className}>
       <ul
         className="grid list-none gap-4 p-0 lg:grid-cols-2 xl:grid-cols-3"
-        aria-label="服务列表"
+        aria-label={t('hub.serviceList')}
       >
         {services.map((service) => (
           <li key={`${service.id}-${service.updatedAt}`}>
@@ -135,10 +130,8 @@ export function ServicesPanel({
         className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-hub-border/70 pt-4"
       >
         <p className="text-xs text-hub-muted">
-          第 {safePageIndex + 1} 页
-          <span className="ml-2 text-hub-muted/70">
-            {t('hub.pageSize')}
-          </span>
+          {t('hub.pageStatus', { page: safePageIndex + 1 })}
+          <span className="ml-2 text-hub-muted/70">{t('hub.pageSize')}</span>
         </p>
         <div className="flex items-center gap-2">
           <button

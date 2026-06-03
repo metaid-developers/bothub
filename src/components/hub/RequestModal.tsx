@@ -4,10 +4,7 @@ import { useCallback, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import type { ProviderInfo, SkillServiceCore } from '@/api/aggregator.types'
 import { useMessageStore } from '@/delivery/messageStore'
-import {
-  persistFailedToSendOrder,
-  persistPendingOrder,
-} from '@/delivery/orderStore'
+import { persistFailedToSendOrder, persistPendingOrder } from '@/delivery/orderStore'
 import { formatPrice } from '@/lib/format'
 import {
   buildDeliveryOrderPath,
@@ -19,6 +16,7 @@ import {
   PayAndRequestError,
 } from '@/order/flow'
 import { ORDER_RAW_REQUEST_MAX_CHARS } from '@/order/orderMessage'
+import { t } from '@/i18n'
 import * as metalet from '@/wallet/metalet'
 import type { WalletIdentity } from '@/wallet/types'
 import { useWallet } from '@/wallet/useWallet'
@@ -41,8 +39,7 @@ export interface RequestModalProps {
   wallet: WalletIdentity | null
 }
 
-const MRC20_CHECKOUT_UNSUPPORTED_MESSAGE =
-  '暂不支持 MRC20 服务下单，请选择原生币或免费服务。'
+const MRC20_CHECKOUT_UNSUPPORTED_MESSAGE = () => t('hub.request.mrc20Unsupported')
 
 export function RequestModal({ open, onClose, service, provider, wallet }: RequestModalProps) {
   const navigate = useNavigate()
@@ -54,7 +51,7 @@ export function RequestModal({ open, onClose, service, provider, wallet }: Reque
   const [createPinDiagnosticJson, setCreatePinDiagnosticJson] = useState<string | null>(null)
 
   const price = useMemo(() => formatPrice(service.price, service.currency), [service])
-  const providerName = provider.name?.trim() || '未知服务方'
+  const providerName = provider.name?.trim() || t('hub.unknownBot')
   const promptTooLong = prompt.length > ORDER_RAW_REQUEST_MAX_CHARS
   const promptEmpty = prompt.trim().length === 0
 
@@ -74,18 +71,18 @@ export function RequestModal({ open, onClose, service, provider, wallet }: Reque
     setRetryDisabled(false)
     setCreatePinDiagnosticJson(null)
     if (!wallet?.globalMetaId?.trim()) {
-      setErrorMessage('连接 Metalet 钱包后即可下单。')
+      setErrorMessage(t('hub.request.walletRequired'))
       setStep('error')
       return
     }
     if (!provider.chatPubkey?.trim()) {
-      setErrorMessage('服务方暂时无法接单，请稍后再试或选择其他服务。')
+      setErrorMessage(t('hub.request.providerUnavailable'))
       setStep('error')
       return
     }
     const isFree = isFreeServicePrice(service.price)
     if (!isFree && service.settlementKind === 'mrc20') {
-      setErrorMessage(MRC20_CHECKOUT_UNSUPPORTED_MESSAGE)
+      setErrorMessage(MRC20_CHECKOUT_UNSUPPORTED_MESSAGE())
       setStep('error')
       return
     }
@@ -152,7 +149,10 @@ export function RequestModal({ open, onClose, service, provider, wallet }: Reque
           try {
             await useMessageStore.getState().hydrateFromDb(wallet.globalMetaId)
           } catch (hydrateError) {
-            console.warn('Failed order was saved locally but could not hydrate Delivery.', hydrateError)
+            console.warn(
+              'Failed order was saved locally but could not hydrate Delivery.',
+              hydrateError,
+            )
           }
         } catch (persistError) {
           console.warn('Failed order could not be saved locally.', persistError)
@@ -162,25 +162,21 @@ export function RequestModal({ open, onClose, service, provider, wallet }: Reque
         setRetryDisabled(Boolean(paidTxid) && !savedForRecovery)
         const message = savedForRecovery
           ? paidTxid
-            ? '付款已完成，但请求消息未成功发送。已在我的交付中保存，可继续处理。'
-            : '免费请求暂时发送失败，已在我的交付中保存，可继续处理。'
+            ? t('hub.request.paidSaved')
+            : t('hub.request.freeSaved')
           : paidTxid
-            ? `付款已完成，但请求消息未成功发送，本地恢复记录也未能保存。支付参考：${paidTxid}`
-            : '免费请求暂时发送失败，且无法保存到我的交付。请稍后重试。'
-        setErrorMessage(
-          message,
-        )
+            ? t('hub.request.paidNotSaved', { txid: paidTxid })
+            : t('hub.request.freeNotSaved')
+        setErrorMessage(message)
         setStep('error')
         return
       }
       const message =
-        err instanceof PayAndRequestError
-          ? '下单前信息不完整，请换一个服务或稍后再试。'
-          : '下单失败，请稍后重试。'
+        err instanceof PayAndRequestError ? t('hub.request.incomplete') : t('hub.request.failed')
       const walletStore = useWallet.getState()
       if (walletStore.isWalletReadinessError(err)) {
         walletStore.clearStaleConnection()
-        setErrorMessage('钱包连接已失效，请重新连接 Metalet 后再下单。')
+        setErrorMessage(t('hub.request.staleWallet'))
         setStep('error')
         return
       }
@@ -201,14 +197,14 @@ export function RequestModal({ open, onClose, service, provider, wallet }: Reque
       <div className="fixed inset-0 flex items-center justify-center p-4">
         <Dialog.Panel className="w-full max-w-lg rounded-card border border-hub-border bg-hub-surface p-5 shadow-xl">
           <Dialog.Title className="font-display text-lg font-semibold text-white">
-            下单请求
+            {t('hub.request.title')}
           </Dialog.Title>
           <p className="mt-1 text-sm text-hub-muted">{service.displayName}</p>
 
           {step === 'prompt' ? (
             <div className="mt-4 space-y-3">
               <label className="block text-sm text-hub-muted" htmlFor="request-prompt">
-                填写你的需求
+                {t('hub.request.promptLabel')}
               </label>
               <textarea
                 id="request-prompt"
@@ -217,7 +213,7 @@ export function RequestModal({ open, onClose, service, provider, wallet }: Reque
                 maxLength={ORDER_RAW_REQUEST_MAX_CHARS}
                 rows={6}
                 className="w-full resize-y rounded-xl border border-hub-border bg-hub-surface2 px-3 py-2 text-sm text-white placeholder:text-hub-muted/60 focus:border-hub-accent focus:outline-none"
-                placeholder="请描述你想让服务方完成的任务"
+                placeholder={t('hub.request.promptPlaceholder')}
               />
               <p
                 className={clsx(
@@ -233,7 +229,7 @@ export function RequestModal({ open, onClose, service, provider, wallet }: Reque
                   onClick={resetAndClose}
                   className="rounded-lg px-3 py-2 text-sm text-hub-muted hover:bg-hub-surface2"
                 >
-                  取消
+                  {t('hub.request.cancel')}
                 </button>
                 <button
                   type="button"
@@ -241,7 +237,7 @@ export function RequestModal({ open, onClose, service, provider, wallet }: Reque
                   onClick={() => setStep('confirm')}
                   className="rounded-lg bg-hub-accent px-4 py-2 text-sm font-semibold text-hub-bg disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  检查订单
+                  {t('hub.request.reviewOrder')}
                 </button>
               </div>
             </div>
@@ -251,20 +247,20 @@ export function RequestModal({ open, onClose, service, provider, wallet }: Reque
             <div className="mt-4 space-y-4">
               <dl className="space-y-2 rounded-xl border border-hub-border/80 bg-hub-surface2/50 p-3 text-sm">
                 <div className="flex justify-between gap-2">
-                  <dt className="text-hub-muted">服务方</dt>
+                  <dt className="text-hub-muted">{t('hub.provider')}</dt>
                   <dd className="font-medium text-white">{providerName}</dd>
                 </div>
                 <div className="flex justify-between gap-2">
-                  <dt className="text-hub-muted">价格</dt>
+                  <dt className="text-hub-muted">{t('hub.price')}</dt>
                   <dd className="font-semibold text-hub-accent">
                     {price.amount}{' '}
                     <span className="text-xs uppercase text-hub-muted">{price.currency}</span>
                   </dd>
                 </div>
                 <div className="flex justify-between gap-2">
-                  <dt className="text-hub-muted">结算方式</dt>
+                  <dt className="text-hub-muted">{t('hub.settlement')}</dt>
                   <dd className="text-white">
-                    {service.settlementKind === 'native' ? '原生币' : 'MRC20'}
+                    {service.settlementKind === 'native' ? t('hub.nativeCoin') : 'MRC20'}
                   </dd>
                 </div>
               </dl>
@@ -277,14 +273,14 @@ export function RequestModal({ open, onClose, service, provider, wallet }: Reque
                   onClick={() => setStep('prompt')}
                   className="rounded-lg px-3 py-2 text-sm text-hub-muted hover:bg-hub-surface2"
                 >
-                  返回修改
+                  {t('hub.request.back')}
                 </button>
                 <button
                   type="button"
                   onClick={() => void handleConfirm()}
                   className="rounded-lg bg-hub-accent px-4 py-2 text-sm font-semibold text-hub-bg"
                 >
-                  确认并下单
+                  {t('hub.request.confirm')}
                 </button>
               </div>
             </div>
@@ -293,24 +289,24 @@ export function RequestModal({ open, onClose, service, provider, wallet }: Reque
           {busy ? (
             <div className="mt-6 space-y-2 text-sm" aria-live="polite">
               <ProgressRow
-                label="检查钱包"
+                label={t('hub.request.checkWallet')}
                 active={step === 'checking_wallet'}
                 done={step === 'paying' || step === 'encrypting' || step === 'broadcasting'}
               />
               {service.price !== '0' ? (
                 <ProgressRow
-                  label="付款"
+                  label={t('hub.request.payment')}
                   active={step === 'paying'}
                   done={step === 'encrypting' || step === 'broadcasting'}
                 />
               ) : null}
               <ProgressRow
-                label="加密请求"
+                label={t('hub.request.encrypt')}
                 active={step === 'encrypting'}
                 done={step === 'broadcasting'}
               />
               <ProgressRow
-                label="写入链上"
+                label={t('hub.request.broadcast')}
                 active={step === 'broadcasting'}
                 done={false}
               />
@@ -318,7 +314,7 @@ export function RequestModal({ open, onClose, service, provider, wallet }: Reque
           ) : null}
 
           {step === 'done' ? (
-            <p className="mt-4 text-sm text-hub-accent">请求已发送，正在打开我的交付…</p>
+            <p className="mt-4 text-sm text-hub-accent">{t('hub.request.sentRedirect')}</p>
           ) : null}
 
           {step === 'error' ? (
@@ -329,7 +325,7 @@ export function RequestModal({ open, onClose, service, provider, wallet }: Reque
               {createPinDiagnosticJson ? (
                 <details className="rounded-lg border border-hub-border bg-hub-surface2/70 px-3 py-2 text-xs text-hub-muted">
                   <summary className="cursor-pointer text-hub-accent">
-                    发单诊断详情
+                    {t('hub.request.diagnostics')}
                   </summary>
                   <pre className="mt-2 max-h-48 overflow-auto whitespace-pre-wrap break-words">
                     {createPinDiagnosticJson}
@@ -342,7 +338,7 @@ export function RequestModal({ open, onClose, service, provider, wallet }: Reque
                   onClick={resetAndClose}
                   className="rounded-lg px-3 py-2 text-sm text-hub-muted hover:bg-hub-surface2"
                 >
-                  关闭
+                  {t('hub.request.close')}
                 </button>
                 <button
                   type="button"
@@ -351,10 +347,10 @@ export function RequestModal({ open, onClose, service, provider, wallet }: Reque
                   className="rounded-lg bg-hub-accent px-4 py-2 text-sm font-semibold text-hub-bg"
                 >
                   {recoverableDeliveryPath
-                    ? '已保存到我的交付'
+                    ? t('hub.request.savedToDelivery')
                     : retryDisabled
-                      ? '无法保存恢复记录'
-                      : '再试一次'}
+                      ? t('hub.request.cannotSaveRecovery')
+                      : t('hub.request.retry')}
                 </button>
                 {recoverableDeliveryPath ? (
                   <button
@@ -362,7 +358,7 @@ export function RequestModal({ open, onClose, service, provider, wallet }: Reque
                     onClick={() => navigate(recoverableDeliveryPath)}
                     className="rounded-lg bg-hub-accent px-4 py-2 text-sm font-semibold text-hub-bg"
                   >
-                    打开我的交付
+                    {t('hub.request.openDelivery')}
                   </button>
                 ) : null}
               </div>
@@ -374,15 +370,7 @@ export function RequestModal({ open, onClose, service, provider, wallet }: Reque
   )
 }
 
-function ProgressRow({
-  label,
-  active,
-  done,
-}: {
-  label: string
-  active: boolean
-  done: boolean
-}) {
+function ProgressRow({ label, active, done }: { label: string; active: boolean; done: boolean }) {
   return (
     <div className="flex items-center gap-2">
       <span

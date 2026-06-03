@@ -560,7 +560,7 @@ export function DeliveryPage() {
       <WsErrorBanner className="shrink-0" />
 
       <div
-        aria-label="我的交付工作区"
+        aria-label={t('delivery.workspace.label')}
         className="grid min-h-0 flex-1 grid-rows-[minmax(9rem,14rem)_minmax(0,1fr)_auto_auto] overflow-hidden rounded-card border border-hub-border bg-hub-surface/30 md:grid-cols-[minmax(220px,280px)_minmax(0,1fr)_minmax(220px,280px)] md:grid-rows-[minmax(0,1fr)_auto]"
       >
         <aside

@@ -6,8 +6,6 @@ import { t } from '@/i18n'
 
 type Asset = DeliveryAssetRecord | ParsedDeliveryAsset
 
-const PREVIEW_UNAVAILABLE_LABEL = '预览暂不可用，可打开文件'
-
 function assetKindLabel(kind: Asset['kind']): string {
   switch (kind) {
     case 'image':
@@ -54,7 +52,7 @@ function OpenLink({ asset }: { asset: Asset }) {
       rel="noopener noreferrer"
       className="shrink-0 text-xs font-medium text-hub-accent hover:underline"
     >
-      打开
+      {t('delivery.assetActions.open')}
     </a>
   )
 }
@@ -105,10 +103,13 @@ export function AssetPreviewCard({
   }
 
   return (
-    <article aria-label={asset.filename} className={clsx(
-      'overflow-hidden rounded-card border border-hub-border bg-hub-surface2/80',
-      mode === 'compact' && 'max-w-full',
-    )}>
+    <article
+      aria-label={asset.filename}
+      className={clsx(
+        'overflow-hidden rounded-card border border-hub-border bg-hub-surface2/80',
+        mode === 'compact' && 'max-w-full',
+      )}
+    >
       <div className="flex aspect-[16/9] items-center justify-center overflow-hidden bg-black/25">
         {asset.kind === 'image' && !previewFailed ? (
           <img
@@ -131,17 +132,12 @@ export function AssetPreviewCard({
         ) : null}
         {asset.kind === 'audio' && !previewFailed ? (
           <div className="flex w-full px-2">
-            <audio
-              key={mediaSrc}
-              controls
-              onError={handlePreviewError}
-              className="w-full"
-            >
+            <audio key={mediaSrc} controls onError={handlePreviewError} className="w-full">
               <source src={mediaSrc} type={asset.mimeType} onError={handlePreviewError} />
             </audio>
           </div>
         ) : null}
-        {(!supportsInlinePreview || previewFailed) ? (
+        {!supportsInlinePreview || previewFailed ? (
           <div
             className={clsx(
               'flex h-full w-full flex-col items-center justify-center gap-1 px-3 text-center',
@@ -153,7 +149,7 @@ export function AssetPreviewCard({
             </span>
             <span className="max-w-full truncate text-[11px] text-hub-muted">
               {previewFailed || !supportsInlinePreview
-                ? PREVIEW_UNAVAILABLE_LABEL
+                ? t('delivery.assetActions.previewUnavailable')
                 : asset.extension || asset.kind}
             </span>
           </div>
@@ -165,21 +161,21 @@ export function AssetPreviewCard({
           {onPreview && supportsInlinePreview && (
             <button
               type="button"
-              aria-label={`预览 ${asset.filename}`}
+              aria-label={t('delivery.assetActions.previewFile', { filename: asset.filename })}
               onClick={() => onPreview(asset)}
               className="shrink-0 text-xs text-hub-accent hover:underline"
             >
-              预览
+              {t('delivery.assetActions.preview')}
             </button>
           )}
           {onCopyLink && (
             <button
               type="button"
-              aria-label="复制链接"
+              aria-label={t('delivery.assetActions.copyLink')}
               onClick={() => onCopyLink(asset)}
               className="shrink-0 text-xs text-hub-accent hover:underline"
             >
-              复制链接
+              {t('delivery.assetActions.copyLink')}
             </button>
           )}
           <OpenLink asset={asset} />

@@ -2,22 +2,23 @@ import { clsx } from 'clsx'
 import { PeerAvatar } from '@/components/delivery/PeerAvatar'
 import type { DeliverySyncUiStatus } from '@/delivery/syncStatusStore'
 import { STATUS_LABELS, type WorkspaceOrder } from '@/delivery/workspace'
-import { t } from '@/i18n'
+import { getLanguage, t } from '@/i18n'
 
 function formatTime(ts: number): string {
   const date = new Date(ts)
   const now = new Date()
   const diffMs = now.getTime() - date.getTime()
   const diffMin = Math.floor(diffMs / 60_000)
-  if (diffMin < 1) return '刚刚'
-  if (diffMin < 60) return `${diffMin} 分钟前`
+  if (diffMin < 1) return t('time.justNow')
+  if (diffMin < 60) return t('time.minutesAgo', { count: diffMin })
   const diffHours = Math.floor(diffMin / 60)
-  if (diffHours < 24) return `${diffHours} 小时前`
+  if (diffHours < 24) return t('time.hoursAgo', { count: diffHours })
   const diffDays = Math.floor(diffHours / 24)
-  if (diffDays < 7) return `${diffDays} 天前`
-  const month = date.getMonth() + 1
-  const day = date.getDate()
-  return `${month}月${day}日`
+  if (diffDays < 7) return t('time.daysAgo', { count: diffDays })
+  return new Intl.DateTimeFormat(getLanguage(), {
+    month: 'short',
+    day: 'numeric',
+  }).format(date)
 }
 
 function statusLabel(status: WorkspaceOrder['status']): string {
@@ -46,9 +47,7 @@ export function DeliveryOrderList({
     return (
       <div className="flex flex-col items-center justify-center gap-3 px-2 py-8 text-center">
         <p className="text-sm font-semibold text-white">{t('delivery.walletNotConnectedTitle')}</p>
-        <p className="max-w-xs text-xs text-hub-muted">
-          {t('delivery.walletNotConnectedHint')}
-        </p>
+        <p className="max-w-xs text-xs text-hub-muted">{t('delivery.walletNotConnectedHint')}</p>
       </div>
     )
   }
@@ -58,13 +57,11 @@ export function DeliveryOrderList({
       <div>
         {syncStatus === 'partial' && failedPeerCount > 0 && (
           <p className="mb-2 px-1 text-xs text-amber-400/70">
-            {`已显示本地记录，${failedPeerCount} 个会话同步失败`}
+            {t('delivery.workspace.syncPartial', { count: failedPeerCount })}
           </p>
         )}
         {syncStatus === 'error' && (
-          <p className="mb-2 px-1 text-xs text-red-400/70">
-            {t('delivery.workspace.syncError')}
-          </p>
+          <p className="mb-2 px-1 text-xs text-red-400/70">{t('delivery.workspace.syncError')}</p>
         )}
         <OrderCardList
           orders={orders}
@@ -75,7 +72,10 @@ export function DeliveryOrderList({
     )
   }
 
-  if (syncStatus === 'hydrating' || (syncStatus === 'idle' && walletConnected && orders.length === 0)) {
+  if (
+    syncStatus === 'hydrating' ||
+    (syncStatus === 'idle' && walletConnected && orders.length === 0)
+  ) {
     return (
       <div className="px-3 py-6 text-center">
         <p className="text-xs text-hub-muted">{t('delivery.workspace.syncHydrating')}</p>
@@ -102,12 +102,8 @@ export function DeliveryOrderList({
   if (orders.length === 0 && walletConnected) {
     return (
       <div className="flex flex-col items-center justify-center gap-3 px-2 py-8 text-center">
-        <p className="text-sm font-semibold text-white">
-          {t('delivery.workspace.noOrdersTitle')}
-        </p>
-        <p className="max-w-xs text-xs text-hub-muted">
-          {t('delivery.workspace.noOrdersHint')}
-        </p>
+        <p className="text-sm font-semibold text-white">{t('delivery.workspace.noOrdersTitle')}</p>
+        <p className="max-w-xs text-xs text-hub-muted">{t('delivery.workspace.noOrdersHint')}</p>
       </div>
     )
   }
@@ -181,7 +177,11 @@ function OrderCardList({
                   </p>
                   <div className="mt-1 flex items-center gap-2 text-[10px] text-hub-muted/60">
                     <span>{formatTime(order.lastActivityAt)}</span>
-                    {order.assetCount > 0 && <span>{order.assetCount} 个成果</span>}
+                    {order.assetCount > 0 && (
+                      <span>
+                        {order.assetCount} {t('delivery.workspace.assetCountSuffix')}
+                      </span>
+                    )}
                   </div>
                 </div>
               </div>

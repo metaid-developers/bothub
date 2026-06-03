@@ -1,8 +1,9 @@
 import type { ReactNode } from 'react'
 import { NavLink } from 'react-router-dom'
 import { clsx } from 'clsx'
+import { LanguageSelect } from '@/components/LanguageSelect'
 import { WalletConnectButton } from '@/components/WalletConnectButton'
-import { t } from '@/i18n'
+import { t, useLanguage } from '@/i18n'
 
 const tabClass = ({ isActive }: { isActive: boolean }) =>
   clsx(
@@ -21,6 +22,8 @@ function TabIndicator({ isActive }: { isActive: boolean }) {
 }
 
 export function AppShell({ children }: { children: ReactNode }) {
+  const [language] = useLanguage()
+
   return (
     <div className="flex min-h-screen flex-col bg-hub-bg font-body text-white">
       <header className="sticky top-0 z-20 border-b border-hub-border bg-hub-surface/95 backdrop-blur">
@@ -43,12 +46,15 @@ export function AppShell({ children }: { children: ReactNode }) {
               )}
             </NavLink>
           </nav>
-          <div className="flex items-center">
+          <div className="flex items-center gap-3">
+            <LanguageSelect />
             <WalletConnectButton />
           </div>
         </div>
       </header>
-      <main className="mx-auto w-full max-w-[1600px] flex-1 px-4 py-6">{children}</main>
+      <main key={language} className="mx-auto w-full max-w-[1600px] flex-1 px-4 py-6">
+        {children}
+      </main>
     </div>
   )
 }

@@ -22,9 +22,7 @@ export function DeliveryWorkspaceHeader({ order }: DeliveryWorkspaceHeaderProps)
         <p className="text-sm font-semibold text-white">
           {t('delivery.workspace.noSelectedOrderTitle')}
         </p>
-        <p className="mt-1 text-xs text-hub-muted">
-          {t('delivery.workspace.noSelectedHint')}
-        </p>
+        <p className="mt-1 text-xs text-hub-muted">{t('delivery.workspace.noSelectedHint')}</p>
       </div>
     )
   }
@@ -56,7 +54,7 @@ export function DeliveryWorkspaceHeader({ order }: DeliveryWorkspaceHeaderProps)
       <div className="mt-3 flex flex-wrap items-center gap-4 text-xs text-hub-muted">
         {order.priceLabel && <span>{order.priceLabel}</span>}
         <span>
-          {order.assetCount} 个成果
+          {order.assetCount} {t('delivery.workspace.assetCountSuffix')}
         </span>
         <span className="ml-auto flex gap-2">
           <button
@@ -65,7 +63,7 @@ export function DeliveryWorkspaceHeader({ order }: DeliveryWorkspaceHeaderProps)
             aria-disabled="true"
             className="rounded-full border border-hub-border px-2 py-0.5 text-hub-muted"
           >
-            评价
+            {t('delivery.workspace.rating')}
           </button>
           <button
             type="button"
@@ -73,7 +71,7 @@ export function DeliveryWorkspaceHeader({ order }: DeliveryWorkspaceHeaderProps)
             aria-disabled="true"
             className="rounded-full border border-hub-border px-2 py-0.5 text-hub-muted"
           >
-            退款
+            {t('delivery.workspace.refund')}
           </button>
         </span>
       </div>

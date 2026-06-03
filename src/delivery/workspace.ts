@@ -1,8 +1,4 @@
-import type {
-  BuyerOrder,
-  DeliveryAssetRecord,
-  DeliverySessionRecord,
-} from '@/delivery/domain'
+import type { BuyerOrder, DeliveryAssetRecord, DeliverySessionRecord } from '@/delivery/domain'
 import { buildSessionId } from '@/delivery/domain'
 import type { DeliveryMessage } from '@/delivery/messageStore'
 import {
@@ -11,15 +7,13 @@ import {
   parseOrderMessage,
 } from '@/delivery/orderParser'
 import { parseDeliveryProtocol } from '@/delivery/protocol'
-import {
-  deliveryAssetsForSession,
-  deriveSessionStatus,
-} from '@/delivery/sessionDisplay'
+import { deliveryAssetsForSession, deriveSessionStatus } from '@/delivery/sessionDisplay'
 import {
   buildGroupedSessionList,
   buildSessionKey,
   messagesForSession as resolveMessagesForSession,
 } from '@/delivery/sessionGrouping'
+import { t } from '@/i18n'
 
 export interface WorkspaceOrder {
   id: string
@@ -80,7 +74,7 @@ export const STATUS_LABELS: Record<WorkspaceOrderStatus, string> = {
   failed_to_send: 'delivery.workspace.status.failed_to_send',
 }
 
-const HISTORICAL_DELIVERY_LABEL = '历史交付'
+const historicalDeliveryLabel = () => t('delivery.unknownService')
 const FALLBACK_CORRELATION_WINDOW_MS = 24 * 60 * 60 * 1000
 
 interface FallbackCorrelationCandidate {
@@ -173,9 +167,7 @@ function buildPaymentReference(order: BuyerOrder): string | undefined {
 }
 
 function uniqueValues(values: Array<string | null | undefined>): string[] {
-  return Array.from(
-    new Set(values.map((value) => value?.trim() ?? '').filter(Boolean)),
-  )
+  return Array.from(new Set(values.map((value) => value?.trim() ?? '').filter(Boolean)))
 }
 
 function compositeIdTail(id: string): string {
@@ -377,9 +369,9 @@ function buildFallbackCorrelations(input: {
   }
 
   for (const [peerGlobalMetaId, messages] of Object.entries(input.byPeer)) {
-    const chatPubkey = messages.find((message) => message.peerChatPubkey?.trim())
-      ?.peerChatPubkey
-      ?.trim()
+    const chatPubkey = messages
+      .find((message) => message.peerChatPubkey?.trim())
+      ?.peerChatPubkey?.trim()
     const aliasCandidates = chatPubkey ? byChatPubkey.get(chatPubkey) : undefined
     if (!aliasCandidates?.length) continue
     for (const candidate of aliasCandidates) {
@@ -499,11 +491,7 @@ function normalizeMessagesByKnownCorrelations(
     const peerKnown = known.get(peer)
     const fallbackCandidates = fallbackCorrelations.get(peer)
     for (const message of messages) {
-      const correlation = deriveMessageCorrelation(
-        message,
-        peerKnown,
-        fallbackCandidates,
-      )
+      const correlation = deriveMessageCorrelation(message, peerKnown, fallbackCandidates)
       const targetPeer = correlation?.providerGlobalMetaId?.trim() || peer
       appendNormalizedMessage(
         output,
@@ -527,9 +515,7 @@ function normalizeMessagesByKnownCorrelations(
   )
 }
 
-function uniqueAssets(
-  assets: DeliveryAssetRecord[],
-): DeliveryAssetRecord[] {
+function uniqueAssets(assets: DeliveryAssetRecord[]): DeliveryAssetRecord[] {
   return Array.from(new Map(assets.map((asset) => [asset.id, asset])).values())
 }
 
@@ -638,24 +624,23 @@ export function buildDeliveryWorkspace(input: {
         existingOrder?.serviceName?.trim() ||
         session.serviceLabel?.trim() ||
         existing?.serviceLabel ||
-        HISTORICAL_DELIVERY_LABEL,
+        historicalDeliveryLabel(),
       requestSummary:
         existingOrder?.displaySummary?.trim() ||
         existing?.requestSummary ||
         session.serviceLabel?.trim() ||
-        HISTORICAL_DELIVERY_LABEL,
+        historicalDeliveryLabel(),
       rawRequest: existingOrder?.rawRequest || existing?.rawRequest,
       outputType: existingOrder?.outputType || existing?.outputType,
       priceLabel: existingOrder ? buildPriceLabel(existingOrder) : existing?.priceLabel,
       paymentReference: existingOrder
         ? buildPaymentReference(existingOrder)
         : existing?.paymentReference,
-      orderCorrelationId:
-        orderCorrelationId ||
-        existing?.orderCorrelationId ||
-        null,
+      orderCorrelationId: orderCorrelationId || existing?.orderCorrelationId || null,
       status: existing
-        ? (existing.status !== 'waiting' ? existing.status : normalizeSessionStatus(session.status))
+        ? existing.status !== 'waiting'
+          ? existing.status
+          : normalizeSessionStatus(session.status)
         : normalizeSessionStatus(session.status),
       assetCount: assets.length,
       messageCount: messages.length,
@@ -673,7 +658,8 @@ export function buildDeliveryWorkspace(input: {
     }
 
     if (existing) {
-      merged.assetCount = existing.assetCount + assets.length - (input.assetsBySession[sessionId]?.length ?? 0)
+      merged.assetCount =
+        existing.assetCount + assets.length - (input.assetsBySession[sessionId]?.length ?? 0)
       merged.messageCount = Math.max(existing.messageCount, messages.length)
       merged.unreadCount = existing.unreadCount + merged.unreadCount
     }
@@ -734,10 +720,7 @@ export function buildDeliveryWorkspace(input: {
 
   for (const session of buildGroupedSessionList(byPeer, walletGlobalMetaId)) {
     const correlationId = session.orderCorrelationId?.trim() || null
-    if (
-      correlationId &&
-      orderByJoin.has(orderJoinKey(session.peerGlobalMetaId, correlationId))
-    ) {
+    if (correlationId && orderByJoin.has(orderJoinKey(session.peerGlobalMetaId, correlationId))) {
       continue
     }
 
@@ -764,8 +747,8 @@ export function buildDeliveryWorkspace(input: {
       providerName: session.peerName?.trim() || undefined,
       providerAvatarUrl: session.peerAvatarUrl?.trim() || undefined,
       serviceId: undefined,
-      serviceLabel: session.serviceLabel?.trim() || HISTORICAL_DELIVERY_LABEL,
-      requestSummary: session.serviceLabel?.trim() || HISTORICAL_DELIVERY_LABEL,
+      serviceLabel: session.serviceLabel?.trim() || historicalDeliveryLabel(),
+      requestSummary: session.serviceLabel?.trim() || historicalDeliveryLabel(),
       orderCorrelationId: correlationId,
       status: deriveWorkspaceStatus(messages, walletGlobalMetaId),
       assetCount: assets.length,
@@ -808,12 +791,9 @@ export function selectWorkspaceOrder(
   const target = selectedId?.trim()
   if (target) {
     const match = workspace.orders.find((order) =>
-      [
-        order.orderCorrelationId,
-        order.sessionKey,
-        order.sessionId,
-        order.id,
-      ].some((value) => value?.trim() === target),
+      [order.orderCorrelationId, order.sessionKey, order.sessionId, order.id].some(
+        (value) => value?.trim() === target,
+      ),
     )
     if (match) return match
   }

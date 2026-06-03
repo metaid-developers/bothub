@@ -47,9 +47,9 @@ export function ProviderProfile({ provider, className }: ProviderProfileProps) {
   return (
     <section
       className={clsx('rounded-xl border border-hub-border/80 bg-hub-surface2/50 p-3', className)}
-      aria-label="服务方资料"
+      aria-label={t('hub.providerProfile')}
     >
-      <h3 className="text-[11px] font-semibold text-hub-muted">服务方</h3>
+      <h3 className="text-[11px] font-semibold text-hub-muted">{t('hub.provider')}</h3>
       <div className="mt-2 flex items-center gap-3">
         <ProviderAvatar name={name} avatar={provider.avatar} />
         <div className="min-w-0 flex-1">
@@ -62,9 +62,9 @@ export function ProviderProfile({ provider, className }: ProviderProfileProps) {
               <span className="truncate">{truncatedPubkey}</span>
               <span
                 className="shrink-0 rounded bg-hub-surface px-1 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-hub-accent"
-                aria-label="服务方接单密钥已缩略显示"
+                aria-label={t('hub.providerKeyTruncated')}
               >
-                已缩略
+                {t('hub.truncated')}
               </span>
             </p>
           ) : (

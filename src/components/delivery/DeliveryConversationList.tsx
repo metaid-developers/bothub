@@ -3,7 +3,7 @@ import { PeerAvatar } from '@/components/delivery/PeerAvatar'
 import type { DeliveryConversation } from '@/delivery/conversationWorkspace'
 import { sessionPreviewText } from '@/delivery/messageDisplay'
 import type { DeliverySyncUiStatus } from '@/delivery/syncStatusStore'
-import { t } from '@/i18n'
+import { getLanguage, t } from '@/i18n'
 
 interface DeliveryConversationListProps {
   conversations: DeliveryConversation[]
@@ -19,33 +19,28 @@ function formatTime(ts: number): string {
   const now = new Date()
   const diffMs = now.getTime() - date.getTime()
   const diffMin = Math.floor(diffMs / 60_000)
-  if (diffMin < 1) return '刚刚'
-  if (diffMin < 60) return `${diffMin} 分钟前`
+  if (diffMin < 1) return t('time.justNow')
+  if (diffMin < 60) return t('time.minutesAgo', { count: diffMin })
   const diffHours = Math.floor(diffMin / 60)
-  if (diffHours < 24) return `${diffHours} 小时前`
+  if (diffHours < 24) return t('time.hoursAgo', { count: diffHours })
   const diffDays = Math.floor(diffHours / 24)
-  if (diffDays < 7) return `${diffDays} 天前`
-  const month = date.getMonth() + 1
-  const day = date.getDate()
-  return `${month}月${day}日`
+  if (diffDays < 7) return t('time.daysAgo', { count: diffDays })
+  return new Intl.DateTimeFormat(getLanguage(), {
+    month: 'short',
+    day: 'numeric',
+  }).format(date)
 }
 
 function displayName(conversation: DeliveryConversation): string {
   return (
-    conversation.providerName?.trim() ||
-    conversation.providerGlobalMetaId.trim() ||
-    conversation.id
+    conversation.providerName?.trim() || conversation.providerGlobalMetaId.trim() || conversation.id
   )
 }
 
 function latestPreview(conversation: DeliveryConversation): string | null {
   const lastMessage = conversation.lastMessage
   if (!lastMessage) return null
-  return sessionPreviewText(
-    lastMessage.content,
-    lastMessage.protocolTag,
-    lastMessage.decryptError,
-  )
+  return sessionPreviewText(lastMessage.content, lastMessage.protocolTag, lastMessage.decryptError)
 }
 
 export function DeliveryConversationList({
@@ -60,9 +55,7 @@ export function DeliveryConversationList({
     return (
       <div className="flex flex-col items-center justify-center gap-3 px-2 py-8 text-center">
         <p className="text-sm font-semibold text-white">{t('delivery.walletNotConnectedTitle')}</p>
-        <p className="max-w-xs text-xs text-hub-muted">
-          {t('delivery.walletNotConnectedHint')}
-        </p>
+        <p className="max-w-xs text-xs text-hub-muted">{t('delivery.walletNotConnectedHint')}</p>
       </div>
     )
   }
@@ -72,13 +65,11 @@ export function DeliveryConversationList({
       <div>
         {syncStatus === 'partial' && failedPeerCount > 0 && (
           <p className="mb-2 px-1 text-xs text-amber-400/70">
-            {`已显示本地记录，${failedPeerCount} 个会话同步失败`}
+            {t('delivery.workspace.syncPartial', { count: failedPeerCount })}
           </p>
         )}
         {syncStatus === 'error' && (
-          <p className="mb-2 px-1 text-xs text-red-400/70">
-            {t('delivery.workspace.syncError')}
-          </p>
+          <p className="mb-2 px-1 text-xs text-red-400/70">{t('delivery.workspace.syncError')}</p>
         )}
         <ConversationCardList
           conversations={conversations}
@@ -170,20 +161,24 @@ function ConversationCardList({
                     <p className="truncate text-xs font-semibold text-white">{name}</p>
                     {conversation.activeOrderCount > 0 && (
                       <span className="shrink-0 rounded-full bg-hub-accent/15 px-2 py-0.5 text-[10px] font-semibold text-hub-accent">
-                        {conversation.activeOrderCount} 个进行中
+                        {conversation.activeOrderCount}{' '}
+                        {t('delivery.workspace.activeOrderCountSuffix')}
                       </span>
                     )}
                   </div>
-                  {preview && (
-                    <p className="mt-0.5 truncate text-xs text-hub-muted">{preview}</p>
-                  )}
+                  {preview && <p className="mt-0.5 truncate text-xs text-hub-muted">{preview}</p>}
                   <div className="mt-1 flex items-center gap-2 text-[10px] text-hub-muted/60">
                     <span>{formatTime(conversation.latestActivityAt)}</span>
                     {conversation.deliveredOrderCount > 0 && (
-                      <span>{conversation.deliveredOrderCount} 个已交付</span>
+                      <span>
+                        {conversation.deliveredOrderCount}{' '}
+                        {t('delivery.workspace.deliveredOrderCountSuffix')}
+                      </span>
                     )}
                     {conversation.assetCount > 0 && (
-                      <span>{conversation.assetCount} 个成果</span>
+                      <span>
+                        {conversation.assetCount} {t('delivery.workspace.assetCountSuffix')}
+                      </span>
                     )}
                   </div>
                 </div>

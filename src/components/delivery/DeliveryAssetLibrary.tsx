@@ -16,14 +16,14 @@ interface DeliveryAssetLibraryProps {
   scopeLabel?: string
 }
 
-const FILTER_LABELS: Record<string, string> = {
-  all: '全部',
-  image: '图片',
-  video: '视频',
-  audio: '音频',
-  document: '文档',
-  archive: '压缩包',
-  other: '其他',
+const FILTER_LABEL_KEYS: Record<FilterKind, Parameters<typeof t>[0]> = {
+  all: 'delivery.workspace.assetScopeAll',
+  image: 'delivery.assetKinds.image',
+  video: 'delivery.assetKinds.video',
+  audio: 'delivery.assetKinds.audio',
+  document: 'delivery.assetKinds.document',
+  archive: 'delivery.assetKinds.archive',
+  other: 'delivery.assetKinds.other',
 }
 
 function kindCount(assets: ParsedDeliveryAsset[], kind: AssetKind): number {
@@ -62,7 +62,7 @@ export function DeliveryAssetLibrary({ assets, scopeLabel }: DeliveryAssetLibrar
 
   async function copyAllLinks() {
     if (!navigator.clipboard) {
-      setCopyError('复制失败，请手动打开链接。')
+      setCopyError(t('delivery.assetActions.copyFailed'))
       return
     }
     const text = assets.map((a: Asset) => a.downloadUrl).join('\n')
@@ -70,25 +70,22 @@ export function DeliveryAssetLibrary({ assets, scopeLabel }: DeliveryAssetLibrar
       await navigator.clipboard.writeText(text)
       setCopyError(null)
     } catch {
-      setCopyError('复制失败，请手动打开链接。')
+      setCopyError(t('delivery.assetActions.copyFailed'))
     }
   }
 
-  const handlePreview = useCallback(
-    (a: Asset) => setPreviewAsset(a as ParsedDeliveryAsset),
-    [],
-  )
+  const handlePreview = useCallback((a: Asset) => setPreviewAsset(a as ParsedDeliveryAsset), [])
 
   const handleCopyLink = useCallback(async (a: Asset) => {
     if (!navigator.clipboard) {
-      setCopyError('复制失败，请手动打开链接。')
+      setCopyError(t('delivery.assetActions.copyFailed'))
       return
     }
     try {
       await navigator.clipboard.writeText(a.downloadUrl)
       setCopyError(null)
     } catch {
-      setCopyError('复制失败，请手动打开链接。')
+      setCopyError(t('delivery.assetActions.copyFailed'))
     }
   }, [])
 
@@ -110,9 +107,9 @@ export function DeliveryAssetLibrary({ assets, scopeLabel }: DeliveryAssetLibrar
           </p>
         )}
         <div className="flex flex-col items-center justify-center py-8 text-center">
-          <p className="text-sm font-semibold text-white">还没有收到成果</p>
+          <p className="text-sm font-semibold text-white">{t('delivery.noAssetsYet')}</p>
           <p className="mt-1 max-w-xs text-xs text-hub-muted">
-            服务方完成交付后，图片、视频、音频和附件会显示在这里。
+            {t('delivery.workspace.assetLibraryEmptyHint')}
           </p>
         </div>
       </aside>
@@ -130,7 +127,7 @@ export function DeliveryAssetLibrary({ assets, scopeLabel }: DeliveryAssetLibrar
             {t('delivery.workspace.assets')}
           </h2>
           <span className="text-[11px] text-hub-muted">
-            {assets.length} 个成果
+            {assets.length} {t('delivery.workspace.assetCountSuffix')}
           </span>
         </div>
         {trimmedScopeLabel && (
@@ -144,7 +141,7 @@ export function DeliveryAssetLibrary({ assets, scopeLabel }: DeliveryAssetLibrar
               key={kind}
               type="button"
               onClick={() => setFilter(kind)}
-              aria-label={`${FILTER_LABELS[kind] ?? kind} ${kind === 'all' ? counts.all : counts[kind] ?? 0}`}
+              aria-label={`${t(FILTER_LABEL_KEYS[kind])} ${kind === 'all' ? counts.all : (counts[kind] ?? 0)}`}
               className={clsx(
                 'rounded-full px-2 py-0.5 text-[11px] font-medium transition',
                 filter === kind
@@ -152,10 +149,8 @@ export function DeliveryAssetLibrary({ assets, scopeLabel }: DeliveryAssetLibrar
                   : 'text-hub-muted hover:bg-hub-surface2',
               )}
             >
-              {FILTER_LABELS[kind] ?? kind}
-              {kind !== 'all' && (
-                <span className="ml-0.5 opacity-60">{counts[kind] ?? 0}</span>
-              )}
+              {t(FILTER_LABEL_KEYS[kind])}
+              {kind !== 'all' && <span className="ml-0.5 opacity-60">{counts[kind] ?? 0}</span>}
             </button>
           ))}
         </div>
@@ -174,21 +169,17 @@ export function DeliveryAssetLibrary({ assets, scopeLabel }: DeliveryAssetLibrar
           <button
             type="button"
             onClick={copyAllLinks}
-            aria-label="复制全部链接"
+            aria-label={t('delivery.assetActions.copyAllLinksAria')}
             className="rounded-card border border-hub-border px-2 py-1 text-[11px] text-hub-muted hover:bg-hub-surface2"
           >
-            复制全部链接
+            {t('delivery.assetActions.copyAllLinks')}
           </button>
           {copyError && <p className="text-[11px] text-red-400">{copyError}</p>}
         </div>
       </aside>
 
       {previewAsset && (
-        <AssetPreviewDialog
-          asset={previewAsset}
-          open
-          onClose={() => setPreviewAsset(null)}
-        />
+        <AssetPreviewDialog asset={previewAsset} open onClose={() => setPreviewAsset(null)} />
       )}
     </>
   )

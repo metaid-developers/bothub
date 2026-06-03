@@ -74,9 +74,7 @@ export function SessionsList({
                 />
                 <div className="min-w-0 flex-1">
                   <div className="flex min-w-0 items-center justify-between gap-2">
-                    <span className="truncate font-semibold text-white">
-                      {displayName}
-                    </span>
+                    <span className="truncate font-semibold text-white">{displayName}</span>
                     <span className="shrink-0 rounded-full border border-hub-border px-2 py-0.5 text-[10px] font-medium text-hub-muted">
                       {t(`delivery.status.${session.status}`)}
                     </span>
@@ -89,9 +87,7 @@ export function SessionsList({
                 </div>
               </div>
               {session.serviceLabel ? (
-                <p className="mt-0.5 text-xs font-medium text-hub-accent">
-                  {session.serviceLabel}
-                </p>
+                <p className="mt-0.5 text-xs font-medium text-hub-accent">{session.serviceLabel}</p>
               ) : null}
               <p className="mt-1 line-clamp-2 text-xs text-hub-muted">
                 {sessionPreviewText(
@@ -101,8 +97,12 @@ export function SessionsList({
                 )}
               </p>
               <p className="mt-1 flex items-center justify-between gap-2 text-[11px] text-hub-muted">
-                <span>{session.messageCount} 条消息</span>
-                <span>{session.assetCount} 个成果</span>
+                <span>
+                  {session.messageCount} {t('delivery.workspace.messageCountSuffix')}
+                </span>
+                <span>
+                  {session.assetCount} {t('delivery.workspace.assetCountSuffix')}
+                </span>
               </p>
             </button>
           </li>

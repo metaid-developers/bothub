@@ -1,35 +1,41 @@
 import { useEffect, useId, useState } from 'react'
 import { MagnifyingGlassIcon, FunnelIcon } from '@heroicons/react/24/outline'
 import { clsx } from 'clsx'
-import type {
-  SkillServiceCurrency,
-  SkillServiceOutputType,
-} from '@/api/aggregator.types'
+import type { SkillServiceCurrency, SkillServiceOutputType } from '@/api/aggregator.types'
 import type { HubFilters } from '@/components/hub/filters'
 import { t } from '@/i18n'
 
-const CURRENCIES: { value: SkillServiceCurrency | ''; label: string }[] = [
-  { value: '', label: t('hub.currencyAll') },
+const CURRENCY_VALUES: Array<{
+  value: SkillServiceCurrency | ''
+  labelKey?: Parameters<typeof t>[0]
+  label?: string
+}> = [
+  { value: '', labelKey: 'hub.currencyAll' },
   { value: 'SPACE', label: 'SPACE' },
   { value: 'BTC', label: 'BTC' },
   { value: 'DOGE', label: 'DOGE' },
   { value: 'MRC20', label: 'MRC20' },
 ]
 
-const OUTPUT_TYPES: { value: SkillServiceOutputType | ''; label: string }[] = [
-  { value: '', label: t('filters.outputAll') },
-  { value: 'text', label: t('filters.text') },
-  { value: 'image', label: t('filters.image') },
-  { value: 'video', label: t('filters.video') },
-  { value: 'audio', label: t('filters.audio') },
-  { value: 'other', label: t('filters.other') },
+const OUTPUT_TYPE_VALUES: Array<{
+  value: SkillServiceOutputType | ''
+  labelKey: Parameters<typeof t>[0]
+}> = [
+  { value: '', labelKey: 'filters.outputAll' },
+  { value: 'text', labelKey: 'filters.text' },
+  { value: 'image', labelKey: 'filters.image' },
+  { value: 'video', labelKey: 'filters.video' },
+  { value: 'audio', labelKey: 'filters.audio' },
+  { value: 'other', labelKey: 'filters.other' },
 ]
 
-const SORT_OPTIONS: (Pick<HubFilters, 'sortBy' | 'order'> & { label: string })[] = [
-  { sortBy: 'rating', order: 'desc', label: t('hub.sortTopRated') },
-  { sortBy: 'updated', order: 'desc', label: t('hub.sortRecent') },
-  { sortBy: 'price', order: 'asc', label: t('hub.sortPriceAsc') },
-  { sortBy: 'price', order: 'desc', label: t('hub.sortPriceDesc') },
+const SORT_OPTIONS: Array<
+  Pick<HubFilters, 'sortBy' | 'order'> & { labelKey: Parameters<typeof t>[0] }
+> = [
+  { sortBy: 'rating', order: 'desc', labelKey: 'hub.sortTopRated' },
+  { sortBy: 'updated', order: 'desc', labelKey: 'hub.sortRecent' },
+  { sortBy: 'price', order: 'asc', labelKey: 'hub.sortPriceAsc' },
+  { sortBy: 'price', order: 'desc', labelKey: 'hub.sortPriceDesc' },
 ]
 
 const KEYWORD_DEBOUNCE_MS = 300
@@ -104,9 +110,9 @@ export function FiltersBar({ value, onChange, className }: FiltersBarProps) {
             }
             className="rounded-xl border border-hub-border bg-hub-surface2 px-3 py-2.5 text-sm text-white focus:border-hub-accent/60 focus:outline-none focus:ring-2 focus:ring-hub-accent/25"
           >
-            {CURRENCIES.map((opt) => (
-              <option key={opt.label} value={opt.value}>
-                {opt.label}
+            {CURRENCY_VALUES.map((opt) => (
+              <option key={opt.value || 'all'} value={opt.value}>
+                {opt.labelKey ? t(opt.labelKey) : opt.label}
               </option>
             ))}
           </select>
@@ -121,9 +127,9 @@ export function FiltersBar({ value, onChange, className }: FiltersBarProps) {
             }
             className="rounded-xl border border-hub-border bg-hub-surface2 px-3 py-2.5 text-sm text-white focus:border-hub-accent/60 focus:outline-none focus:ring-2 focus:ring-hub-accent/25"
           >
-            {OUTPUT_TYPES.map((opt) => (
-              <option key={opt.label} value={opt.value}>
-                {opt.label}
+            {OUTPUT_TYPE_VALUES.map((opt) => (
+              <option key={opt.value || 'all'} value={opt.value}>
+                {t(opt.labelKey)}
               </option>
             ))}
           </select>
@@ -131,9 +137,7 @@ export function FiltersBar({ value, onChange, className }: FiltersBarProps) {
             aria-label={t('filters.sort')}
             value={sortKey}
             onChange={(e) => {
-              const match = SORT_OPTIONS.find(
-                (o) => `${o.sortBy}:${o.order}` === e.target.value,
-              )
+              const match = SORT_OPTIONS.find((o) => `${o.sortBy}:${o.order}` === e.target.value)
               if (match) {
                 onChange({ ...value, sortBy: match.sortBy, order: match.order })
               }
@@ -141,8 +145,8 @@ export function FiltersBar({ value, onChange, className }: FiltersBarProps) {
             className="rounded-xl border border-hub-border bg-hub-surface2 px-3 py-2.5 text-sm text-white focus:border-hub-accent/60 focus:outline-none focus:ring-2 focus:ring-hub-accent/25"
           >
             {SORT_OPTIONS.map((opt) => (
-              <option key={opt.label} value={`${opt.sortBy}:${opt.order}`}>
-                {opt.label}
+              <option key={`${opt.sortBy}:${opt.order}`} value={`${opt.sortBy}:${opt.order}`}>
+                {t(opt.labelKey)}
               </option>
             ))}
           </select>

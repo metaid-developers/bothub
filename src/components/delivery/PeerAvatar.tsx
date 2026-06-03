@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { clsx } from 'clsx'
 import { peerDisplayName } from '@/components/delivery/peerDisplay'
+import { t } from '@/i18n'
 import { avatarColor, avatarInitials } from '@/lib/avatar'
 
 export interface PeerAvatarProps {
@@ -15,15 +16,10 @@ const sizeClass = {
   md: 'h-10 w-10 text-[13px]',
 }
 
-export function PeerAvatar({
-  name,
-  avatarUrl,
-  globalMetaId,
-  size = 'sm',
-}: PeerAvatarProps) {
+export function PeerAvatar({ name, avatarUrl, globalMetaId, size = 'sm' }: PeerAvatarProps) {
   const [imageFailed, setImageFailed] = useState(false)
   const displayName = peerDisplayName({ name, globalMetaId })
-  const label = `${displayName} 头像`
+  const label = t('common.avatarLabel', { name: displayName })
   const initials = avatarInitials(displayName)
   const bgColor = avatarColor(displayName)
   const imageUrl = avatarUrl?.trim()

@@ -33,13 +33,7 @@ function ServiceIcon({ service }: { service: SkillServiceListItem }) {
   )
 }
 
-function ProviderAvatar({
-  name,
-  avatar,
-}: {
-  name: string
-  avatar: string | null
-}) {
+function ProviderAvatar({ name, avatar }: { name: string; avatar: string | null }) {
   const initials = avatarInitials(name)
   const bgColor = avatarColor(name)
   const [failed, setFailed] = useState(false)
@@ -70,7 +64,7 @@ function RatingStars({ avg, count }: { avg: number; count: number }) {
   return (
     <div
       className="flex items-center gap-1.5 text-xs"
-      aria-label={`评分 ${avg.toFixed(1)}，${count} 条评价`}
+      aria-label={t('hub.ratingLabel', { rating: avg.toFixed(1), count })}
     >
       <span className="flex gap-0.5 text-hub-accent" aria-hidden>
         {Array.from({ length: 5 }, (_, i) => (
@@ -125,7 +119,8 @@ export function ServiceCard({
       onKeyDown={selectable ? handleCardKeyDown : undefined}
       className={clsx(
         'flex h-full flex-col rounded-card border border-hub-border bg-hub-surface p-4 shadow-[0_12px_40px_-24px_rgba(0,0,0,0.8)] transition hover:border-hub-border/80 hover:bg-hub-surface2/80',
-        selectable && 'cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-hub-accent',
+        selectable &&
+          'cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-hub-accent',
         selected && 'border-hub-accent/70 ring-1 ring-hub-accent/35',
         className,
       )}
@@ -166,7 +161,7 @@ export function ServiceCard({
         <div className="flex min-w-0 items-center gap-2">
           <span
             className="h-2 w-2 shrink-0 rounded-full bg-hub-online shadow-[0_0_8px_rgba(34,197,94,0.55)]"
-            title="在线"
+            title={t('hub.online')}
             aria-hidden
           />
           <ProviderAvatar name={providerName} avatar={service.providerAvatar} />
@@ -182,7 +177,7 @@ export function ServiceCard({
           onRequest?.(service)
         }}
         className="mt-4 w-full rounded-xl bg-hub-accent py-2.5 text-sm font-semibold text-hub-bg opacity-90 transition enabled:hover:bg-hub-accent-hover disabled:cursor-not-allowed disabled:opacity-60"
-        title={onRequest ? undefined : '打开服务详情，连接钱包后即可下单'}
+        title={onRequest ? undefined : t('hub.requestUnavailableTitle')}
       >
         {t('hub.payRequest')}
       </button>
