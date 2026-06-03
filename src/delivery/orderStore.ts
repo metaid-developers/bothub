@@ -107,7 +107,8 @@ export async function persistPendingOrder(
     orderCorrelationId,
   })
   const orderId = buildOrderId(walletGlobalMetaId, providerGlobalMetaId, orderCorrelationId)
-  const messageId = input.result.orderPinId || `${sessionId}:order`
+  const simplemsgPinId = input.result.simplemsgPinId?.trim() || ''
+  const messageId = simplemsgPinId || input.result.orderPinId || `${sessionId}:order`
 
   const order: BuyerOrder = {
     id: orderId,
@@ -167,7 +168,7 @@ export async function persistPendingOrder(
     encryption: 'plain',
     protocolTag: 'order',
     orderCorrelationId,
-    pinId: input.result.orderPinId,
+    pinId: simplemsgPinId || input.result.orderPinId || undefined,
     timestamp: now,
     decryptStatus: 'plain',
   }

@@ -178,12 +178,12 @@ describe('executePayAndRequest', () => {
       ],
     })
     expect(transfer.mock.invocationCallOrder[0]).toBeLessThan(
-      createPin.mock.invocationCallOrder[0],
-    )
-    expect(createPin.mock.invocationCallOrder[0]).toBeLessThan(
       ecdh.mock.invocationCallOrder[0],
     )
     expect(ecdh.mock.invocationCallOrder[0]).toBeLessThan(
+      createPin.mock.invocationCallOrder[0],
+    )
+    expect(createPin.mock.invocationCallOrder[0]).toBeLessThan(
       createPin.mock.invocationCallOrder[1],
     )
     expect(ecdh).toHaveBeenCalledWith({ externalPubKey: provider.chatPubkey })
@@ -223,6 +223,7 @@ describe('executePayAndRequest', () => {
     expect(result.paymentCommitTxid).toBe('')
     expect(result.orderReference).toBe('')
     expect(result.orderPinId).toBe('service-order-pin-001')
+    expect(result.simplemsgPinId).toBe('simplemsg-pin-001')
     expect(result.sessionKey).toBe(`${provider.globalMetaId}:service-order-pin-001`)
     expect(result.orderPayload).toContain(`txid: ${paymentTxid}`)
     expect(result.orderPayload).toContain('order pin id: service-order-pin-001')
@@ -255,8 +256,8 @@ describe('executePayAndRequest', () => {
     expect(transfer).not.toHaveBeenCalled()
     expect(ecdh).toHaveBeenCalledWith({ externalPubKey: provider.chatPubkey })
     expect(createPin).toHaveBeenCalledTimes(2)
-    expect(createPin.mock.invocationCallOrder[0]).toBeLessThan(
-      ecdh.mock.invocationCallOrder[0],
+    expect(ecdh.mock.invocationCallOrder[0]).toBeLessThan(
+      createPin.mock.invocationCallOrder[0],
     )
     const serviceOrderArgs = createPin.mock.calls[0][0] as {
       dataList: Array<{ metaidData: { path: string; body: string } }>
@@ -287,6 +288,7 @@ describe('executePayAndRequest', () => {
     expect(result.paymentCommitTxid).toBe('')
     expect(result.orderReference).toBe(generateRandomHex(32))
     expect(result.orderPinId).toBe('service-order-free-pin')
+    expect(result.simplemsgPinId).toBe('simplemsg-free-pin')
     expect(result.sessionKey).toBe(`${provider.globalMetaId}:service-order-free-pin`)
     expect(result.orderPayload).toContain(`order id: ${result.orderReference}`)
     expect(result.orderPayload).toContain('order pin id: service-order-free-pin')
@@ -332,6 +334,7 @@ describe('executePayAndRequest', () => {
 
     expect(transfer).not.toHaveBeenCalled()
     expect(result.orderPinId).toBe(`${orderTxid}i0`)
+    expect(result.simplemsgPinId).toBe(`${orderTxid}i0`)
     expect(result.paymentTxid).toBe('')
     expect(result.paymentCommitTxid).toBe('')
     expect(result.orderReference).toBe(generateRandomHex(32))
@@ -366,6 +369,7 @@ describe('executePayAndRequest', () => {
     expect(transfer).not.toHaveBeenCalled()
     expect(createPin).toHaveBeenCalledTimes(2)
     expect(result.orderPinId).toBe('service-order-indeterminate-simplemsg')
+    expect(result.simplemsgPinId).toBe('')
     expect(result.paymentTxid).toBe('')
     expect(result.paymentCommitTxid).toBe('')
     expect(result.orderReference).toBe(expectedOrderReference)
@@ -406,6 +410,7 @@ describe('executePayAndRequest', () => {
 
     expect(transfer).not.toHaveBeenCalled()
     expect(result.orderPinId).toBe('service-order-open-url')
+    expect(result.simplemsgPinId).toBe(`${orderTxid}i0`)
     expect(result.paymentTxid).toBe('')
     expect(result.paymentCommitTxid).toBe('')
     expect(result.orderReference).toBe(expectedOrderReference)
@@ -443,6 +448,7 @@ describe('executePayAndRequest', () => {
     expect(transfer).not.toHaveBeenCalled()
     expect(createPin).toHaveBeenCalledTimes(2)
     expect(result.orderPinId).toBe('service-order-response-lost')
+    expect(result.simplemsgPinId).toBe('')
     expect(result.paymentTxid).toBe('')
     expect(result.paymentCommitTxid).toBe('')
     expect(result.orderReference).toBe(expectedOrderReference)
@@ -775,7 +781,7 @@ describe('executePayAndRequest', () => {
       code: 'encryption_failed',
       message: 'Order encryption timed out waiting for Metalet ECDH response',
     })
-    expect(createPin).toHaveBeenCalledOnce()
+    expect(createPin).not.toHaveBeenCalled()
   })
 
   it('waits past the old 90s limit before timing out a free order broadcast', async () => {

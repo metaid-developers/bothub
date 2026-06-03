@@ -76,6 +76,7 @@ export interface PreparedPayAndRequest {
 
 export interface ExecutePayAndRequestResult extends PayAndRequestPaymentResult {
   orderPinId: string
+  simplemsgPinId?: string
   sessionKey: string
   orderPayload: string
   displaySummary: string
@@ -153,6 +154,25 @@ export function validatePayAndRequestInput(
     displaySummary,
     providerGlobalMetaId,
     providerChatPubkey,
+  }
+}
+
+async function resolveOrderSharedSecret(input: ValidatedPayAndRequestInput): Promise<string> {
+  try {
+    const ecdhResult = await withWalletResponseTimeout(
+      input.metalet.ecdh({ externalPubKey: input.providerChatPubkey }),
+      'Order encryption timed out waiting for Metalet ECDH response',
+      ECDH_WALLET_RESPONSE_TIMEOUT_MS,
+    )
+    return ecdhResult.sharedSecret
+  } catch (err) {
+    const message =
+      err instanceof WalletResponseTimeoutError
+        ? err.message
+        : err instanceof Error && err.message
+          ? `Order encryption failed: ${err.message}`
+          : 'Order encryption failed'
+    throw new PayAndRequestError(message, 'encryption_failed')
   }
 }
 
@@ -253,6 +273,16 @@ export async function prepareEncryptedOrderMessage(
   payment: PayAndRequestPaymentResult,
   serviceOrderPinId = '',
 ): Promise<PreparedPayAndRequest> {
+  const sharedSecret = await resolveOrderSharedSecret(input)
+  return buildPreparedOrderMessage(input, payment, serviceOrderPinId, sharedSecret)
+}
+
+function buildPreparedOrderMessage(
+  input: ValidatedPayAndRequestInput,
+  payment: PayAndRequestPaymentResult,
+  serviceOrderPinId: string,
+  sharedSecret: string,
+): PreparedPayAndRequest {
   const orderPayload = buildOrderPayload({
     displayText: input.displaySummary,
     rawRequest: input.rawRequest,
@@ -271,24 +301,6 @@ export async function prepareEncryptedOrderMessage(
     serviceName: input.service.serviceName,
     outputType: input.service.outputType,
   })
-
-  let sharedSecret: string
-  try {
-    const ecdhResult = await withWalletResponseTimeout(
-      input.metalet.ecdh({ externalPubKey: input.providerChatPubkey }),
-      'Order encryption timed out waiting for Metalet ECDH response',
-      ECDH_WALLET_RESPONSE_TIMEOUT_MS,
-    )
-    sharedSecret = ecdhResult.sharedSecret
-  } catch (err) {
-    const message =
-      err instanceof WalletResponseTimeoutError
-        ? err.message
-        : err instanceof Error && err.message
-          ? `Order encryption failed: ${err.message}`
-          : 'Order encryption failed'
-    throw new PayAndRequestError(message, 'encryption_failed')
-  }
 
   const encryptedContent = ecdhEncryptWithSharedSecret(orderPayload, sharedSecret)
   const simplemsgBody = buildPrivateMessagePayload(input.providerGlobalMetaId, encryptedContent)
@@ -515,13 +527,15 @@ export async function executePayAndRequest(
 ): Promise<ExecutePayAndRequestResult> {
   const validated = validatePayAndRequestInput(input)
   const payment = await executeServicePayment(validated.service, validated.metalet)
+  const sharedSecret = await resolveOrderSharedSecret(validated)
   const serviceOrderPinId = await publishSkillServiceOrderPin(validated, payment)
-  const prepared = await prepareEncryptedOrderMessage(validated, payment, serviceOrderPinId)
+  const prepared = buildPreparedOrderMessage(validated, payment, serviceOrderPinId, sharedSecret)
   const simplemsgPinId = await broadcastPreparedOrder(prepared, validated.metalet)
 
   return {
     ...payment,
     orderPinId: serviceOrderPinId || simplemsgPinId,
+    simplemsgPinId,
     sessionKey: prepared.sessionKey,
     orderPayload: prepared.orderPayload,
     displaySummary: prepared.displaySummary,
