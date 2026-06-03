@@ -412,27 +412,48 @@ export async function syncKnownPrivateChatHistory(
     if (!peerGlobalMetaId || aliases.has(peerGlobalMetaId)) continue
 
     try {
-      const page = await listPrivateChatHistory({
-        metaId,
-        otherMetaId: peerGlobalMetaId,
-        cursor: '',
-        size: 50,
-      })
-
+      let cursor = ''
       let fullyPersisted = true
       let persistenceError: unknown
-      for (const item of page.list) {
-        const result = await mergePrivateChatItem({
-          item,
-          selfGlobalMetaId: walletGlobalMetaId,
-          walletIdentity: identity,
-          peerChatPublicKeyCache,
+      let newestTimestamp: number | undefined
+
+      // Fetch up to 3 pages (150 messages) per peer.
+      for (let pageIndex = 0; pageIndex < 3; pageIndex++) {
+        const page = await listPrivateChatHistory({
+          metaId,
+          otherMetaId: peerGlobalMetaId,
+          cursor,
+          size: 50,
         })
-        if (!result.persisted) {
-          fullyPersisted = false
-          persistenceError = result.persistenceError
+
+        for (const item of page.list) {
+          const result = await mergePrivateChatItem({
+            item,
+            selfGlobalMetaId: walletGlobalMetaId,
+            walletIdentity: identity,
+            peerChatPublicKeyCache,
+          })
+          if (!result.persisted) {
+            fullyPersisted = false
+            persistenceError = result.persistenceError
+          }
         }
+
+        if (page.list.length > 0) {
+          const pageNewest = page.list.reduce<number | undefined>(
+            (max, item) =>
+              max === undefined || item.timestamp > max ? item.timestamp : max,
+            undefined,
+          )
+          if (pageNewest !== undefined && (newestTimestamp === undefined || pageNewest > newestTimestamp)) {
+            newestTimestamp = pageNewest
+          }
+        }
+
+        if (!page.nextCursor) break
+        cursor = page.nextCursor
       }
+
       if (!fullyPersisted) {
         summary.failedPeers.push({
           peerGlobalMetaId,
@@ -441,16 +462,11 @@ export async function syncKnownPrivateChatHistory(
         continue
       }
 
-      const newestTimestamp = page.list.reduce<number | undefined>(
-        (max, item) =>
-          max === undefined || item.timestamp > max ? item.timestamp : max,
-        undefined,
-      )
       await putSyncState({
         id: `${walletGlobalMetaId}:${peerGlobalMetaId}`,
         walletGlobalMetaId,
         peerGlobalMetaId,
-        cursor: page.nextCursor ?? undefined,
+        cursor,
         lastTimestamp: newestTimestamp,
         updatedAt: Date.now(),
       })

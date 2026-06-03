@@ -33,7 +33,7 @@ describe('aggregator client', () => {
       expect(data.list[0]).not.toHaveProperty('available')
     })
 
-    it('includes null provider fields and MRC20 settlement item', async () => {
+    it('includes null provider fields and excludes MRC20 settlement items', async () => {
       const { listServices } = await loadAggregator()
       const data = await listServices()
 
@@ -41,11 +41,9 @@ describe('aggregator client', () => {
       expect(anon).toBeDefined()
       expect(anon?.providerAvatar).toBeNull()
 
+      // MRC20 services are filtered out since checkout is not yet supported.
       const mrc20 = data.list.find((item) => item.settlementKind === 'mrc20')
-      expect(mrc20).toBeDefined()
-      expect(mrc20?.currency).toBe('MRC20')
-      expect(mrc20?.mrc20Ticker).toBeTruthy()
-      expect(mrc20?.mrc20Id).toBeTruthy()
+      expect(mrc20).toBeUndefined()
     })
 
     it('getServiceDetail returns service, provider, and metadata', async () => {
@@ -78,7 +76,8 @@ describe('aggregator client', () => {
       expect(fetchMock.mock.calls[0][0]).toBe(
         'https://api.test/api/bot-hub/skill-service/list?size=20&sortBy=rating',
       )
-      expect(data.list).toHaveLength(3)
+      // MRC20 item is filtered out from the mock fixture (settlementKind: 'mrc20')
+      expect(data.list).toHaveLength(2)
       expect(data.total).toBe(3)
     })
 

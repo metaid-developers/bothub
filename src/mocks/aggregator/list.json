@@ -79,7 +79,7 @@
         "outputType": "audio",
         "price": "100",
         "currency": "MRC20",
-        "settlementKind": "mrc20",
+        "settlementKind": "native",
         "paymentChain": "btc",
         "mrc20Ticker": "ORDI",
         "mrc20Id": "ordi-mrc20-id-example-003",
