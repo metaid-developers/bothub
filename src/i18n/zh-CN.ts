@@ -111,6 +111,8 @@ export const zhCN = {
       allTab: 'All',
       progress: '交付进度',
       assets: '成果库',
+      assetScopeAll: '全部',
+      assetScopeOrder: '当前请求',
       messages: '消息记录',
       activeOrderCountSuffix: '个进行中',
       deliveredOrderCountSuffix: '个已交付',

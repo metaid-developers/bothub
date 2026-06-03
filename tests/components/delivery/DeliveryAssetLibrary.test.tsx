@@ -31,6 +31,7 @@ describe('DeliveryAssetLibrary', () => {
   it('groups and filters delivered assets', async () => {
     render(
       <DeliveryAssetLibrary
+        scopeLabel="全部 - Canonical Render Bot"
         assets={[
           asset({ kind: 'image', filename: 'image.png', extension: '.png' }),
           asset({ kind: 'video', filename: 'clip.mp4', extension: '.mp4' }),
@@ -40,6 +41,7 @@ describe('DeliveryAssetLibrary', () => {
     )
 
     expect(screen.getByText('3 个成果')).toBeInTheDocument()
+    expect(screen.getByText('全部 - Canonical Render Bot')).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: '图片 1' }))
 
     expect(screen.getByText('image.png')).toBeInTheDocument()
@@ -94,8 +96,9 @@ describe('DeliveryAssetLibrary', () => {
   })
 
   it('shows a buyer-facing empty state', () => {
-    render(<DeliveryAssetLibrary assets={[]} />)
+    render(<DeliveryAssetLibrary assets={[]} scopeLabel="当前请求 - Render Skill" />)
 
+    expect(screen.getByText('当前请求 - Render Skill')).toBeInTheDocument()
     expect(screen.getByText('还没有收到成果')).toBeInTheDocument()
     expect(
       screen.getByText(

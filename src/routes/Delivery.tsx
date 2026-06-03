@@ -65,6 +65,32 @@ function providerIdsForConversation(
   ])
 }
 
+function deliveryAssetScopeLabel(input: {
+  conversation: DeliveryConversation | null
+  order: WorkspaceOrder | null
+  tab: ReturnType<typeof selectDeliveryTab>
+}): string | undefined {
+  if (!input.conversation) return undefined
+
+  if (input.tab.kind === 'all') {
+    const providerLabel =
+      input.conversation.providerName?.trim() ||
+      input.conversation.providerGlobalMetaId.trim()
+    return providerLabel
+      ? `${t('delivery.workspace.assetScopeAll')} - ${providerLabel}`
+      : undefined
+  }
+
+  const orderLabel =
+    input.order?.serviceLabel.trim() ||
+    input.order?.requestSummary.trim() ||
+    input.order?.id.trim() ||
+    input.tab.orderId.trim()
+  return orderLabel
+    ? `${t('delivery.workspace.assetScopeOrder')} - ${orderLabel}`
+    : undefined
+}
+
 function resolveConversationProviderProfile(
   conversation: DeliveryConversation | null,
   providerProfiles: Record<string, UserProfile>,
@@ -509,6 +535,16 @@ export function DeliveryPage() {
     [selectedConversation, selectedTab],
   )
 
+  const selectedAssetScopeLabel = useMemo(
+    () =>
+      deliveryAssetScopeLabel({
+        conversation: selectedConversationWithProfile,
+        order: selectedOrderWithProfile,
+        tab: selectedTab,
+      }),
+    [selectedConversationWithProfile, selectedOrderWithProfile, selectedTab],
+  )
+
   return (
     <section aria-labelledby="delivery-heading" className="space-y-4">
       <div>
@@ -569,7 +605,7 @@ export function DeliveryPage() {
           )}
         </div>
 
-        <DeliveryAssetLibrary assets={selectedAssets} />
+        <DeliveryAssetLibrary assets={selectedAssets} scopeLabel={selectedAssetScopeLabel} />
         {selectedTab.kind === 'all' && (
           <DeliveryComposer
             wallet={walletConnected ? identity : null}

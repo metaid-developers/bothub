@@ -979,6 +979,43 @@ describe('DeliveryPage layout', () => {
     expect(screen.queryByText(providerAddress.slice(0, 12))).not.toBeInTheDocument()
   })
 
+  it('switches asset library scope labels between All and an order tab', async () => {
+    const order = buyerOrder({
+      serviceName: 'Render Skill',
+      displaySummary: 'Render a launch card',
+      rawRequest: 'Render a launch card',
+      providerName: 'Canonical Render Bot',
+      orderPinId: 'order-alpha',
+    })
+    vi.stubGlobal('indexedDB', {})
+    mocks.walletState.identity = connectedWallet
+    mocks.walletState.status = 'connected'
+    mocks.getOrdersForWallet.mockResolvedValue([order])
+    mocks.loadDeliveryWorkspaceRecords.mockResolvedValue({
+      orders: [],
+      sessions: [],
+      assetsBySession: {
+        [order.id]: [
+          deliveryAsset({
+            id: `${order.id}:metafile://render.png`,
+            sessionId: order.id,
+            messageId: 'order-alpha',
+            orderCorrelationId: 'order-alpha',
+            uri: 'metafile://render.png',
+            filename: 'render.png',
+          }),
+        ],
+      },
+    })
+
+    renderDeliveryPage('/delivery')
+
+    expect(await screen.findByText('全部 - Canonical Render Bot')).toBeInTheDocument()
+    fireEvent.click(await screen.findByRole('tab', { name: /Render Skill/ }))
+
+    expect(screen.getByText('当前请求 - Render Skill')).toBeInTheDocument()
+  })
+
   it('shows order protocol messages in All and the matching order tab', () => {
     mocks.walletState.identity = connectedWallet
     mocks.walletState.status = 'connected'
