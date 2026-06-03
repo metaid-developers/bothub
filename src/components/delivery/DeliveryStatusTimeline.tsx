@@ -30,20 +30,27 @@ function isDecryptGapMessage(message: DeliveryMessage): boolean {
   )
 }
 
+function sanitizeDecryptGapMessage(message: DeliveryMessage): DeliveryMessage {
+  return {
+    ...message,
+    content: t('delivery.decryptFailedDefault'),
+    rawContent: t('delivery.workspace.rawDecryptPlaceholder'),
+    decryptError: t('delivery.workspace.decryptErrorPlaceholder'),
+  }
+}
+
 function displayMessages(
   messages: DeliveryMessage[],
   showDetails: boolean,
+  includeDecryptGaps = false,
 ): DeliveryMessage[] {
-  if (!showDetails) {
-    return messages.filter((message) => !isDecryptGapMessage(message))
-  }
-
-  return messages.map((message) => {
-    if (message.decryptError || !isDecryptGapMessage(message)) return message
-    return {
-      ...message,
-      decryptError: t('delivery.workspace.rawDecryptPlaceholder'),
+  return messages.flatMap((message) => {
+    const decryptGap = isDecryptGapMessage(message)
+    if (!decryptGap) return [message]
+    if (!showDetails && !includeDecryptGaps) {
+      return []
     }
+    return [sanitizeDecryptGapMessage(message)]
   })
 }
 
@@ -101,7 +108,7 @@ export function DeliveryStatusTimeline({
           </div>
         )}
         <div id={detailsId} className="space-y-0.5 px-4 pb-3 pt-3">
-          {displayMessages(messages, showDetails).map((message) => (
+          {displayMessages(messages, showDetails, true).map((message) => (
             <MessageBubble
               key={message.id}
               message={message}

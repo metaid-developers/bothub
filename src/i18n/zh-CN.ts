@@ -132,6 +132,7 @@ export const zhCN = {
       decryptSyncAria: '交付记录需要同步',
       decryptSyncCopy: '有交付记录暂时无法显示，已保留原始记录。',
       rawDecryptPlaceholder: '原始记录暂未显示',
+      decryptErrorPlaceholder: '解密详情暂不显示',
       syncHydrating: '正在恢复本地交付记录…',
       syncSyncing: '正在同步最新交付…',
       syncPartial: '已显示本地记录，{count} 个会话同步失败',

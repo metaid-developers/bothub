@@ -103,6 +103,13 @@ describe('DeliveryStatusTimeline', () => {
     expect(screen.getByText('这条交付记录暂时无法显示，已保留原始记录')).toBeInTheDocument()
     expect(screen.queryByText('U2FsdGVkX1cipher')).not.toBeInTheDocument()
     expect(screen.queryByText('missing peer key')).not.toBeInTheDocument()
+
+    const nestedDetailsButton = screen.getAllByRole('button', { name: '技术详情' })[1]
+    fireEvent.click(nestedDetailsButton)
+
+    expect(screen.getByText('原始记录暂未显示')).toBeInTheDocument()
+    expect(screen.queryByText('U2FsdGVkX1cipher')).not.toBeInTheDocument()
+    expect(screen.queryByText('missing peer key')).not.toBeInTheDocument()
   })
 
   it('hides raw ecdh content behind diagnostics even without a stored error', () => {
@@ -132,6 +139,12 @@ describe('DeliveryStatusTimeline', () => {
 
     expect(detailsButton).toHaveAttribute('aria-expanded', 'true')
     expect(screen.getByText('这条交付记录暂时无法显示，已保留原始记录')).toBeInTheDocument()
+    expect(screen.queryByText('U2FsdGVkX1rawcipher')).not.toBeInTheDocument()
+
+    const nestedDetailsButton = screen.getAllByRole('button', { name: '技术详情' })[1]
+    fireEvent.click(nestedDetailsButton)
+
+    expect(screen.getByText('原始记录暂未显示')).toBeInTheDocument()
     expect(screen.queryByText('U2FsdGVkX1rawcipher')).not.toBeInTheDocument()
   })
 
@@ -174,7 +187,7 @@ describe('DeliveryStatusTimeline', () => {
     expect(screen.queryByText('交付进度')).not.toBeInTheDocument()
   })
 
-  it('keeps raw ecdh content hidden behind diagnostics in All mode', () => {
+  it('renders a safe placeholder for decrypt gaps by default in All mode', () => {
     render(
       <DeliveryStatusTimeline
         order={null}
@@ -185,6 +198,7 @@ describe('DeliveryStatusTimeline', () => {
             content: 'U2FsdGVkX1allcipher',
             rawContent: 'U2FsdGVkX1allcipher',
             encryption: 'ecdh',
+            decryptError: 'missing peer key',
           }),
         ]}
         selfGlobalMetaId="idqbuyer"
@@ -192,15 +206,26 @@ describe('DeliveryStatusTimeline', () => {
       />,
     )
 
-    const detailsButton = screen.getByRole('button', { name: '技术详情' })
-    expect(detailsButton).toHaveAttribute('aria-expanded', 'false')
-    expect(screen.queryByText('U2FsdGVkX1allcipher')).not.toBeInTheDocument()
-
-    fireEvent.click(detailsButton)
-
-    expect(detailsButton).toHaveAttribute('aria-expanded', 'true')
     expect(screen.getByText('这条交付记录暂时无法显示，已保留原始记录')).toBeInTheDocument()
     expect(screen.queryByText('U2FsdGVkX1allcipher')).not.toBeInTheDocument()
+    expect(screen.queryByText('missing peer key')).not.toBeInTheDocument()
+
+    const [topLevelDetailsButton, nestedDetailsButton] = screen.getAllByRole('button', {
+      name: '技术详情',
+    })
+    expect(topLevelDetailsButton).toHaveAttribute('aria-expanded', 'false')
+
+    fireEvent.click(topLevelDetailsButton)
+
+    expect(topLevelDetailsButton).toHaveAttribute('aria-expanded', 'true')
+    expect(screen.queryByText('U2FsdGVkX1allcipher')).not.toBeInTheDocument()
+    expect(screen.queryByText('missing peer key')).not.toBeInTheDocument()
+
+    fireEvent.click(nestedDetailsButton)
+
+    expect(screen.getByText('原始记录暂未显示')).toBeInTheDocument()
+    expect(screen.queryByText('U2FsdGVkX1allcipher')).not.toBeInTheDocument()
+    expect(screen.queryByText('missing peer key')).not.toBeInTheDocument()
   })
 
   it('shows conversation empty state in All mode', () => {
