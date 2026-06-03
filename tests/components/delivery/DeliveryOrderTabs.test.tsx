@@ -157,4 +157,28 @@ describe('DeliveryOrderTabs', () => {
       'true',
     )
   })
+
+  it('keeps long order labels bounded while preserving the full title', () => {
+    const longLabel =
+      'Extremely long image rendering request with many detailed scene requirements'
+    render(
+      <DeliveryOrderTabs
+        conversation={{
+          ...conversationWithTwoOrders(),
+          orderThreads: [
+            orderThread({
+              serviceLabel: longLabel,
+            }),
+          ],
+        }}
+        selectedTabId="order:order-pin-1"
+        onSelectTab={vi.fn()}
+      />,
+    )
+
+    const tab = screen.getByRole('tab', { name: new RegExp(longLabel) })
+    expect(tab).toHaveAttribute('title', expect.stringContaining(longLabel))
+    expect(tab).toHaveClass('max-w-[16rem]')
+    expect(screen.getByText(longLabel)).toHaveClass('truncate')
+  })
 })

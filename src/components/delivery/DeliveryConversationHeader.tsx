@@ -14,6 +14,10 @@ function displayName(conversation: DeliveryConversation): string {
   )
 }
 
+function countLabel(count: number, suffix: string): string {
+  return `${count} ${suffix}`
+}
+
 export function DeliveryConversationHeader({
   conversation,
 }: DeliveryConversationHeaderProps) {
@@ -48,13 +52,30 @@ export function DeliveryConversationHeader({
         <div className="min-w-0 flex-1">
           <p className="truncate text-sm font-semibold text-white">{name}</p>
           <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-hub-muted">
-            <span>{conversation.activeOrderCount} 个进行中</span>
+            <span>
+              {countLabel(
+                conversation.activeOrderCount,
+                t('delivery.workspace.activeOrderCountSuffix'),
+              )}
+            </span>
             {conversation.deliveredOrderCount > 0 && (
-              <span>{conversation.deliveredOrderCount} 个已交付</span>
+              <span>
+                {countLabel(
+                  conversation.deliveredOrderCount,
+                  t('delivery.workspace.deliveredOrderCountSuffix'),
+                )}
+              </span>
             )}
-            <span>{conversation.assetCount} 个成果</span>
+            <span>
+              {countLabel(conversation.assetCount, t('delivery.workspace.assetCountSuffix'))}
+            </span>
             {conversation.messageCount > 0 && (
-              <span>{conversation.messageCount} 条消息</span>
+              <span>
+                {countLabel(
+                  conversation.messageCount,
+                  t('delivery.workspace.messageCountSuffix'),
+                )}
+              </span>
             )}
           </div>
         </div>

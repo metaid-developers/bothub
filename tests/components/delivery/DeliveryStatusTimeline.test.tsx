@@ -135,20 +135,25 @@ describe('DeliveryStatusTimeline', () => {
     expect(screen.queryByText('U2FsdGVkX1rawcipher')).not.toBeInTheDocument()
   })
 
-  it('renders an All conversation timeline without progress milestones', () => {
+  it('renders an All conversation timeline with buyer-readable message bubbles', () => {
     render(
       <DeliveryStatusTimeline
         order={null}
         messages={[
           message({
             id: 'chat-1',
-            content: 'Can I try this first?',
+            peerName: 'Render Bot',
+            fromGlobalMetaId: 'idqprovider',
+            toGlobalMetaId: 'idqbuyer',
+            content: 'I can start now.',
             orderCorrelationId: undefined,
             timestamp: 1,
           }),
           message({
             id: 'delivery-1',
-            content: '[DELIVERY:order-pin-1] Ready',
+            fromGlobalMetaId: 'idqprovider',
+            toGlobalMetaId: 'idqbuyer',
+            content: '[DELIVERY:order-pin-1] Ready metafile://image.png',
             orderCorrelationId: 'order-pin-1',
             timestamp: 2,
           }),
@@ -158,8 +163,14 @@ describe('DeliveryStatusTimeline', () => {
       />,
     )
 
-    expect(screen.getByText('Can I try this first?')).toBeInTheDocument()
-    expect(screen.getByText('[DELIVERY:order-pin-1] Ready')).toBeInTheDocument()
+    expect(screen.getByText('Render Bot')).toBeInTheDocument()
+    expect(screen.getByText('I can start now.')).toBeInTheDocument()
+    const deliveryCard = screen.getByLabelText('交付成果')
+    expect(within(deliveryCard).getByText('Ready metafile://image.png')).toBeInTheDocument()
+    expect(within(deliveryCard).getByText('1 个成果')).toBeInTheDocument()
+    expect(screen.getByLabelText('image.png')).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: '下载' })).toBeInTheDocument()
+    expect(screen.queryByText('[DELIVERY:order-pin-1] Ready metafile://image.png')).not.toBeInTheDocument()
     expect(screen.queryByText('交付进度')).not.toBeInTheDocument()
   })
 

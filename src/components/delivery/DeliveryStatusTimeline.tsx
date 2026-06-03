@@ -30,31 +30,21 @@ function isDecryptGapMessage(message: DeliveryMessage): boolean {
   )
 }
 
-function ConversationMessageBubble({
-  message,
-  selfGlobalMetaId,
-}: {
-  message: DeliveryMessage
-  selfGlobalMetaId: string
-}) {
-  const isSelf = message.fromGlobalMetaId.trim() === selfGlobalMetaId.trim()
+function displayMessages(
+  messages: DeliveryMessage[],
+  showDetails: boolean,
+): DeliveryMessage[] {
+  if (!showDetails) {
+    return messages.filter((message) => !isDecryptGapMessage(message))
+  }
 
-  return (
-    <div className={clsx('flex', isSelf ? 'justify-end' : 'justify-start')}>
-      <div
-        className={clsx(
-          'max-w-[min(100%,28rem)] rounded-card px-3 py-2 text-sm leading-relaxed',
-          isSelf
-            ? 'bg-hub-accent text-white'
-            : 'border border-hub-border bg-hub-surface2 text-white',
-        )}
-      >
-        <p className="whitespace-pre-wrap break-words">
-          {message.decryptError ? t('delivery.decryptFailedDefault') : message.content}
-        </p>
-      </div>
-    </div>
-  )
+  return messages.map((message) => {
+    if (message.decryptError || !isDecryptGapMessage(message)) return message
+    return {
+      ...message,
+      decryptError: t('delivery.workspace.rawDecryptPlaceholder'),
+    }
+  })
 }
 
 export function DeliveryStatusTimeline({
@@ -92,10 +82,12 @@ export function DeliveryStatusTimeline({
           <div className="px-4 py-3">
             <div
               role="status"
-              aria-label="交付记录需要同步"
+              aria-label={t('delivery.workspace.decryptSyncAria')}
               className="rounded-card border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs"
             >
-              <p className="text-amber-300/90">有交付记录暂时无法显示，已保留原始记录。</p>
+              <p className="text-amber-300/90">
+                {t('delivery.workspace.decryptSyncCopy')}
+              </p>
               <button
                 type="button"
                 aria-controls={detailsId}
@@ -109,25 +101,13 @@ export function DeliveryStatusTimeline({
           </div>
         )}
         <div id={detailsId} className="space-y-0.5 px-4 pb-3 pt-3">
-          {(showDetails
-            ? messages
-            : messages.filter((message) => !isDecryptGapMessage(message))
-          ).map((message) => {
-            const displayMessage =
-              !message.decryptError && isDecryptGapMessage(message)
-                ? {
-                    ...message,
-                    decryptError: '原始记录暂未显示',
-                  }
-                : message
-            return (
-              <ConversationMessageBubble
-                key={message.id}
-                message={displayMessage}
-                selfGlobalMetaId={selfGlobalMetaId}
-              />
-            )
-          })}
+          {displayMessages(messages, showDetails).map((message) => (
+            <MessageBubble
+              key={message.id}
+              message={message}
+              selfGlobalMetaId={selfGlobalMetaId}
+            />
+          ))}
         </div>
       </div>
     )
@@ -192,10 +172,12 @@ export function DeliveryStatusTimeline({
         {decryptGap && (
           <div
             role="status"
-            aria-label="交付记录需要同步"
+            aria-label={t('delivery.workspace.decryptSyncAria')}
             className="mt-3 rounded-card border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs"
           >
-            <p className="text-amber-300/90">有交付记录暂时无法显示，已保留原始记录。</p>
+            <p className="text-amber-300/90">
+              {t('delivery.workspace.decryptSyncCopy')}
+            </p>
             <button
               type="button"
               aria-controls={detailsId}
@@ -215,25 +197,13 @@ export function DeliveryStatusTimeline({
             {t('delivery.workspace.messages')}
           </summary>
           <div id={detailsId} className="space-y-0.5 pb-2">
-            {(showDetails
-              ? messages
-              : messages.filter((message) => !isDecryptGapMessage(message))
-            ).map((message) => {
-              const displayMessage =
-                !message.decryptError && isDecryptGapMessage(message)
-                  ? {
-                      ...message,
-                      decryptError: '原始记录暂未显示',
-                    }
-                  : message
-              return (
-                <MessageBubble
-                  key={message.id}
-                  message={displayMessage}
-                  selfGlobalMetaId={selfGlobalMetaId}
-                />
-              )
-            })}
+            {displayMessages(messages, showDetails).map((message) => (
+              <MessageBubble
+                key={message.id}
+                message={message}
+                selfGlobalMetaId={selfGlobalMetaId}
+              />
+            ))}
           </div>
         </details>
       )}
@@ -244,30 +214,60 @@ export function DeliveryStatusTimeline({
 function buildMilestones(order: WorkspaceOrder): TimelineMilestone[] {
   const milestones: TimelineMilestone[] = []
 
-  milestones.push({ label: '请求已发送', status: 'done' })
+  milestones.push({
+    label: t('delivery.workspace.milestones.requestSent'),
+    status: 'done',
+  })
 
   if (order.status === 'active' || order.status === 'delivering') {
-    milestones.push({ label: '服务处理中', status: 'current' })
+    milestones.push({
+      label: t('delivery.workspace.milestones.processing'),
+      status: 'current',
+    })
   } else if (order.status === 'delivered' || order.status === 'completed') {
-    milestones.push({ label: '服务处理中', status: 'done' })
+    milestones.push({
+      label: t('delivery.workspace.milestones.processing'),
+      status: 'done',
+    })
   } else if (order.status === 'failed') {
-    milestones.push({ label: '服务处理中', status: 'done' })
+    milestones.push({
+      label: t('delivery.workspace.milestones.processing'),
+      status: 'done',
+    })
   } else {
-    milestones.push({ label: '服务处理中', status: 'pending' })
+    milestones.push({
+      label: t('delivery.workspace.milestones.processing'),
+      status: 'pending',
+    })
   }
 
   if (order.assetCount > 0 && (order.status === 'delivered' || order.status === 'completed')) {
-    milestones.push({ label: '成果已交付', status: 'done' })
+    milestones.push({
+      label: t('delivery.workspace.milestones.assetsDelivered'),
+      status: 'done',
+    })
   } else if (order.status === 'delivering') {
-    milestones.push({ label: '成果已交付', status: 'pending' })
+    milestones.push({
+      label: t('delivery.workspace.milestones.assetsDelivered'),
+      status: 'pending',
+    })
   } else if (order.status === 'completed') {
-    milestones.push({ label: '成果已交付', status: 'done' })
+    milestones.push({
+      label: t('delivery.workspace.milestones.assetsDelivered'),
+      status: 'done',
+    })
   }
 
   if (order.status === 'completed') {
-    milestones.push({ label: '已完结', status: 'done' })
+    milestones.push({
+      label: t('delivery.workspace.milestones.completed'),
+      status: 'done',
+    })
   } else if (order.status === 'failed' || order.status === 'failed_to_send') {
-    milestones.push({ label: '需要处理', status: 'current' })
+    milestones.push({
+      label: t('delivery.workspace.milestones.needsAttention'),
+      status: 'current',
+    })
   }
 
   return milestones
