@@ -49,6 +49,38 @@ describe('DeliveryAssetLibrary', () => {
     expect(screen.queryByText('brief.pdf')).not.toBeInTheDocument()
   })
 
+  it('resets a stale kind filter when the selected scope has different asset kinds', async () => {
+    const { rerender } = render(
+      <DeliveryAssetLibrary
+        scopeLabel="全部 - Canonical Render Bot"
+        assets={[
+          asset({ kind: 'image', filename: 'image.png', extension: '.png' }),
+        ]}
+      />,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: '图片 1' }))
+
+    rerender(
+      <DeliveryAssetLibrary
+        scopeLabel="当前请求 - Document Skill"
+        assets={[
+          asset({
+            kind: 'document',
+            filename: 'brief.pdf',
+            extension: '.pdf',
+          }),
+        ]}
+      />,
+    )
+
+    expect(screen.getByText('当前请求 - Document Skill')).toBeInTheDocument()
+    await waitFor(() => {
+      expect(screen.getByText('brief.pdf')).toBeInTheDocument()
+    })
+    expect(screen.queryByText('image.png')).not.toBeInTheDocument()
+  })
+
   it('copies one link and all links', async () => {
     render(
       <DeliveryAssetLibrary

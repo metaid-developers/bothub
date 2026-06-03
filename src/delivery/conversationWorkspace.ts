@@ -166,6 +166,10 @@ function isActiveStatus(status: WorkspaceOrderStatus): boolean {
   return !['completed', 'failed', 'failed_to_send'].includes(status)
 }
 
+function isInProgressStatus(status: WorkspaceOrderStatus): boolean {
+  return !['delivered', 'completed', 'failed', 'failed_to_send'].includes(status)
+}
+
 function isDeliveredStatus(status: WorkspaceOrderStatus): boolean {
   return status === 'delivered' || status === 'completed'
 }
@@ -471,8 +475,8 @@ function storedAssetsForThread(input: {
 
 function sortOrderThreads(threads: DeliveryOrderThread[]): DeliveryOrderThread[] {
   return [...threads].sort((a, b) => {
-    const aActive = isActiveStatus(a.status) ? 0 : 1
-    const bActive = isActiveStatus(b.status) ? 0 : 1
+    const aActive = isInProgressStatus(a.status) ? 0 : 1
+    const bActive = isInProgressStatus(b.status) ? 0 : 1
     if (aActive !== bActive) return aActive - bActive
     if (a.lastActivityAt !== b.lastActivityAt) return b.lastActivityAt - a.lastActivityAt
     return a.id.localeCompare(b.id)
@@ -699,7 +703,7 @@ export function buildDeliveryConversations(
       latestActivityAt,
       lastMessage: messages[messages.length - 1] ?? null,
       messageCount: messages.length,
-      activeOrderCount: threads.filter((thread) => isActiveStatus(thread.status)).length,
+      activeOrderCount: threads.filter((thread) => isInProgressStatus(thread.status)).length,
       deliveredOrderCount: threads.filter((thread) => isDeliveredStatus(thread.status)).length,
       assetCount: allAssets.length,
       messages,

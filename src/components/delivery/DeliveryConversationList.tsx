@@ -1,6 +1,7 @@
 import { clsx } from 'clsx'
 import { PeerAvatar } from '@/components/delivery/PeerAvatar'
 import type { DeliveryConversation } from '@/delivery/conversationWorkspace'
+import { sessionPreviewText } from '@/delivery/messageDisplay'
 import type { DeliverySyncUiStatus } from '@/delivery/syncStatusStore'
 import { t } from '@/i18n'
 
@@ -38,8 +39,13 @@ function displayName(conversation: DeliveryConversation): string {
 }
 
 function latestPreview(conversation: DeliveryConversation): string | null {
-  const content = conversation.lastMessage?.content.trim()
-  return content || null
+  const lastMessage = conversation.lastMessage
+  if (!lastMessage) return null
+  return sessionPreviewText(
+    lastMessage.content,
+    lastMessage.protocolTag,
+    lastMessage.decryptError,
+  )
 }
 
 export function DeliveryConversationList({

@@ -97,6 +97,7 @@ export function SessionsList({
                 {sessionPreviewText(
                   session.lastMessage.content,
                   session.lastMessage.protocolTag,
+                  session.lastMessage.decryptError,
                 )}
               </p>
               <p className="mt-1 flex items-center justify-between gap-2 text-[11px] text-hub-muted">

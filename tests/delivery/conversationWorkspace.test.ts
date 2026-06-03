@@ -170,14 +170,36 @@ describe('delivery conversation workspace', () => {
       assetCount: 1,
     })
     expect(conversation?.orderThreads.map((thread) => thread.orderCorrelationId)).toEqual([
-      'order-pin-2',
       'order-pin-1',
+      'order-pin-2',
     ])
     expect(conversation?.messages.map((row) => row.id)).toEqual([
       'chat-1',
       'status-1',
       'delivery-2',
     ])
+  })
+
+  it('counts delivered orders separately from in-progress orders', () => {
+    const workspace = buildDeliveryConversations({
+      walletGlobalMetaId: SELF,
+      orders: [
+        order({
+          orderPinId: 'delivered-pin',
+          id: `${SELF}:${PROVIDER}:delivered-pin`,
+          status: 'delivered',
+          updatedAt: 50,
+        }),
+      ],
+      sessions: [],
+      byPeer: {},
+      assetsBySession: {},
+    })
+
+    expect(workspace.activeOrderCount).toBe(0)
+    expect(workspace.deliveredOrderCount).toBe(1)
+    expect(workspace.conversations[0]?.activeOrderCount).toBe(0)
+    expect(workspace.conversations[0]?.deliveredOrderCount).toBe(1)
   })
 
   it('keeps ambiguous unscoped protocol messages only in All when multiple active orders exist', () => {

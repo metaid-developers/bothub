@@ -11,6 +11,8 @@ export type MessageBubbleVariant =
   | 'rating_reserved'
   | 'system'
 
+const DECRYPT_FAILED_PREVIEW = '这条交付记录暂时无法显示，已保留原始记录'
+
 function protocolKindFromTag(
   protocolTag: string | null | undefined,
 ): DeliveryProtocolKind | null {
@@ -64,29 +66,46 @@ export function getMessageVariant(message: DeliveryMessage): MessageBubbleVarian
   return 'text'
 }
 
-export function sessionPreviewText(content: string, protocolTag?: string): string {
+export function sessionPreviewText(
+  content: string,
+  protocolTag?: string,
+  decryptError?: string,
+): string {
   const order = parseOrderMessage(content)
   if (order) {
     return truncatePreview(order.displaySummary || '请求')
   }
 
   const protocol = parseDeliveryProtocol(content)
-  const protocolKind = protocolKindFromTag(protocolTag) ?? protocol.kind
-  const protocolText = protocol.kind === 'plain' ? '' : protocol.displayText
-  if (protocolKind === 'delivery') {
-    return truncatePreview(protocolText || '已收到交付')
-  }
-  if (protocolKind === 'order_status') {
-    return truncatePreview(protocolText || '交付状态更新')
-  }
-  if (protocolKind === 'order_end') {
-    return truncatePreview(protocolText || '订单已完成')
-  }
-  if (protocolKind === 'needs_rating') {
-    return truncatePreview(protocolText || '评价待开放')
+  if (protocol.kind !== 'plain') {
+    return previewForProtocolKind(protocol.kind, protocol.displayText)
   }
 
-  return truncatePreview(content)
+  if (decryptError?.trim()) {
+    return DECRYPT_FAILED_PREVIEW
+  }
+
+  const protocolKind = protocolKindFromTag(protocolTag)
+  const protocolText = ''
+  if (!protocolKind) return truncatePreview(content)
+  return previewForProtocolKind(protocolKind, protocolText)
+}
+
+function previewForProtocolKind(kind: DeliveryProtocolKind, displayText: string): string {
+  if (kind === 'delivery') {
+    return truncatePreview(displayText || '已收到交付')
+  }
+  if (kind === 'order_status') {
+    return truncatePreview(displayText || '交付状态更新')
+  }
+  if (kind === 'order_end') {
+    return truncatePreview(displayText || '订单已完成')
+  }
+  if (kind === 'needs_rating') {
+    return truncatePreview(displayText || '评价待开放')
+  }
+
+  return truncatePreview(displayText)
 }
 
 function truncatePreview(content: string): string {

@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from 'react'
+import { useState, useMemo, useCallback, useEffect } from 'react'
 import { clsx } from 'clsx'
 import type { ParsedDeliveryAsset } from '@/delivery/assetParser'
 import type { DeliveryAssetRecord } from '@/delivery/domain'
@@ -53,6 +53,12 @@ export function DeliveryAssetLibrary({ assets, scopeLabel }: DeliveryAssetLibrar
     const kinds: FilterKind[] = ['all', 'image', 'video', 'audio', 'document', 'archive', 'other']
     return kinds.filter((k) => (k === 'all' ? true : counts[k] > 0))
   }, [counts])
+
+  useEffect(() => {
+    if (filter !== 'all' && !filtersWithCounts.includes(filter)) {
+      setFilter('all')
+    }
+  }, [filter, filtersWithCounts])
 
   async function copyAllLinks() {
     if (!navigator.clipboard) {

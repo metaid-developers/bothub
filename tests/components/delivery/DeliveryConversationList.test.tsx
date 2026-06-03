@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from 'vitest'
 import { DeliveryConversationList } from '@/components/delivery/DeliveryConversationList'
 import type { DeliveryConversation } from '@/delivery/conversationWorkspace'
 import type { DeliveryMessage } from '@/delivery/messageStore'
+import { buildOrderPayload } from '@/order/buildOrderPayload'
 
 function message(overrides: Partial<DeliveryMessage> = {}): DeliveryMessage {
   return {
@@ -68,6 +69,62 @@ describe('DeliveryConversationList', () => {
     expect(within(list).getByText('2 个进行中')).toBeInTheDocument()
     expect(within(list).getByText('3 个成果')).toBeInTheDocument()
     expect(screen.queryByText('Image Render')).not.toBeInTheDocument()
+  })
+
+  it('formats structured order previews without leaking raw payload text', () => {
+    render(
+      <DeliveryConversationList
+        conversations={[
+          conversation({
+            lastMessage: message({
+              content: buildOrderPayload({
+                displayText: 'Render product hero',
+                rawRequest: 'RAW PROMPT SHOULD NOT APPEAR',
+                price: '0',
+                currency: 'SPACE',
+                orderReference: 'order-demo',
+                serviceId: 'svc',
+                skillName: 'render-skill',
+                outputType: 'image',
+              }),
+              protocolTag: 'order',
+            }),
+          }),
+        ]}
+        selectedConversationId="idqprovider"
+        walletConnected
+        syncStatus="ready"
+        onSelectConversation={vi.fn()}
+      />,
+    )
+
+    expect(screen.getByText('Render product hero')).toBeInTheDocument()
+    expect(screen.queryByText(/RAW PROMPT SHOULD NOT APPEAR/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/<raw_request>/)).not.toBeInTheDocument()
+  })
+
+  it('uses a safe preview for decrypt-failed ciphertext', () => {
+    render(
+      <DeliveryConversationList
+        conversations={[
+          conversation({
+            lastMessage: message({
+              content: 'U2FsdGVkX1encrypted-delivery',
+              rawContent: 'U2FsdGVkX1encrypted-delivery',
+              encryption: 'simplemsg',
+              decryptError: 'missing peer key',
+            }),
+          }),
+        ]}
+        selectedConversationId="idqprovider"
+        walletConnected
+        syncStatus="ready"
+        onSelectConversation={vi.fn()}
+      />,
+    )
+
+    expect(screen.getByText('这条交付记录暂时无法显示，已保留原始记录')).toBeInTheDocument()
+    expect(screen.queryByText(/U2FsdGVk/)).not.toBeInTheDocument()
   })
 
   it('calls onSelectConversation with conversation id when row clicked', async () => {

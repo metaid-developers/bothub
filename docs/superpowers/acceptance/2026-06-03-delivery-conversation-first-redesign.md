@@ -21,7 +21,7 @@ Checked on 2026-06-03 CST from branch `codex/delivery-conversation-first`.
 
 | Command | Result | Notes |
 | --- | --- | --- |
-| `npm test` | passed | 62 test files, 508 tests passed. |
+| `npm test` | passed | 62 test files, 513 tests passed. |
 | `npm run typecheck` | passed | `tsc -b --noEmit` exited 0. |
 | `npm run lint` | passed | `eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0` exited 0. |
 | `npm run build` | passed with warning | Production build completed; Vite warned that `dist/assets/index-Dm6a6QeE.js` is 541.53 kB after minification. |
@@ -34,7 +34,7 @@ Checked on 2026-06-03 CST from branch `codex/delivery-conversation-first`.
 - Dev server: `http://localhost:5176/delivery` with `VITE_META_SOCKET_BASE_URL=https://socket.metaid.io`, `VITE_USE_AGGREGATOR_MOCK=false`, and `VITE_USE_WS_MOCK=false`.
 - In-app Browser verified the baseline route loaded, showed `我的交付`, `服务方会话`, disabled `All`, `成果库`, and the disconnected composer placeholder.
 - Terminal Playwright used a temporary `/tmp/bothub-playwright` install plus seeded IndexedDB/sessionStorage to verify the connected conversation-first flow.
-- Screenshots: `/tmp/bothub-delivery-conversation-first-all.png` and `/tmp/bothub-delivery-conversation-first-alpha.png`.
+- Temporary screenshots were captured during the Playwright run as `/tmp/bothub-delivery-conversation-first-all.png` and `/tmp/bothub-delivery-conversation-first-alpha.png`; these `/tmp` artifacts are not part of the repository and may no longer exist after cleanup.
 
 ## Known Warnings
 
