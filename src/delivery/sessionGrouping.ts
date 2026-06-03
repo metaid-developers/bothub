@@ -116,6 +116,7 @@ export function resolveProviderChatPubkey(input: {
   orders?: Array<{
     providerGlobalMetaId: string
     providerChatPubkey?: string
+    orderPinId?: string
     orderCorrelationId?: string
     paymentTxid?: string
     orderReference?: string
@@ -134,9 +135,12 @@ export function resolveProviderChatPubkey(input: {
   const orderKey = (
     peerOrders.find((order) => {
       if (!correlation) return true
-      return [order.orderCorrelationId, order.paymentTxid, order.orderReference].some(
-        (value) => value?.trim() === correlation,
-      )
+      return [
+        order.orderPinId,
+        order.orderCorrelationId,
+        order.paymentTxid,
+        order.orderReference,
+      ].some((value) => value?.trim() === correlation)
     }) ?? peerOrders[0]
   )?.providerChatPubkey?.trim()
   if (orderKey) return orderKey

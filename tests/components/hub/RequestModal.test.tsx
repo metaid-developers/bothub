@@ -108,7 +108,7 @@ describe('RequestModal', () => {
     })
     executePayAndRequest.mockResolvedValue(result)
     persistPendingOrder.mockResolvedValue({
-      order: { id: 'idqbuyer:idqprovider:order-ref-1' },
+      order: { id: 'idqbuyer:idqprovider:order-ref-1', orderPinId: 'pin-order-1' },
     })
     persistFailedToSendOrder.mockResolvedValue({
       order: { id: 'idqbuyer:idqprovider:failed-order' },
@@ -147,9 +147,7 @@ describe('RequestModal', () => {
     fireEvent.click(screen.getByRole('button', { name: '确认并下单' }))
 
     await waitFor(() =>
-      expect(navigate).toHaveBeenCalledWith(
-        '/delivery?order=idqbuyer%3Aidqprovider%3Aorder-ref-1',
-      ),
+      expect(navigate).toHaveBeenCalledWith('/delivery?order=pin-order-1'),
     )
 
     expect(persistPendingOrder).toHaveBeenCalledWith({
@@ -176,7 +174,7 @@ describe('RequestModal', () => {
     )
   })
 
-  it('navigates a persisted paid order using the payment txid correlation id', async () => {
+  it('navigates a persisted paid order using the canonical order pin id', async () => {
     const paidService = { ...service, price: '1' }
     const paidResult: ExecutePayAndRequestResult = {
       ...result,
@@ -187,7 +185,7 @@ describe('RequestModal', () => {
     }
     executePayAndRequest.mockResolvedValue(paidResult)
     persistPendingOrder.mockResolvedValueOnce({
-      order: { id: 'idqbuyer:idqprovider:paid-txid-1' },
+      order: { id: 'idqbuyer:idqprovider:paid-txid-1', orderPinId: 'pin-order-1' },
     })
 
     render(
@@ -209,9 +207,7 @@ describe('RequestModal', () => {
     fireEvent.click(screen.getByRole('button', { name: '确认并下单' }))
 
     await waitFor(() =>
-      expect(navigate).toHaveBeenCalledWith(
-        '/delivery?order=idqbuyer%3Aidqprovider%3Apaid-txid-1',
-      ),
+      expect(navigate).toHaveBeenCalledWith('/delivery?order=pin-order-1'),
     )
 
     expect(persistPendingOrder).toHaveBeenCalledWith({
@@ -435,9 +431,7 @@ describe('RequestModal', () => {
     fireEvent.click(screen.getByRole('button', { name: '确认并下单' }))
 
     await waitFor(() =>
-      expect(navigate).toHaveBeenCalledWith(
-        '/delivery?order=idqbuyer%3Aidqprovider%3Aorder-ref-1',
-      ),
+      expect(navigate).toHaveBeenCalledWith('/delivery?order=pin-order-1'),
     )
 
     expect(console.warn).toHaveBeenCalledWith(

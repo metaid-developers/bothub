@@ -159,7 +159,7 @@ export function DeliveryPage() {
         orderCorrelationId,
       })
     }
-    return workspace.orders[0]?.id || null
+    return workspace.orders[0]?.orderCorrelationId || workspace.orders[0]?.id || null
   }, [orderFromUrl, sessionFromUrl, workspace.orders, selfGlobalMetaId])
 
   const selectedOrder = selectWorkspaceOrder(workspace, resolvedSelectedId)
@@ -216,7 +216,12 @@ export function DeliveryPage() {
         orders: orders.map((order) => ({
           providerGlobalMetaId: order.providerGlobalMetaId,
           providerChatPubkey: order.providerChatPubkey,
-          orderCorrelationId: order.orderReference,
+          orderPinId: order.orderPinId,
+          orderCorrelationId:
+            order.orderPinId?.trim() ||
+            order.paymentTxid?.trim() ||
+            order.orderReference?.trim() ||
+            undefined,
           paymentTxid: order.paymentTxid,
           orderReference: order.orderReference,
         })),

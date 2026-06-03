@@ -400,6 +400,29 @@ describe('sessionGrouping', () => {
 
     expect(
       resolveProviderChatPubkey({
+        session: { ...baseSession, orderCorrelationId: 'service-order-pin-i0' },
+        orders: [
+          {
+            providerGlobalMetaId: PEER,
+            providerChatPubkey: 'legacy-order-key',
+            orderReference: 'legacy-ref',
+            paymentTxid: 'pay-tx',
+          },
+          {
+            providerGlobalMetaId: PEER,
+            providerChatPubkey: 'canonical-order-key',
+            orderPinId: 'service-order-pin-i0',
+            orderReference: 'other-legacy-ref',
+            paymentTxid: 'other-pay-tx',
+          },
+        ],
+        messages,
+        providerProfile: { chatPubkey: 'profile-key' },
+      }),
+    ).toBe('canonical-order-key')
+
+    expect(
+      resolveProviderChatPubkey({
         session: baseSession,
         orders: [{ providerGlobalMetaId: 'other-peer', providerChatPubkey: 'other-key' }],
         messages,

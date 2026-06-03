@@ -158,6 +158,35 @@ describe('delivery workspace', () => {
     )
   })
 
+  it('resolves selected canonical order pin ids while keeping legacy ids routable', () => {
+    const legacyId = `${SELF}:${PROVIDER}:legacy-ref`
+    const workspace = buildDeliveryWorkspace({
+      walletGlobalMetaId: SELF,
+      orders: [
+        order({
+          id: `${SELF}:${PROVIDER}:other-ref`,
+          orderReference: 'other-ref',
+          orderPinId: 'other-order-pin-i0',
+          updatedAt: 20,
+        }),
+        order({
+          id: legacyId,
+          orderReference: 'legacy-ref',
+          orderPinId: 'service-order-pin-i0',
+          updatedAt: 10,
+        }),
+      ],
+      sessions: [],
+      byPeer: {},
+      assetsBySession: {},
+    })
+
+    expect(selectWorkspaceOrder(workspace, 'service-order-pin-i0')?.id).toBe(legacyId)
+    expect(selectWorkspaceOrder(workspace, legacyId)?.orderCorrelationId).toBe(
+      'service-order-pin-i0',
+    )
+  })
+
   it('merges session, messages, and stored assets into one selected order', () => {
     const workspace = buildDeliveryWorkspace({
       walletGlobalMetaId: SELF,

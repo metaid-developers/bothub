@@ -38,7 +38,7 @@ describe('DeliveryOrderList', () => {
     render(
       <DeliveryOrderList
         orders={[workspaceOrder()]}
-        selectedOrderId="self:provider:order-1"
+        selectedOrderId="order-1"
         walletConnected
         syncStatus="ready"
         onSelectOrder={vi.fn()}
@@ -58,6 +58,23 @@ describe('DeliveryOrderList', () => {
     render(
       <DeliveryOrderList
         orders={[workspaceOrder()]}
+        selectedOrderId={null}
+        walletConnected
+        syncStatus="ready"
+        onSelectOrder={onSelectOrder}
+      />,
+    )
+
+    await fireEvent.click(screen.getByRole('button', { name: /Image Render/ }))
+
+    expect(onSelectOrder).toHaveBeenCalledWith('order-1')
+  })
+
+  it('falls back to the composite order id for legacy rows without canonical correlation', async () => {
+    const onSelectOrder = vi.fn()
+    render(
+      <DeliveryOrderList
+        orders={[workspaceOrder({ orderCorrelationId: '' })]}
         selectedOrderId={null}
         walletConnected
         syncStatus="ready"
@@ -91,7 +108,7 @@ describe('DeliveryOrderList', () => {
     render(
       <DeliveryOrderList
         orders={[workspaceOrder()]}
-        selectedOrderId="self:provider:order-1"
+        selectedOrderId="order-1"
         walletConnected
         syncStatus="partial"
         failedPeerCount={2}

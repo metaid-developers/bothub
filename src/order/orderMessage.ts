@@ -8,7 +8,8 @@ export const RAW_REQUEST_BLOCK_RE =
   /<raw_request>\s*\n?([\s\S]*?)\n?\s*<\/raw_request>/i
 export const ORDER_METADATA_TXID_RE = /^txid:\s*(.+)$/im
 export const ORDER_METADATA_ORDER_ID_RE = /^order id:\s*(.+)$/im
-export const ORDER_METADATA_ORDER_PIN_ID_RE = /^order pin id:\s*(.+)$/im
+export const ORDER_METADATA_ORDER_PIN_ID_RE =
+  /^(?:order pin id|orderPinId|serviceOrderPinId)\s*[:：=]\s*(.+)$/im
 export const ORDER_METADATA_SERVICE_ID_RE = /^service id:\s*(.+)$/im
 export const ORDER_METADATA_SKILL_NAME_RE = /^skill name:\s*(.+)$/im
 export const ORDER_METADATA_OUTPUT_TYPE_RE = /^output type:\s*(.+)$/im

@@ -82,4 +82,33 @@ describe('orderParser', () => {
     expect(parsed?.orderPinId).toBe('order-pin-i0')
     expect(getOrderCorrelationId(parsed!)).toBe('order-pin-i0')
   })
+
+  it.each([
+    ['orderPinId', 'order-pin-camel-i0'],
+    ['serviceOrderPinId', 'service-order-pin-camel-i0'],
+  ] as const)(
+    'parses %s metadata as the canonical order correlation over legacy tags',
+    (metadataKey, orderPinId) => {
+      const payload = [
+        '[ORDER] Camel order',
+        '<raw_request>',
+        'Do the camel thing',
+        '</raw_request>',
+        '支付金额 1 SPACE',
+        'txid: pay-tx',
+        'order id: legacy-ref',
+        `${metadataKey}: ${orderPinId}`,
+        'service id: pin-camel',
+        'skill name: camel-skill',
+        'output type: text',
+      ].join('\n')
+
+      const parsed = parseOrderMessage(payload)
+
+      expect(parsed?.paymentTxid).toBe('pay-tx')
+      expect(parsed?.orderReference).toBe('legacy-ref')
+      expect(parsed?.orderPinId).toBe(orderPinId)
+      expect(getOrderCorrelationId(parsed!)).toBe(orderPinId)
+    },
+  )
 })

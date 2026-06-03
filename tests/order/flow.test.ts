@@ -72,6 +72,25 @@ describe('Delivery route helpers', () => {
     )
   })
 
+  it('prefers a canonical order pin id for order-centered Delivery URLs', () => {
+    expect(
+      buildDeliveryOrderPath({
+        id: 'idqbuyer:idqprovider:legacy-ref',
+        orderPinId: 'service-order-pin-i0',
+      }),
+    ).toBe('/delivery?order=service-order-pin-i0')
+  })
+
+  it('falls back to legacy order ids when no canonical order pin id exists', () => {
+    expect(
+      buildDeliveryOrderPath({
+        id: 'idqbuyer:idqprovider:legacy-ref',
+        orderPinId: '',
+        orderCorrelationId: '',
+      }),
+    ).toBe('/delivery?order=idqbuyer%3Aidqprovider%3Alegacy-ref')
+  })
+
   it('keeps the session Delivery URL helper compatible', () => {
     expect(buildDeliverySessionPath('idqprovider:order-ref-1')).toBe(
       '/delivery?session=idqprovider%3Aorder-ref-1',

@@ -779,7 +779,14 @@ export function selectWorkspaceOrder(
 ): WorkspaceOrder | null {
   const target = selectedId?.trim()
   if (target) {
-    const match = workspace.orders.find((order) => order.id === target)
+    const match = workspace.orders.find((order) =>
+      [
+        order.orderCorrelationId,
+        order.sessionKey,
+        order.sessionId,
+        order.id,
+      ].some((value) => value?.trim() === target),
+    )
     if (match) return match
   }
   return workspace.orders[0] ?? null

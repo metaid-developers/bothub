@@ -54,6 +54,26 @@ describe('parseDeliveryProtocol', () => {
     })
   })
 
+  it.each([
+    [
+      'orderPinId',
+      `[ORDER_STATUS:${orderTxid}] generating video\norderPinId: order-pin-camel-i0`,
+      'order-pin-camel-i0',
+    ],
+    [
+      'serviceOrderPinId',
+      `[ORDER_END:${orderTxid}] complete\nserviceOrderPinId = service-order-pin-camel-i0`,
+      'service-order-pin-camel-i0',
+    ],
+  ] as const)(
+    'normalizes protocol assignment to %s metadata over a legacy tag',
+    (_metadataKey, content, orderCorrelationId) => {
+      expect(parseDeliveryProtocol(content)).toMatchObject({
+        orderCorrelationId,
+      })
+    },
+  )
+
   it('normalizes delivery payload orderPinId metadata as the order correlation', () => {
     expect(
       parseDeliveryProtocol(
