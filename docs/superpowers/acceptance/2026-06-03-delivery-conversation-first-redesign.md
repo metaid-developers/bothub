@@ -6,7 +6,7 @@ Checked on 2026-06-03 CST from branch `codex/delivery-conversation-first`.
 
 - Worktree: `/Users/tusm/.config/superpowers/worktrees/bothub/codex-delivery-conversation-first`
 - Branch: `codex/delivery-conversation-first`
-- Browser acceptance: pending controller browser check
+- Browser acceptance: passed against `http://localhost:5176/delivery`
 
 ## Product Change Summary
 
@@ -27,6 +27,14 @@ Checked on 2026-06-03 CST from branch `codex/delivery-conversation-first`.
 | `npm run build` | passed with warning | Production build completed; Vite warned that `dist/assets/index-Dm6a6QeE.js` is 541.53 kB after minification. |
 | `npm run smoke:meta-socket` | passed | Default `http://127.0.0.1:18091` smoke passed with health `ok`, service count 3, detail schema `botHubSkillServiceDetail.v1`, Socket.IO heartbeat ack, and private-chat checks skipped because metaids were not provided. |
 | `META_SOCKET_BASE_URL=https://socket.metaid.io npm run smoke:meta-socket` | not run | Default local smoke passed, so the documented public endpoint fallback was not needed. |
+| Browser acceptance on `/delivery` | passed | In-app Browser verified the no-wallet state with public meta-socket config. Terminal Playwright then seeded a connected wallet, two orders for one provider, and mixed private/order messages; it verified one provider conversation row, `All` plus two order tabs, All-only composer, read-only order tabs, scoped asset labels, and no page errors. |
+
+## Browser Acceptance
+
+- Dev server: `http://localhost:5176/delivery` with `VITE_META_SOCKET_BASE_URL=https://socket.metaid.io`, `VITE_USE_AGGREGATOR_MOCK=false`, and `VITE_USE_WS_MOCK=false`.
+- In-app Browser verified the baseline route loaded, showed `我的交付`, `服务方会话`, disabled `All`, `成果库`, and the disconnected composer placeholder.
+- Terminal Playwright used a temporary `/tmp/bothub-playwright` install plus seeded IndexedDB/sessionStorage to verify the connected conversation-first flow.
+- Screenshots: `/tmp/bothub-delivery-conversation-first-all.png` and `/tmp/bothub-delivery-conversation-first-alpha.png`.
 
 ## Known Warnings
 
