@@ -4,31 +4,39 @@ import { fetchUserProfileByGlobalMetaId, type UserProfile } from '@/api/userProf
 import { WsErrorBanner } from '@/components/common/WsErrorBanner'
 import { DeliveryAssetLibrary } from '@/components/delivery/DeliveryAssetLibrary'
 import { DeliveryComposer } from '@/components/delivery/DeliveryComposer'
-import { DeliveryOrderList } from '@/components/delivery/DeliveryOrderList'
+import { DeliveryConversationHeader } from '@/components/delivery/DeliveryConversationHeader'
+import { DeliveryConversationList } from '@/components/delivery/DeliveryConversationList'
+import { DeliveryOrderTabs } from '@/components/delivery/DeliveryOrderTabs'
 import { DeliveryStatusTimeline } from '@/components/delivery/DeliveryStatusTimeline'
 import { DeliveryWorkspaceHeader } from '@/components/delivery/DeliveryWorkspaceHeader'
 import { getOrdersForWallet } from '@/delivery/db'
 import { retryDecryptPeerMessages } from '@/delivery/decryptRetry'
-import { buildSessionId, type BuyerOrder } from '@/delivery/domain'
+import type { BuyerOrder } from '@/delivery/domain'
 import { useMessageStore } from '@/delivery/messageStore'
-import {
-  parseSessionKey,
-  resolveProviderChatPubkey,
-} from '@/delivery/sessionGrouping'
+import { resolveProviderChatPubkey } from '@/delivery/sessionGrouping'
 import { useDeliverySyncStatusStore } from '@/delivery/syncStatusStore'
 import { t } from '@/i18n'
 import { useWallet } from '@/wallet/useWallet'
 import {
-  buildDeliveryWorkspace,
-  selectWorkspaceOrder,
   type WorkspaceOrder,
 } from '@/delivery/workspace'
+import {
+  assetsForConversation,
+  buildDeliveryConversations,
+  messagesForConversation,
+  resolveDeliveryRouteSelection,
+  selectDeliveryConversation,
+  selectDeliveryTab,
+  selectOrderThread,
+  type DeliveryConversation,
+} from '@/delivery/conversationWorkspace'
 import {
   loadDeliveryWorkspaceRecords,
   type DeliveryWorkspaceRecords,
 } from '@/delivery/workspaceRecovery'
 import type { EnrichedDeliverySession } from '@/delivery/sessionDisplay'
 
+const CONVERSATION_PARAM = 'conversation'
 const ORDER_PARAM = 'order'
 const SESSION_PARAM = 'session'
 
@@ -39,42 +47,47 @@ function hasDisplayProfile(input: {
   return Boolean(input.peerName?.trim() && input.peerAvatarUrl?.trim())
 }
 
-function workspaceOrderToComposerSession(
-  order: WorkspaceOrder,
+function conversationToComposerSession(
+  conversation: DeliveryConversation,
+  resolvedProviderChatPubkey: string,
   profile?: UserProfile,
 ): EnrichedDeliverySession {
-  const messages = order.messages
+  const messages = conversation.messages
   const providerChatPubkey =
-    order.providerChatPubkey?.trim() || profile?.chatPubkey?.trim() || undefined
-  const providerName = order.providerName?.trim() || profile?.name?.trim() || undefined
+    resolvedProviderChatPubkey.trim() ||
+    conversation.providerChatPubkey?.trim() ||
+    profile?.chatPubkey?.trim() ||
+    undefined
+  const providerName =
+    conversation.providerName?.trim() || profile?.name?.trim() || undefined
   const providerAvatarUrl =
-    order.providerAvatarUrl?.trim() || profile?.avatarUrl?.trim() || undefined
+    conversation.providerAvatarUrl?.trim() || profile?.avatarUrl?.trim() || undefined
   return {
-    sessionKey: order.sessionKey,
-    peerGlobalMetaId: order.providerGlobalMetaId,
+    sessionKey: conversation.providerGlobalMetaId,
+    peerGlobalMetaId: conversation.providerGlobalMetaId,
     providerChatPubkey,
     peerName: providerName,
     peerAvatarUrl: providerAvatarUrl,
-    orderCorrelationId: order.orderCorrelationId,
-    serviceLabel: order.serviceLabel,
+    orderCorrelationId: null,
+    serviceLabel: null,
     lastMessage: messages[messages.length - 1] ?? {
       id: '',
-      peerGlobalMetaId: order.providerGlobalMetaId,
-      fromGlobalMetaId: order.providerGlobalMetaId,
+      peerGlobalMetaId: conversation.providerGlobalMetaId,
+      fromGlobalMetaId: conversation.providerGlobalMetaId,
       toGlobalMetaId: '',
       content: '',
       rawContent: '',
       encryption: 'plain',
       contentType: 'text/plain',
-      timestamp: order.lastActivityAt,
+      timestamp: conversation.latestActivityAt,
     },
-    messageCount: order.messageCount,
-    status: order.status === 'waiting'
-      ? 'pending'
-      : order.status === 'failed_to_send'
-        ? 'failed'
-        : (order.status as 'active' | 'delivering' | 'delivered' | 'completed' | 'failed'),
-    assetCount: order.assetCount,
+    messageCount: conversation.messageCount,
+    status: conversation.activeOrderCount > 0
+      ? 'active'
+      : conversation.deliveredOrderCount > 0
+        ? 'completed'
+        : 'pending',
+    assetCount: conversation.assetCount,
   }
 }
 
@@ -136,7 +149,7 @@ export function DeliveryPage() {
 
   const workspace = useMemo(
     () =>
-      buildDeliveryWorkspace({
+      buildDeliveryConversations({
         walletGlobalMetaId: selfGlobalMetaId,
         orders,
         sessions: workspaceRecords.sessions,
@@ -146,40 +159,40 @@ export function DeliveryPage() {
     [selfGlobalMetaId, orders, workspaceRecords.sessions, byPeer, mergedAssetsBySession],
   )
 
+  const conversationFromUrl = searchParams.get(CONVERSATION_PARAM)?.trim() || null
   const orderFromUrl = searchParams.get(ORDER_PARAM)?.trim() || null
   const sessionFromUrl = searchParams.get(SESSION_PARAM)?.trim() || null
 
-  const resolvedSelectedId = useMemo(() => {
-    if (orderFromUrl) return orderFromUrl
-    if (sessionFromUrl) {
-      const { peerGlobalMetaId, orderCorrelationId } = parseSessionKey(sessionFromUrl)
-      return buildSessionId({
-        walletGlobalMetaId: selfGlobalMetaId,
-        providerGlobalMetaId: peerGlobalMetaId,
-        orderCorrelationId,
-      })
-    }
-    return workspace.orders[0]?.orderCorrelationId || workspace.orders[0]?.id || null
-  }, [orderFromUrl, sessionFromUrl, workspace.orders, selfGlobalMetaId])
-
-  const selectedOrder = selectWorkspaceOrder(workspace, resolvedSelectedId)
-
-  const workspaceOrdersWithProfiles = useMemo(
+  const resolvedRouteSelection = useMemo(
     () =>
-      workspace.orders.map((order) =>
-        mergeWorkspaceOrderProfile(order, providerProfiles[order.providerGlobalMetaId]),
-      ),
-    [workspace.orders, providerProfiles],
+      resolveDeliveryRouteSelection({
+        workspace,
+        conversationParam: conversationFromUrl,
+        orderParam: orderFromUrl,
+        sessionParam: sessionFromUrl,
+        walletGlobalMetaId: selfGlobalMetaId,
+      }),
+    [conversationFromUrl, orderFromUrl, sessionFromUrl, selfGlobalMetaId, workspace],
   )
 
-  const messages = useMemo(
-    () => selectedOrder?.messages ?? [],
-    [selectedOrder],
+  const selectedConversation = selectDeliveryConversation(
+    workspace,
+    resolvedRouteSelection.conversationId,
+  )
+  const selectedTab = selectDeliveryTab(
+    selectedConversation,
+    resolvedRouteSelection.tabId,
+  )
+  const selectedOrderThread = selectOrderThread(selectedConversation, selectedTab)
+
+  const selectedMessages = useMemo(
+    () => messagesForConversation(selectedConversation, selectedTab),
+    [selectedConversation, selectedTab],
   )
 
   const messagesWithProfileFallback = useMemo(
     () =>
-      messages.map((message) => {
+      selectedMessages.map((message) => {
         const profile = providerProfiles[message.peerGlobalMetaId]
         if (!profile) return message
         return {
@@ -189,28 +202,29 @@ export function DeliveryPage() {
           peerAvatarUrl: message.peerAvatarUrl?.trim() || profile.avatarUrl?.trim() || undefined,
         }
       }),
-    [messages, providerProfiles],
+    [selectedMessages, providerProfiles],
   )
 
   const selectedHasDecryptGap = useMemo(
     () =>
-      messages.some(
+      (selectedConversation?.messages ?? []).some(
         (message) =>
           Boolean(message.decryptError?.trim()) ||
           (message.content === message.rawContent &&
             message.encryption.trim().toLowerCase() === 'ecdh'),
       ),
-    [messages],
+    [selectedConversation],
   )
 
   const selectedProviderChatPubkey = useMemo(
     () =>
       resolveProviderChatPubkey({
-        session: selectedOrder
+        session: selectedConversation
           ? {
-              peerGlobalMetaId: selectedOrder.providerGlobalMetaId,
-              providerChatPubkey: selectedOrder.providerChatPubkey,
-              orderCorrelationId: selectedOrder.orderCorrelationId,
+              peerGlobalMetaId: selectedConversation.providerGlobalMetaId,
+              providerChatPubkey: selectedConversation.providerChatPubkey,
+              orderCorrelationId:
+                selectedTab.kind === 'order' ? selectedTab.orderCorrelationId : null,
             }
           : null,
         orders: orders.map((order) => ({
@@ -225,25 +239,23 @@ export function DeliveryPage() {
           paymentTxid: order.paymentTxid,
           orderReference: order.orderReference,
         })),
-        messages,
-        providerProfile: selectedOrder?.providerGlobalMetaId
-          ? providerProfiles[selectedOrder.providerGlobalMetaId]
+        messages: selectedConversation?.messages ?? [],
+        providerProfile: selectedConversation?.providerGlobalMetaId
+          ? providerProfiles[selectedConversation.providerGlobalMetaId]
           : undefined,
       }),
-    [messages, orders, providerProfiles, selectedOrder],
+    [orders, providerProfiles, selectedConversation, selectedTab],
   )
 
   const composerSession = useMemo(() => {
-    if (!selectedOrder) return null
-    const profile = providerProfiles[selectedOrder.providerGlobalMetaId]
-    return workspaceOrderToComposerSession(
-      {
-        ...selectedOrder,
-        providerChatPubkey: selectedProviderChatPubkey || selectedOrder.providerChatPubkey,
-      },
+    if (!selectedConversation || selectedTab.kind !== 'all') return null
+    const profile = providerProfiles[selectedConversation.providerGlobalMetaId]
+    return conversationToComposerSession(
+      selectedConversation,
+      selectedProviderChatPubkey,
       profile,
     )
-  }, [selectedOrder, selectedProviderChatPubkey, providerProfiles])
+  }, [providerProfiles, selectedConversation, selectedProviderChatPubkey, selectedTab])
 
   const retryDecryptWithProviderProfile = useCallback(
     (peerGlobalMetaId: string, profile: UserProfile): void => {
@@ -322,13 +334,13 @@ export function DeliveryPage() {
   )
 
   useEffect(() => {
-    if (!selectedOrder) return
-    const providerGlobalMetaId = selectedOrder.providerGlobalMetaId
+    if (!selectedConversation) return
+    const providerGlobalMetaId = selectedConversation.providerGlobalMetaId
     if (providerProfiles[providerGlobalMetaId]) return
     const needsChatKey = !selectedProviderChatPubkey
     const needsDisplayProfile = !hasDisplayProfile({
-      peerName: selectedOrder.providerName,
-      peerAvatarUrl: selectedOrder.providerAvatarUrl,
+      peerName: selectedConversation.providerName,
+      peerAvatarUrl: selectedConversation.providerAvatarUrl,
     })
     if (!needsChatKey && !needsDisplayProfile && !selectedHasDecryptGap) return
     void fetchProviderProfile(providerGlobalMetaId, { retryDecrypt: selectedHasDecryptGap })
@@ -337,19 +349,19 @@ export function DeliveryPage() {
     providerProfiles,
     selectedProviderChatPubkey,
     selectedHasDecryptGap,
-    selectedOrder,
+    selectedConversation,
   ])
 
   useEffect(() => {
-    if (!selectedOrder || !selectedProviderChatPubkey || !selectedHasDecryptGap) return
-    const profile = providerProfiles[selectedOrder.providerGlobalMetaId]
+    if (!selectedConversation || !selectedProviderChatPubkey || !selectedHasDecryptGap) return
+    const profile = providerProfiles[selectedConversation.providerGlobalMetaId]
     if (!profile) return
-    retryDecryptWithProviderProfile(selectedOrder.providerGlobalMetaId, profile)
+    retryDecryptWithProviderProfile(selectedConversation.providerGlobalMetaId, profile)
   }, [
     retryDecryptWithProviderProfile,
     selectedHasDecryptGap,
     selectedProviderChatPubkey,
-    selectedOrder,
+    selectedConversation,
     providerProfiles,
   ])
 
@@ -358,8 +370,8 @@ export function DeliveryPage() {
     const seenProviderPeers = new Set<string>()
     const missingProviderPeers: string[] = []
 
-    for (const workspaceOrder of workspace.orders) {
-      const providerGlobalMetaId = workspaceOrder.providerGlobalMetaId.trim()
+    for (const conversation of workspace.conversations) {
+      const providerGlobalMetaId = conversation.providerGlobalMetaId.trim()
       if (
         !providerGlobalMetaId ||
         seenProviderPeers.has(providerGlobalMetaId) ||
@@ -371,10 +383,10 @@ export function DeliveryPage() {
       }
 
       const missingDisplayProfile = !hasDisplayProfile({
-        peerName: workspaceOrder.providerName,
-        peerAvatarUrl: workspaceOrder.providerAvatarUrl,
+        peerName: conversation.providerName,
+        peerAvatarUrl: conversation.providerAvatarUrl,
       })
-      const missingChatKey = !workspaceOrder.providerChatPubkey?.trim()
+      const missingChatKey = !conversation.providerChatPubkey?.trim()
       if (!missingDisplayProfile && !missingChatKey) continue
 
       seenProviderPeers.add(providerGlobalMetaId)
@@ -385,14 +397,15 @@ export function DeliveryPage() {
     for (const providerGlobalMetaId of missingProviderPeers) {
       void fetchProviderProfile(providerGlobalMetaId)
     }
-  }, [workspace.orders, fetchProviderProfile, providerProfiles, walletConnected])
+  }, [workspace.conversations, fetchProviderProfile, providerProfiles, walletConnected])
 
-  const selectOrder = useCallback(
-    (orderId: string) => {
+  const selectConversation = useCallback(
+    (conversationId: string) => {
       setSearchParams(
         (prev) => {
           const next = new URLSearchParams(prev)
-          next.set(ORDER_PARAM, orderId)
+          next.set(CONVERSATION_PARAM, conversationId)
+          next.delete(ORDER_PARAM)
           next.delete(SESSION_PARAM)
           return next
         },
@@ -402,27 +415,66 @@ export function DeliveryPage() {
     [setSearchParams],
   )
 
+  const selectTab = useCallback(
+    (tabId: string) => {
+      setSearchParams(
+        (prev) => {
+          const next = new URLSearchParams(prev)
+          if (selectedConversation) {
+            next.set(CONVERSATION_PARAM, selectedConversation.id)
+          }
+          next.delete(SESSION_PARAM)
+          if (tabId === 'all') {
+            next.delete(ORDER_PARAM)
+            return next
+          }
+
+          const tab = selectDeliveryTab(selectedConversation, tabId)
+          const thread = selectOrderThread(selectedConversation, tab)
+          if (thread) {
+            next.set(ORDER_PARAM, thread.orderCorrelationId)
+          } else {
+            next.delete(ORDER_PARAM)
+          }
+          return next
+        },
+        { replace: true },
+      )
+    },
+    [selectedConversation, setSearchParams],
+  )
+
+  const selectedConversationWithProfile = useMemo(
+    () =>
+      selectedConversation
+        ? mergeConversationProfile(
+            selectedConversation,
+            providerProfiles[selectedConversation.providerGlobalMetaId],
+          )
+        : null,
+    [providerProfiles, selectedConversation],
+  )
+
   const selectedOrderWithProfile = useMemo(() => {
-    if (!selectedOrder) return null
-    const profile = providerProfiles[selectedOrder.providerGlobalMetaId]
-    if (!profile) return selectedOrder
-    return {
-      ...selectedOrder,
-      providerChatPubkey:
-        selectedOrder.providerChatPubkey?.trim() || profile.chatPubkey?.trim() || undefined,
-      providerName: selectedOrder.providerName?.trim() || profile.name?.trim() || undefined,
-      providerAvatarUrl:
-        selectedOrder.providerAvatarUrl?.trim() || profile.avatarUrl?.trim() || undefined,
-    }
-  }, [selectedOrder, providerProfiles])
+    if (!selectedOrderThread) return null
+    return mergeWorkspaceOrderProfile(
+      selectedOrderThread.order,
+      providerProfiles[selectedOrderThread.order.providerGlobalMetaId],
+    )
+  }, [selectedOrderThread, providerProfiles])
 
   const orderForTimeline = useMemo(() => {
-    if (!selectedOrder) return null
+    if (!selectedOrderWithProfile) return null
     return {
-      ...selectedOrder,
+      ...selectedOrderWithProfile,
       messages: messagesWithProfileFallback,
     }
-  }, [selectedOrder, messagesWithProfileFallback])
+  }, [selectedOrderWithProfile, messagesWithProfileFallback])
+
+  const selectedAssets = useMemo(
+    () => assetsForConversation(selectedConversation, selectedTab),
+    [selectedConversation, selectedTab],
+  )
 
   return (
     <section aria-labelledby="delivery-heading" className="space-y-4">
@@ -437,56 +489,75 @@ export function DeliveryPage() {
 
       <div className="grid min-h-[560px] overflow-hidden rounded-card border border-hub-border bg-hub-surface/30 md:grid-cols-[minmax(220px,280px)_minmax(0,1fr)_minmax(220px,280px)] md:grid-rows-[minmax(0,1fr)_auto]">
         <aside
-          aria-label={t('delivery.workspace.orders')}
+          aria-label={t('delivery.workspace.conversations')}
           className="border-b border-hub-border p-3 md:row-span-2 md:border-b-0 md:border-r"
         >
           <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-hub-muted">
-            {t('delivery.workspace.orders')}
+            {t('delivery.workspace.conversations')}
           </h2>
-          <DeliveryOrderList
-            orders={workspaceOrdersWithProfiles}
-            selectedOrderId={resolvedSelectedId}
+          <DeliveryConversationList
+            conversations={workspace.conversations.map((conversation) =>
+              mergeConversationProfile(
+                conversation,
+                providerProfiles[conversation.providerGlobalMetaId],
+              ),
+            )}
+            selectedConversationId={selectedConversation?.id ?? null}
             walletConnected={walletConnected}
             syncStatus={syncStatus}
             failedPeerCount={syncFailedPeerCount}
-            onSelectOrder={selectOrder}
+            onSelectConversation={selectConversation}
           />
         </aside>
 
         <div className="flex min-w-0 flex-col md:col-start-2 md:row-start-1">
-          <DeliveryWorkspaceHeader order={selectedOrderWithProfile} />
-          <DeliveryStatusTimeline
-            order={orderForTimeline}
-            selfGlobalMetaId={selfGlobalMetaId}
+          <DeliveryConversationHeader conversation={selectedConversationWithProfile} />
+          <DeliveryOrderTabs
+            conversation={selectedConversationWithProfile}
+            selectedTabId={selectedTab.id}
+            onSelectTab={selectTab}
           />
+          {selectedTab.kind === 'order' ? (
+            <>
+              <DeliveryWorkspaceHeader order={selectedOrderWithProfile} />
+              <DeliveryStatusTimeline
+                mode="order"
+                order={orderForTimeline}
+                selfGlobalMetaId={selfGlobalMetaId}
+              />
+            </>
+          ) : (
+            <DeliveryStatusTimeline
+              mode="all"
+              order={null}
+              messages={messagesWithProfileFallback}
+              selfGlobalMetaId={selfGlobalMetaId}
+            />
+          )}
         </div>
 
-        <DeliveryAssetLibrary
-          assets={
-            selectedOrder
-              ? selectedOrder.assets
-              : []
-          }
-        />
-        <DeliveryComposer
-          wallet={walletConnected ? identity : null}
-          session={composerSession}
-          providerChatPubkey={selectedProviderChatPubkey}
-          providerKeyLoading={Boolean(
-            selectedOrder?.providerGlobalMetaId &&
-            providerProfileLoading[selectedOrder.providerGlobalMetaId],
-          )}
-          onFetchProviderKey={
-            selectedOrder
-              ? () => {
-                  void fetchProviderProfile(selectedOrder.providerGlobalMetaId, {
-                    force: true,
-                    retryDecrypt: selectedHasDecryptGap,
-                  })
-                }
-              : undefined
-          }
-        />
+        <DeliveryAssetLibrary assets={selectedAssets} />
+        {selectedTab.kind === 'all' && (
+          <DeliveryComposer
+            wallet={walletConnected ? identity : null}
+            session={composerSession}
+            providerChatPubkey={selectedProviderChatPubkey}
+            providerKeyLoading={Boolean(
+              selectedConversation?.providerGlobalMetaId &&
+              providerProfileLoading[selectedConversation.providerGlobalMetaId],
+            )}
+            onFetchProviderKey={
+              selectedConversation
+                ? () => {
+                    void fetchProviderProfile(selectedConversation.providerGlobalMetaId, {
+                      force: true,
+                      retryDecrypt: selectedHasDecryptGap,
+                    })
+                  }
+                : undefined
+            }
+          />
+        )}
       </div>
     </section>
   )
@@ -504,5 +575,20 @@ function mergeWorkspaceOrderProfile(
     providerName: order.providerName?.trim() || profile.name?.trim() || undefined,
     providerAvatarUrl:
       order.providerAvatarUrl?.trim() || profile.avatarUrl?.trim() || undefined,
+  }
+}
+
+function mergeConversationProfile(
+  conversation: DeliveryConversation,
+  profile: UserProfile | undefined,
+): DeliveryConversation {
+  if (!profile) return conversation
+  return {
+    ...conversation,
+    providerChatPubkey:
+      conversation.providerChatPubkey?.trim() || profile.chatPubkey?.trim() || undefined,
+    providerName: conversation.providerName?.trim() || profile.name?.trim() || undefined,
+    providerAvatarUrl:
+      conversation.providerAvatarUrl?.trim() || profile.avatarUrl?.trim() || undefined,
   }
 }
