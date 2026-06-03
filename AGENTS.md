@@ -2,6 +2,30 @@
 
 This file provides guidance to AI coding agents working in this repository.
 
+## Project Context
+
+BotHub is a public caller-side React SPA for browsing remote `skill-service`
+providers, submitting a natural-language Pay & Request order with Metalet, and
+tracking provider replies plus delivered digital assets in Delivery. It reads
+service and private-chat data from `meta-socket`; payment, encryption, and
+simplemsg order submission happen through `window.metaidwallet`.
+
+It is not a provider runtime, service-publishing console, OAC Core client, or
+custom backend. Keep the app frontend-only unless a documented `meta-socket`
+boundary forces a thin proxy.
+
+Main modules:
+- `src/routes/`: top-level Bot Hub and Delivery pages.
+- `src/components/hub/`: service cards, filters, detail panel, request modal.
+- `src/components/delivery/`: session list, timeline, composer, delivered assets.
+- `src/api/`: `meta-socket` HTTP clients, types, and TanStack Query hooks.
+- `src/ws/`: Socket.IO setup and private-chat envelope handling.
+- `src/wallet/`: Metalet wrapper, wallet state, identity normalization.
+- `src/order/`: Pay & Request payload building, diagnostics, pin/payment flow.
+- `src/delivery/`: local session/message/order state, parsing, IndexedDB sync.
+- `src/i18n/`, `src/lib/`, `src/styles/`: copy, formatting helpers, global CSS.
+- `tests/`: Vitest specs mirroring the feature and boundary modules.
+
 ## Commit and Merge Rules
 
 - If you notice unfamiliar or unrelated file changes, continue working and stay focused on your own scoped edits unless the user asks you to inspect them.
