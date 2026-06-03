@@ -324,7 +324,7 @@ describe('decryptRetry', () => {
     ])
   })
 
-  it('stops retrying the peer after the first decrypt error in a pass', async () => {
+  it('continues retrying after a decrypt error in a pass', async () => {
     const debugLines: string[] = []
     await persistAllAndHydrate([
       encryptedMessage({
@@ -354,14 +354,15 @@ describe('decryptRetry', () => {
       pushDebug: (line) => debugLines.push(line),
     })
 
-    expect(result).toEqual({ attempted: 1, updated: 0 })
-    expect(mockedDecryptIncoming).toHaveBeenCalledTimes(1)
+    expect(result).toEqual({ attempted: 2, updated: 0 })
+    expect(mockedDecryptIncoming).toHaveBeenCalledTimes(2)
     expect(debugLines).toEqual([
+      '[decrypt] retry failed for idqprovi...: wallet ecdh failed',
       '[decrypt] retry failed for idqprovi...: wallet ecdh failed',
     ])
   })
 
-  it('stops retrying the peer after the first thrown decrypt error in a pass', async () => {
+  it('continues retrying after a thrown decrypt error in a pass', async () => {
     const debugLines: string[] = []
     await persistAllAndHydrate([
       encryptedMessage({
@@ -388,9 +389,10 @@ describe('decryptRetry', () => {
       pushDebug: (line) => debugLines.push(line),
     })
 
-    expect(result).toEqual({ attempted: 1, updated: 0 })
-    expect(mockedDecryptIncoming).toHaveBeenCalledTimes(1)
+    expect(result).toEqual({ attempted: 2, updated: 0 })
+    expect(mockedDecryptIncoming).toHaveBeenCalledTimes(2)
     expect(debugLines).toEqual([
+      '[decrypt] retry failed for idqprovi...: wallet rejected ecdh',
       '[decrypt] retry failed for idqprovi...: wallet rejected ecdh',
     ])
   })

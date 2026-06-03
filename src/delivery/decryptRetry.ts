@@ -101,7 +101,7 @@ export async function retryDecryptPeerMessages(
           detail: result.error,
           pushDebug: input.pushDebug,
         })
-        break
+        continue
       }
       if (!result.plaintext || result.plaintext === message.rawContent) continue
 
@@ -122,7 +122,7 @@ export async function retryDecryptPeerMessages(
         detail: error,
         pushDebug: input.pushDebug,
       })
-      break
+      continue
     }
   }
 
