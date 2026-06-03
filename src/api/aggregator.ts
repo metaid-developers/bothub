@@ -101,14 +101,17 @@ function hydrateListItem(
 }
 
 async function hydrateListData(data: SkillServiceListData): Promise<SkillServiceListData> {
+  // MRC20 checkout is not supported yet — hide these services from the UI.
+  const filtered = data.list.filter((item) => item.settlementKind !== 'mrc20')
+
   const keys = Array.from(
     new Set(
-      data.list
+      filtered
         .map((item) => providerLookupKey(item))
         .filter((key): key is string => Boolean(key)),
     ),
   )
-  if (keys.length === 0) return data
+  if (keys.length === 0) return { ...data, list: filtered }
 
   const profiles = new Map(
     await Promise.all(keys.map(async (key) => [key, await fetchProviderProfile(key)] as const)),
@@ -116,7 +119,7 @@ async function hydrateListData(data: SkillServiceListData): Promise<SkillService
 
   return {
     ...data,
-    list: data.list.map((item) => hydrateListItem(item, profiles.get(providerLookupKey(item) ?? ''))),
+    list: filtered.map((item) => hydrateListItem(item, profiles.get(providerLookupKey(item) ?? ''))),
   }
 }
 
