@@ -228,6 +228,7 @@ export const zhCN = {
       statusUpdate: '交付状态更新',
       orderCompleted: '订单已完成',
       ratingReserved: '评价待开放',
+      copyTxId: '复制 TxID {txid}',
     },
     assetActions: {
       previewUnavailable: '预览暂不可用，可打开文件',

@@ -1,6 +1,10 @@
 import { fireEvent, render, screen } from '@testing-library/react'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { MessageBubble } from '@/components/delivery/MessageBubble'
+import {
+  formatDeliveryTxIdPreview,
+  resolveDeliveryMessageTxId,
+} from '@/delivery/messageMetadata'
 import type { DeliveryMessage } from '@/delivery/messageStore'
 
 function message(content: string, overrides: Partial<DeliveryMessage> = {}): DeliveryMessage {
@@ -19,6 +23,60 @@ function message(content: string, overrides: Partial<DeliveryMessage> = {}): Del
 }
 
 describe('MessageBubble', () => {
+  it('formats and resolves on-chain message txids for compact bubble metadata', () => {
+    const txid = `01234567${'a'.repeat(50)}abcdef`
+    expect(formatDeliveryTxIdPreview(txid)).toBe('01234567......abcdef')
+    expect(
+      resolveDeliveryMessageTxId(message('from pin', { pinId: `${txid}i0` })),
+    ).toBe(txid)
+  })
+
+  it('shows caller avatar beside outgoing private chat text', () => {
+    render(
+      <MessageBubble
+        message={message('hello from caller', {
+          fromGlobalMetaId: 'self',
+          toGlobalMetaId: 'provider',
+        })}
+        selfGlobalMetaId="self"
+        selfName="Caller User"
+        selfAvatarUrl="https://cdn.example/caller.png"
+      />,
+    )
+
+    expect(screen.getByText('hello from caller')).toBeInTheDocument()
+    expect(screen.getByRole('img', { name: 'Caller User 头像' })).toHaveAttribute(
+      'src',
+      'https://cdn.example/caller.png',
+    )
+  })
+
+  it('shows time and a copyable shortened txid under chain-backed bubbles', () => {
+    const txid = `89abcdef${'b'.repeat(50)}123456`
+    const writeText = vi.fn().mockResolvedValue(undefined)
+    Object.defineProperty(navigator, 'clipboard', {
+      value: { writeText },
+      configurable: true,
+    })
+
+    render(
+      <MessageBubble
+        message={message('chain message', {
+          txId: txid,
+          timestamp: new Date(2026, 0, 2, 3, 4).getTime(),
+        })}
+        selfGlobalMetaId="self"
+      />,
+    )
+
+    expect(screen.getByText('03:04')).toBeInTheDocument()
+    expect(screen.getByText('89abcdef......123456')).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: '复制 TxID 89abcdef......123456' }))
+
+    expect(writeText).toHaveBeenCalledWith(txid)
+  })
+
   it('renders status messages as compact timeline events with stripped text', () => {
     render(
       <MessageBubble

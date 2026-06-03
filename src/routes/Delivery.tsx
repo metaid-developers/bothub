@@ -150,6 +150,8 @@ export function DeliveryPage() {
   const identity = useWallet((s) => s.identity)
   const walletConnected = walletStatus === 'connected' && identity != null
   const selfGlobalMetaId = identity?.globalMetaId ?? ''
+  const selfDisplayName = identity?.name?.trim() || undefined
+  const selfAvatarUrl = identity?.avatarUrl?.trim() || undefined
   const [orders, setOrders] = useState<BuyerOrder[]>([])
   const [providerProfiles, setProviderProfiles] = useState<Record<string, UserProfile>>({})
   const [providerProfileLoading, setProviderProfileLoading] = useState<Record<string, boolean>>({})
@@ -605,6 +607,8 @@ export function DeliveryPage() {
                   mode="order"
                   order={orderForTimeline}
                   selfGlobalMetaId={selfGlobalMetaId}
+                  selfName={selfDisplayName}
+                  selfAvatarUrl={selfAvatarUrl}
                 />
               </>
             ) : (
@@ -613,6 +617,8 @@ export function DeliveryPage() {
                 order={null}
                 messages={messagesWithProfileFallback}
                 selfGlobalMetaId={selfGlobalMetaId}
+                selfName={selfDisplayName}
+                selfAvatarUrl={selfAvatarUrl}
               />
             )}
           </div>

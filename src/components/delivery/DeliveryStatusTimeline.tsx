@@ -9,6 +9,8 @@ interface DeliveryStatusTimelineProps {
   order: WorkspaceOrder | null
   messages?: DeliveryMessage[]
   selfGlobalMetaId: string
+  selfName?: string | null
+  selfAvatarUrl?: string | null
   mode?: 'order' | 'all'
 }
 
@@ -58,6 +60,8 @@ export function DeliveryStatusTimeline({
   order,
   messages: allMessages,
   selfGlobalMetaId,
+  selfName,
+  selfAvatarUrl,
   mode = 'order',
 }: DeliveryStatusTimelineProps) {
   const [showDetails, setShowDetails] = useState(false)
@@ -107,12 +111,14 @@ export function DeliveryStatusTimeline({
             </div>
           </div>
         )}
-        <div id={detailsId} className="space-y-0.5 px-4 pb-3 pt-3">
+        <div id={detailsId} className="space-y-5 px-4 pb-5 pt-4 md:px-5">
           {displayMessages(messages, showDetails, true).map((message) => (
             <MessageBubble
               key={message.id}
               message={message}
               selfGlobalMetaId={selfGlobalMetaId}
+              selfName={selfName}
+              selfAvatarUrl={selfAvatarUrl}
             />
           ))}
         </div>
@@ -203,12 +209,14 @@ export function DeliveryStatusTimeline({
           <summary className="cursor-pointer px-4 py-2 text-xs font-semibold text-hub-muted">
             {t('delivery.workspace.messages')}
           </summary>
-          <div id={detailsId} className="space-y-0.5 pb-2">
+          <div id={detailsId} className="space-y-5 px-4 pb-4 pt-3">
             {displayMessages(messages, showDetails).map((message) => (
               <MessageBubble
                 key={message.id}
                 message={message}
                 selfGlobalMetaId={selfGlobalMetaId}
+                selfName={selfName}
+                selfAvatarUrl={selfAvatarUrl}
               />
             ))}
           </div>

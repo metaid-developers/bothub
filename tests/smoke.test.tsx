@@ -42,6 +42,6 @@ describe('App smoke', () => {
 
   it('navigates to Delivery route', () => {
     renderApp('/delivery')
-    expect(screen.getByRole('heading', { name: 'Delivery' })).toBeInTheDocument()
+    expect(screen.getByRole('region', { name: 'Delivery' })).toBeInTheDocument()
   })
 })

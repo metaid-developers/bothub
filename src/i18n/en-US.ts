@@ -234,6 +234,7 @@ export const enUS = {
       statusUpdate: 'Delivery status update',
       orderCompleted: 'Order completed',
       ratingReserved: 'Rating will open later',
+      copyTxId: 'Copy TxID {txid}',
     },
     assetActions: {
       previewUnavailable: 'Preview unavailable. Open the file instead.',

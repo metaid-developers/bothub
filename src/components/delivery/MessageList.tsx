@@ -8,12 +8,16 @@ export interface MessageListProps {
   sessionKey: string | null
   messages: DeliveryMessage[]
   selfGlobalMetaId: string
+  selfName?: string | null
+  selfAvatarUrl?: string | null
 }
 
 export function MessageList({
   sessionKey,
   messages,
   selfGlobalMetaId,
+  selfName,
+  selfAvatarUrl,
 }: MessageListProps) {
   const bottomRef = useRef<HTMLDivElement | null>(null)
 
@@ -42,7 +46,7 @@ export function MessageList({
 
   return (
     <div
-      className="flex h-full min-h-[360px] flex-col gap-3 overflow-y-auto bg-hub-surface/20 p-4"
+      className="flex h-full min-h-[360px] flex-col gap-5 overflow-y-auto bg-hub-surface/20 p-5 md:p-6"
       aria-label={t('delivery.messages')}
     >
       {messages.map((message) => (
@@ -50,6 +54,8 @@ export function MessageList({
           key={message.id}
           message={message}
           selfGlobalMetaId={selfGlobalMetaId}
+          selfName={selfName}
+          selfAvatarUrl={selfAvatarUrl}
         />
       ))}
       <div ref={bottomRef} />
