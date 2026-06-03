@@ -621,6 +621,87 @@ describe('executePayAndRequest', () => {
     })
   })
 
+  it('throws a recoverable broadcast error with paid payment context when service-order pin publish fails', async () => {
+    const paymentTxid = 'c'.repeat(64)
+    const transfer = vi.fn().mockResolvedValue({ txids: [paymentTxid] })
+    const ecdh = vi.fn().mockResolvedValue({ sharedSecret: 'aa'.repeat(32) })
+    const createPin = vi.fn().mockRejectedValueOnce(new Error('service-order network down'))
+
+    await expect(
+      executePayAndRequest({
+        service: paidService,
+        provider,
+        prompt: 'Paid request whose service order pin fails.',
+        wallet,
+        metalet: { transfer, ecdh, createPin },
+      }),
+    ).rejects.toMatchObject({
+      code: 'broadcast_failed',
+      message: 'Skill service order pin broadcast failed: service-order network down',
+      partial: {
+        service: paidService,
+        provider,
+        prompt: 'Paid request whose service order pin fails.',
+        payment: {
+          paymentTxid,
+          paymentCommitTxid: '',
+          orderReference: '',
+        },
+        sessionKey: `${provider.globalMetaId}:${paymentTxid}`,
+        serviceOrderPinId: '',
+        orderPayload: expect.stringContaining(`txid: ${paymentTxid}`),
+        encryptedContent: expect.any(String),
+        simplemsgBody: expect.stringContaining('"content"'),
+        displaySummary: 'Paid request whose service order pin fails.',
+      },
+    })
+    expect(transfer.mock.invocationCallOrder[0]).toBeLessThan(ecdh.mock.invocationCallOrder[0])
+    expect(ecdh.mock.invocationCallOrder[0]).toBeLessThan(createPin.mock.invocationCallOrder[0])
+    expect(createPin).toHaveBeenCalledOnce()
+  })
+
+  it('throws a recoverable broadcast error with a free order reference when service-order pin publish fails', async () => {
+    vi.spyOn(crypto, 'getRandomValues').mockImplementation((array) => {
+      if (array instanceof Uint8Array) {
+        array.fill(0x14)
+      }
+      return array
+    })
+    const expectedOrderReference = generateRandomHex(32)
+    const transfer = vi.fn()
+    const ecdh = vi.fn().mockResolvedValue({ sharedSecret: 'bb'.repeat(32) })
+    const createPin = vi.fn().mockResolvedValueOnce({ error: 'service-order user canceled' })
+
+    await expect(
+      executePayAndRequest({
+        service: freeService,
+        provider,
+        prompt: 'Free request whose service order pin fails.',
+        wallet,
+        metalet: { transfer, ecdh, createPin },
+      }),
+    ).rejects.toMatchObject({
+      code: 'broadcast_failed',
+      message: expect.stringMatching(/service-order user canceled/),
+      partial: {
+        payment: {
+          paymentTxid: '',
+          paymentCommitTxid: '',
+          orderReference: expectedOrderReference,
+        },
+        sessionKey: `${provider.globalMetaId}:${expectedOrderReference}`,
+        serviceOrderPinId: '',
+        orderPayload: expect.stringContaining(`order id: ${expectedOrderReference}`),
+        encryptedContent: expect.any(String),
+        simplemsgBody: expect.stringContaining('"content"'),
+        displaySummary: 'Free request whose service order pin fails.',
+      },
+    })
+    expect(transfer).not.toHaveBeenCalled()
+    expect(ecdh.mock.invocationCallOrder[0]).toBeLessThan(createPin.mock.invocationCallOrder[0])
+    expect(createPin).toHaveBeenCalledOnce()
+  })
+
   it('throws a broadcast error with a free order reference when createPin fails', async () => {
     clearTestSessionStorage()
     vi.spyOn(crypto, 'getRandomValues').mockImplementation((array) => {

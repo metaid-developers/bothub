@@ -528,7 +528,20 @@ export async function executePayAndRequest(
   const validated = validatePayAndRequestInput(input)
   const payment = await executeServicePayment(validated.service, validated.metalet)
   const sharedSecret = await resolveOrderSharedSecret(validated)
-  const serviceOrderPinId = await publishSkillServiceOrderPin(validated, payment)
+  let serviceOrderPinId: string
+  try {
+    serviceOrderPinId = await publishSkillServiceOrderPin(validated, payment)
+  } catch (err) {
+    if (err instanceof PayAndRequestBroadcastError) {
+      throw err
+    }
+    const partial = buildPreparedOrderMessage(validated, payment, '', sharedSecret)
+    const message =
+      err instanceof Error && err.message
+        ? err.message
+        : 'Skill service order pin broadcast failed'
+    throw new PayAndRequestBroadcastError(message, partial, err)
+  }
   const prepared = buildPreparedOrderMessage(validated, payment, serviceOrderPinId, sharedSecret)
   const simplemsgPinId = await broadcastPreparedOrder(prepared, validated.metalet)
 
