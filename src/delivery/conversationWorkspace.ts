@@ -44,6 +44,7 @@ export interface DeliveryOrderThread {
   order: WorkspaceOrder
   messages: DeliveryMessage[]
   assets: ParsedDeliveryAsset[]
+  routeAliases: string[]
 }
 
 export interface DeliveryConversation {
@@ -108,8 +109,6 @@ interface OrderContext {
   aliases: Set<string>
 }
 
-const routeAliasesByThread = new WeakMap<DeliveryOrderThread, Set<string>>()
-
 function uniqueById<T>(items: T[], idFor: (item: T) => string): T[] {
   const output = new Map<string, T>()
   for (const item of items) {
@@ -130,8 +129,14 @@ function tabIdForOrderCorrelation(orderCorrelationId: string): string {
   return `order:${orderCorrelationId.trim()}`
 }
 
+function uniqueStrings(values: Array<string | null | undefined>): string[] {
+  return Array.from(
+    new Set(values.map((value) => value?.trim() ?? '').filter(Boolean)),
+  )
+}
+
 function routeCandidatesForThread(thread: DeliveryOrderThread): string[] {
-  return [
+  return uniqueStrings([
     thread.tabId,
     thread.orderCorrelationId,
     thread.orderId,
@@ -139,8 +144,8 @@ function routeCandidatesForThread(thread: DeliveryOrderThread): string[] {
     thread.order.sessionId,
     thread.order.sessionKey,
     thread.order.paymentReference,
-    ...Array.from(routeAliasesByThread.get(thread) ?? []),
-  ].filter((candidate): candidate is string => Boolean(candidate?.trim()))
+    ...thread.routeAliases,
+  ])
 }
 
 function normalize(value: string | null | undefined): string {
@@ -635,8 +640,17 @@ export function buildDeliveryConversations(
         ])
         const lastMessageAt = threadMessages[threadMessages.length - 1]?.timestamp ?? 0
         const lastActivityAt = Math.max(context.order.lastActivityAt, lastMessageAt)
+        const routeAliases = uniqueStrings([
+          context.order.id,
+          context.order.sessionId,
+          context.order.sessionKey,
+          orderCorrelationId,
+          tabIdForOrderCorrelation(orderCorrelationId),
+          context.order.paymentReference,
+          ...Array.from(context.aliases),
+        ])
 
-        const thread = {
+        return {
           id: context.order.id,
           tabId: tabIdForOrderCorrelation(orderCorrelationId),
           orderId: context.order.id,
@@ -650,9 +664,8 @@ export function buildDeliveryConversations(
           order: context.order,
           messages: threadMessages,
           assets: threadAssets,
+          routeAliases,
         }
-        routeAliasesByThread.set(thread, new Set(context.aliases))
-        return thread
       }),
     )
 

@@ -429,6 +429,26 @@ describe('delivery conversation workspace', () => {
       }),
     ).toEqual({ conversationId: PROVIDER, tabId: 'order:order-pin-1' })
 
+    const reconstructedWorkspace = JSON.parse(JSON.stringify(workspace)) as typeof workspace
+    expect(
+      resolveDeliveryRouteSelection({
+        workspace: reconstructedWorkspace,
+        conversationParam: null,
+        orderParam: 'pay-tx-1',
+        sessionParam: null,
+        walletGlobalMetaId: SELF,
+      }),
+    ).toEqual({ conversationId: PROVIDER, tabId: 'order:order-pin-1' })
+    expect(
+      resolveDeliveryRouteSelection({
+        workspace: reconstructedWorkspace,
+        conversationParam: null,
+        orderParam: 'legacy-ref-1',
+        sessionParam: null,
+        walletGlobalMetaId: SELF,
+      }),
+    ).toEqual({ conversationId: PROVIDER, tabId: 'order:order-pin-1' })
+
     expect(
       resolveDeliveryRouteSelection({
         workspace,
