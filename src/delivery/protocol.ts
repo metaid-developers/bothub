@@ -17,13 +17,31 @@ export interface ParsedDeliveryProtocol {
 interface ProtocolTag {
   kind: Exclude<DeliveryProtocolKind, 'plain'>
   orderCorrelationId: string
+  orderPinId: string
   rest: string
 }
 
 const PROTOCOL_TAG_RE =
   /^\[(ORDER_STATUS|DELIVERY|ORDER_END|NeedsRating)(?::([^\]\s]+))?(?:\s+[^\]]+)?\]\s*/i
 const ORDER_PIN_LINE_RE =
-  /^\s*order\s+pin\s+id\s*[:：=]\s*([A-Za-z0-9][A-Za-z0-9._:-]{5,127})\s*$/im
+  /^\s*(?:order\s+pin\s+id|orderPinId|serviceOrderPinId)\s*[:：=]\s*([A-Za-z0-9][A-Za-z0-9._:-]{5,127})\s*$/im
+
+function normalizeOrderPinId(value: unknown): string {
+  return typeof value === 'string' ? value.trim() : ''
+}
+
+export function extractOrderPinIdMetadata(
+  content: string,
+  structuredPayload?: Record<string, unknown> | null,
+): string {
+  const fromPayload =
+    normalizeOrderPinId(structuredPayload?.orderPinId) ||
+    normalizeOrderPinId(structuredPayload?.serviceOrderPinId)
+  if (fromPayload) return fromPayload
+
+  const match = String(content || '').match(ORDER_PIN_LINE_RE)
+  return normalizeOrderPinId(match?.[1])
+}
 
 function toKind(tag: string): Exclude<DeliveryProtocolKind, 'plain'> {
   const normalized = tag.toLowerCase()
@@ -40,6 +58,7 @@ function parseProtocolTag(content: string): ProtocolTag | null {
   return {
     kind: toKind(match[1] ?? ''),
     orderCorrelationId: (match[2] ?? '').trim(),
+    orderPinId: extractOrderPinIdMetadata(content.trimStart().slice(match[0].length)),
     rest: stripOrderProtocolPinLine(content.trimStart().slice(match[0].length)),
   }
 }
@@ -84,7 +103,7 @@ export function parseDeliveryProtocol(content: string): ParsedDeliveryProtocol {
   if (parsedTag.kind !== 'delivery') {
     return {
       kind: parsedTag.kind,
-      orderCorrelationId: parsedTag.orderCorrelationId,
+      orderCorrelationId: parsedTag.orderPinId || parsedTag.orderCorrelationId,
       displayText: parsedTag.rest,
       rawText,
       deliveryResult: '',
@@ -93,13 +112,14 @@ export function parseDeliveryProtocol(content: string): ParsedDeliveryProtocol {
   }
 
   const structuredPayload = parseStructuredPayload(parsedTag.rest)
+  const orderPinId = extractOrderPinIdMetadata(parsedTag.rest, structuredPayload)
   const rawResult = structuredPayload?.result
   const hasStringResult = typeof rawResult === 'string'
   const deliveryResult = hasStringResult ? rawResult.trim() : ''
 
   return {
     kind: 'delivery',
-    orderCorrelationId: parsedTag.orderCorrelationId,
+    orderCorrelationId: orderPinId || parsedTag.orderPinId || parsedTag.orderCorrelationId,
     displayText: deliveryResult || parsedTag.rest,
     rawText,
     deliveryResult,

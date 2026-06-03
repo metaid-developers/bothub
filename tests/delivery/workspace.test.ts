@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import {
   buildDeliveryWorkspace,
+  orderCorrelationCandidates,
+  orderCorrelationIdFor,
   selectWorkspaceOrder,
   type WorkspaceOrder,
 } from '@/delivery/workspace'
@@ -310,6 +312,53 @@ describe('delivery workspace', () => {
       paymentReference: txid,
     })
     expect(paidOrder?.messages.map((row) => row.id)).toEqual(['paid-delivery'])
+  })
+
+  it('prefers orderPinId over payment txid and order reference while retaining aliases', () => {
+    const row = order({
+      id: `${SELF}:${PROVIDER}:order-pin-i0`,
+      paymentTxid: 'pay-tx',
+      paymentCommitTxid: 'commit-tx',
+      orderReference: 'legacy-ref',
+      orderPinId: 'order-pin-i0',
+    })
+
+    expect(orderCorrelationIdFor(row)).toBe('order-pin-i0')
+    expect(orderCorrelationCandidates(row)).toEqual(
+      expect.arrayContaining([
+        'order-pin-i0',
+        'pay-tx',
+        'commit-tx',
+        'legacy-ref',
+        `${SELF}:${PROVIDER}:order-pin-i0`,
+      ]),
+    )
+
+    const workspace = buildDeliveryWorkspace({
+      walletGlobalMetaId: SELF,
+      orders: [row],
+      sessions: [],
+      byPeer: {
+        [PROVIDER]: [
+          message({
+            id: 'legacy-payment-delivery',
+            content: 'Payment pay-tx delivered metafile://paid.png',
+            rawContent: 'Payment pay-tx delivered metafile://paid.png',
+            orderCorrelationId: undefined,
+          }),
+        ],
+      },
+      assetsBySession: {},
+    })
+
+    expect(workspace.orders).toHaveLength(1)
+    expect(workspace.orders[0]).toMatchObject({
+      id: `${SELF}:${PROVIDER}:order-pin-i0`,
+      orderCorrelationId: 'order-pin-i0',
+      paymentReference: 'pay-tx',
+      messageCount: 1,
+      assetCount: 1,
+    })
   })
 
   it('merges unscoped same-batch protocol replies into a recoverable paid order', () => {

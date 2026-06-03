@@ -61,4 +61,25 @@ describe('orderParser', () => {
     expect(parsed?.serviceId).toBe('pin-rt')
     expect(parsed?.skillName).toBe('rt-skill')
   })
+
+  it('parses order pin id metadata as the canonical order correlation', () => {
+    const payload = buildOrderPayload({
+      displayText: 'Canonical order',
+      rawRequest: 'Do the canonical thing',
+      price: '1',
+      currency: 'SPACE',
+      paymentTxid: 'pay-tx',
+      orderReference: 'legacy-ref',
+      orderPinId: 'order-pin-i0',
+      serviceId: 'pin-canonical',
+      skillName: 'canonical-skill',
+      outputType: 'text',
+    })
+    const parsed = parseOrderMessage(payload)
+
+    expect(parsed?.paymentTxid).toBe('pay-tx')
+    expect(parsed?.orderReference).toBe('')
+    expect(parsed?.orderPinId).toBe('order-pin-i0')
+    expect(getOrderCorrelationId(parsed!)).toBe('order-pin-i0')
+  })
 })

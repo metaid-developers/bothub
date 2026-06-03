@@ -8,6 +8,7 @@ export const RAW_REQUEST_BLOCK_RE =
   /<raw_request>\s*\n?([\s\S]*?)\n?\s*<\/raw_request>/i
 export const ORDER_METADATA_TXID_RE = /^txid:\s*(.+)$/im
 export const ORDER_METADATA_ORDER_ID_RE = /^order id:\s*(.+)$/im
+export const ORDER_METADATA_ORDER_PIN_ID_RE = /^order pin id:\s*(.+)$/im
 export const ORDER_METADATA_SERVICE_ID_RE = /^service id:\s*(.+)$/im
 export const ORDER_METADATA_SKILL_NAME_RE = /^skill name:\s*(.+)$/im
 export const ORDER_METADATA_OUTPUT_TYPE_RE = /^output type:\s*(.+)$/im
@@ -114,6 +115,8 @@ export interface BuildOrderPayloadInput {
   paymentTxid?: string
   paymentCommitTxid?: string
   orderReference?: string
+  orderPinId?: string
+  serviceOrderPinId?: string
   paymentChain?: string
   settlementKind?: string
   mrc20Ticker?: string
@@ -192,6 +195,9 @@ export function buildOrderPayload(input: BuildOrderPayloadInput | undefined): st
     'Service Order'
   const paymentTxid = normalizeSingleLineText(input?.paymentTxid)
   const orderReference = normalizeSingleLineText(input?.orderReference)
+  const orderPinId =
+    normalizeSingleLineText(input?.orderPinId) ||
+    normalizeSingleLineText(input?.serviceOrderPinId)
   const settlement = resolveOrderSettlementMetadata(input)
   const omitPaymentSettlementMetadata = !paymentTxid && orderReference && isZeroAmount(input?.price)
 
@@ -202,6 +208,9 @@ export function buildOrderPayload(input: BuildOrderPayloadInput | undefined): st
     metadataLines.push(`txid: ${paymentTxid}`)
   } else if (orderReference) {
     metadataLines.push(`order id: ${orderReference}`)
+  }
+  if (orderPinId) {
+    metadataLines.push(`order pin id: ${orderPinId}`)
   }
   if (!omitPaymentSettlementMetadata && settlement.paymentChain) {
     metadataLines.push(`payment chain: ${settlement.paymentChain}`)

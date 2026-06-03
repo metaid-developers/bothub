@@ -162,11 +162,29 @@ export function groupPeerMessagesBySession(
     selfGlobalMetaId,
   )
   const buckets = new Map<string, DeliveryMessage[]>()
-  const knownCorrelations = new Set<string>()
+  const knownCorrelations = new Map<string, string>()
   const self = selfGlobalMetaId.trim()
   let lastCorrelatedSessionKey: string | null = null
 
   const peerDefaultKey = (peer: string) => buildSessionKey(peer, null)
+  const rememberCorrelation = (
+    canonical: string,
+    aliases: Array<string | null | undefined> = [],
+  ): string => {
+    const normalizedCanonical = canonical.trim()
+    if (!normalizedCanonical) return ''
+    knownCorrelations.set(normalizedCanonical, normalizedCanonical)
+    for (const alias of aliases) {
+      const normalizedAlias = alias?.trim()
+      if (normalizedAlias) knownCorrelations.set(normalizedAlias, normalizedCanonical)
+    }
+    return normalizedCanonical
+  }
+  const canonicalCorrelation = (value: string | null | undefined): string => {
+    const normalized = value?.trim() ?? ''
+    if (!normalized) return ''
+    return knownCorrelations.get(normalized) ?? normalized
+  }
   const rememberCorrelatedKey = (key: string): string => {
     lastCorrelatedSessionKey = key
     return key
@@ -179,31 +197,35 @@ export function groupPeerMessagesBySession(
     const protocolKind = protocolKindForMessage(message)
     const protocolCorrelation = protocol.orderCorrelationId.trim()
     const isSelf = message.fromGlobalMetaId.trim() === self
-    const correlation = parsed ? getOrderCorrelationId(parsed) : protocolCorrelation
-    const storedCorrelation = message.orderCorrelationId?.trim() ?? ''
+    const correlation = canonicalCorrelation(
+      parsed ? getOrderCorrelationId(parsed) : protocolCorrelation,
+    )
+    const storedCorrelation = canonicalCorrelation(message.orderCorrelationId)
 
     if (parsed && isSelf && correlation) {
-      knownCorrelations.add(correlation)
+      rememberCorrelation(correlation, [
+        parsed.orderPinId,
+        parsed.paymentTxid,
+        parsed.orderReference,
+      ])
       return rememberCorrelatedKey(buildSessionKey(peer, correlation))
     }
 
     if (storedCorrelation) {
-      knownCorrelations.add(storedCorrelation)
+      rememberCorrelation(storedCorrelation, [message.orderCorrelationId])
       return rememberCorrelatedKey(buildSessionKey(peer, storedCorrelation))
     }
 
     if (protocolCorrelation) {
-      knownCorrelations.add(protocolCorrelation)
-      return rememberCorrelatedKey(buildSessionKey(peer, protocolCorrelation))
+      const canonical = rememberCorrelation(canonicalCorrelation(protocolCorrelation), [
+        protocolCorrelation,
+      ])
+      return rememberCorrelatedKey(buildSessionKey(peer, canonical))
     }
 
-    if (correlation && knownCorrelations.has(correlation)) {
-      return rememberCorrelatedKey(buildSessionKey(peer, correlation))
-    }
-
-    const textMatch = findCorrelationInText(message.content, knownCorrelations)
+    const textMatch = findCorrelationInText(message.content, new Set(knownCorrelations.keys()))
     if (textMatch) {
-      return rememberCorrelatedKey(buildSessionKey(peer, textMatch))
+      return rememberCorrelatedKey(buildSessionKey(peer, canonicalCorrelation(textMatch)))
     }
 
     if (!isSelf && protocolKind !== 'plain' && lastCorrelatedSessionKey) {

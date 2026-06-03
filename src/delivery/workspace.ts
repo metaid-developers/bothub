@@ -184,8 +184,9 @@ function compositeIdTail(id: string): string {
   return colon >= 0 ? trimmed.slice(colon + 1).trim() : trimmed
 }
 
-function orderCorrelationIdFor(order: BuyerOrder): string {
+export function orderCorrelationIdFor(order: BuyerOrder): string {
   return (
+    order.orderPinId?.trim() ||
     order.paymentTxid?.trim() ||
     order.orderReference?.trim() ||
     compositeIdTail(order.id) ||
@@ -193,14 +194,14 @@ function orderCorrelationIdFor(order: BuyerOrder): string {
   )
 }
 
-function orderCorrelationCandidates(order: BuyerOrder): string[] {
+export function orderCorrelationCandidates(order: BuyerOrder): string[] {
   const canonical = orderCorrelationIdFor(order)
   return uniqueValues([
     canonical,
+    order.orderPinId,
     order.paymentTxid,
     order.paymentCommitTxid,
     order.orderReference,
-    order.orderPinId,
     order.id,
   ])
 }

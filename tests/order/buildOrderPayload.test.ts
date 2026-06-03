@@ -79,4 +79,23 @@ describe('buildOrderPayload', () => {
     })
     expect(payload).toBe(readFixture('mrc20'))
   })
+
+  it('includes the canonical skill-service-order pin id without replacing payment metadata', () => {
+    const payload = buildOrderPayload({
+      displayText: 'Paid order with order pin',
+      rawRequest: 'Need canonical order id.',
+      price: '1',
+      currency: 'SPACE',
+      paymentTxid: 'pay-tx-1',
+      orderReference: 'legacy-ref-1',
+      orderPinId: 'order-pin-i0',
+      serviceId: 'pin-paid-001',
+      skillName: 'paid-skill',
+      outputType: 'text',
+    })
+
+    expect(payload).toContain('txid: pay-tx-1')
+    expect(payload).toContain('order pin id: order-pin-i0')
+    expect(payload).not.toContain('orderId')
+  })
 })

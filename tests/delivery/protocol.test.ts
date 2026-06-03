@@ -32,15 +32,49 @@ describe('parseDeliveryProtocol', () => {
   })
 
   it.each([
-    [`[ORDER_STATUS:${orderTxid}] generating video\norder pin id: order-pin-1`, 'order_status', 'generating video'],
-    [`[DELIVERY:${orderTxid}] {"result":"done metafile://abc123i0.png"}`, 'delivery', 'done metafile://abc123i0.png'],
-    [`[NeedsRating:${orderTxid}] please rate\norder pin id: order-pin-1`, 'needs_rating', 'please rate'],
-    [`[ORDER_END:${orderTxid} completed] complete\norder pin id: order-pin-1`, 'order_end', 'complete'],
-  ] as const)('parses IDBots %s fixtures', (content, kind, displayText) => {
+    [`[ORDER_STATUS:${orderTxid}] generating video\norder pin id: order-pin-1`, 'order_status', 'order-pin-1', 'generating video'],
+    [`[DELIVERY:${orderTxid}] {"result":"done metafile://abc123i0.png"}`, 'delivery', orderTxid, 'done metafile://abc123i0.png'],
+    [`[NeedsRating:${orderTxid}] please rate\norder pin id: order-pin-1`, 'needs_rating', 'order-pin-1', 'please rate'],
+    [`[ORDER_END:${orderTxid} completed] complete\norder pin id: order-pin-1`, 'order_end', 'order-pin-1', 'complete'],
+  ] as const)('parses IDBots %s fixtures', (content, kind, orderCorrelationId, displayText) => {
     expect(parseDeliveryProtocol(content)).toMatchObject({
       kind,
-      orderCorrelationId: orderTxid,
+      orderCorrelationId,
       displayText,
+    })
+  })
+
+  it('normalizes protocol assignment to order pin id metadata when a legacy tag is also present', () => {
+    expect(
+      parseDeliveryProtocol(`[ORDER_STATUS:${orderTxid}] generating video\norder pin id: order-pin-i0`),
+    ).toMatchObject({
+      kind: 'order_status',
+      orderCorrelationId: 'order-pin-i0',
+      displayText: 'generating video',
+    })
+  })
+
+  it('normalizes delivery payload orderPinId metadata as the order correlation', () => {
+    expect(
+      parseDeliveryProtocol(
+        `[DELIVERY:${orderTxid}] {"orderPinId":"order-pin-i0","result":"done metafile://abc123i0.png"}`,
+      ),
+    ).toMatchObject({
+      kind: 'delivery',
+      orderCorrelationId: 'order-pin-i0',
+      displayText: 'done metafile://abc123i0.png',
+    })
+  })
+
+  it('normalizes delivery payload serviceOrderPinId metadata as the order correlation', () => {
+    expect(
+      parseDeliveryProtocol(
+        `[DELIVERY:${orderTxid}] {"serviceOrderPinId":"service-order-pin-i0","result":"done"}`,
+      ),
+    ).toMatchObject({
+      kind: 'delivery',
+      orderCorrelationId: 'service-order-pin-i0',
+      displayText: 'done',
     })
   })
 

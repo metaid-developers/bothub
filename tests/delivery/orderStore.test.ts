@@ -105,7 +105,7 @@ describe('persistPendingOrder', () => {
     })
 
     expect(persisted.order).toMatchObject({
-      id: 'idqbuyer:idqprovider:order-ref-1',
+      id: 'idqbuyer:idqprovider:pin-order-1',
       walletGlobalMetaId: wallet.globalMetaId,
       providerGlobalMetaId: provider.globalMetaId,
       providerChatPubkey: provider.chatPubkey,
@@ -133,11 +133,44 @@ describe('persistPendingOrder', () => {
     })
 
     expect(paid.order).toMatchObject({
-      id: 'idqbuyer:idqprovider:paid-txid-1',
+      id: 'idqbuyer:idqprovider:pin-order-1',
       paymentTxid: 'paid-txid-1',
       paymentCommitTxid: 'commit-txid-1',
       orderPinId: 'pin-order-1',
       status: 'waiting',
+    })
+  })
+
+  it('persists orderPinId as canonical correlation while keeping payment metadata', async () => {
+    const persisted = await persistPendingOrder({
+      wallet,
+      provider,
+      service: { ...service, price: '1' },
+      prompt: 'Paid fortune',
+      result: result({
+        paymentTxid: 'pay-tx',
+        paymentCommitTxid: 'commit-tx',
+        orderReference: 'legacy-ref',
+        orderPinId: 'order-pin-i0',
+        sessionKey: 'idqprovider:order-pin-i0',
+      }),
+    })
+
+    expect(persisted.order).toMatchObject({
+      id: 'idqbuyer:idqprovider:order-pin-i0',
+      paymentTxid: 'pay-tx',
+      paymentCommitTxid: 'commit-tx',
+      orderReference: 'legacy-ref',
+      orderPinId: 'order-pin-i0',
+    })
+    expect(persisted.session).toMatchObject({
+      id: 'idqbuyer:idqprovider:order-pin-i0',
+      orderCorrelationId: 'order-pin-i0',
+    })
+    expect(persisted.message).toMatchObject({
+      sessionId: 'idqbuyer:idqprovider:order-pin-i0',
+      orderCorrelationId: 'order-pin-i0',
+      pinId: 'order-pin-i0',
     })
   })
 
@@ -151,11 +184,11 @@ describe('persistPendingOrder', () => {
     })
 
     expect(persisted.session).toMatchObject({
-      id: 'idqbuyer:idqprovider:order-ref-1',
+      id: 'idqbuyer:idqprovider:pin-order-1',
       walletGlobalMetaId: wallet.globalMetaId,
       providerGlobalMetaId: provider.globalMetaId,
       providerChatPubkey: provider.chatPubkey,
-      orderCorrelationId: 'order-ref-1',
+      orderCorrelationId: 'pin-order-1',
       serviceId: service.id,
       serviceLabel: service.displayName,
       status: 'waiting',
@@ -203,7 +236,12 @@ describe('persistPendingOrder', () => {
         provider,
         service,
         prompt: 'Tell me my fortune',
-        result: result({ orderReference: '', paymentTxid: '', sessionKey: 'idqprovider:' }),
+        result: result({
+          orderReference: '',
+          paymentTxid: '',
+          orderPinId: '',
+          sessionKey: 'idqprovider:',
+        }),
       }),
     ).rejects.toBeTruthy()
 

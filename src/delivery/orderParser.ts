@@ -1,5 +1,6 @@
 import {
   ORDER_METADATA_ORDER_ID_RE,
+  ORDER_METADATA_ORDER_PIN_ID_RE,
   ORDER_METADATA_OUTPUT_TYPE_RE,
   ORDER_METADATA_SERVICE_ID_RE,
   ORDER_METADATA_SKILL_NAME_RE,
@@ -18,6 +19,7 @@ export interface ParsedOrderMessage {
   currency: string
   paymentTxid: string
   orderReference: string
+  orderPinId: string
   serviceId: string
   skillName: string
   serviceName: string
@@ -42,6 +44,7 @@ export function parseOrderMessage(plaintext: string): ParsedOrderMessage | null 
   const priceMatch = source.match(ORDER_PRICE_LINE_RE)
   const paymentTxid = extractMetadataLine(source, ORDER_METADATA_TXID_RE)
   const orderReference = extractMetadataLine(source, ORDER_METADATA_ORDER_ID_RE)
+  const orderPinId = extractMetadataLine(source, ORDER_METADATA_ORDER_PIN_ID_RE)
   const serviceId = extractMetadataLine(source, ORDER_METADATA_SERVICE_ID_RE)
   const skillName = extractMetadataLine(source, ORDER_METADATA_SKILL_NAME_RE)
   const outputType = extractMetadataLine(source, ORDER_METADATA_OUTPUT_TYPE_RE)
@@ -55,6 +58,7 @@ export function parseOrderMessage(plaintext: string): ParsedOrderMessage | null 
     currency: priceMatch?.[2] ? normalizeSingleLine(priceMatch[2]) : '',
     paymentTxid,
     orderReference,
+    orderPinId,
     serviceId,
     skillName,
     serviceName: skillName || displaySummary,
@@ -63,7 +67,7 @@ export function parseOrderMessage(plaintext: string): ParsedOrderMessage | null 
 }
 
 export function getOrderCorrelationId(order: ParsedOrderMessage): string {
-  return order.paymentTxid || order.orderReference
+  return order.orderPinId || order.paymentTxid || order.orderReference
 }
 
 export function findCorrelationInText(

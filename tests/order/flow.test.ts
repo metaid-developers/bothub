@@ -84,7 +84,10 @@ describe('executePayAndRequest', () => {
     const now = 1_764_321_987_654
     vi.spyOn(Date, 'now').mockReturnValue(now)
     const paymentTxid = 'e'.repeat(64)
-    const createPin = vi.fn().mockResolvedValue({ pinId: 'pin-order-standard' })
+    const createPin = vi
+      .fn()
+      .mockResolvedValueOnce({ pinId: 'service-order-standard' })
+      .mockResolvedValueOnce({ pinId: 'pin-order-standard' })
 
     await executePayAndRequest({
       service: paidService,
@@ -98,7 +101,8 @@ describe('executePayAndRequest', () => {
       },
     })
 
-    const pinArgs = createPin.mock.calls[0][0] as {
+    expect(createPin).toHaveBeenCalledTimes(2)
+    const pinArgs = createPin.mock.calls[1][0] as {
       dataList: Array<{
         metaidData: {
           path: string
@@ -145,7 +149,10 @@ describe('executePayAndRequest', () => {
     const paymentTxid = 'f'.repeat(64)
     const transfer = vi.fn().mockResolvedValue({ txids: [paymentTxid] })
     const ecdh = vi.fn().mockResolvedValue({ sharedSecret: 'aa'.repeat(32) })
-    const createPin = vi.fn().mockResolvedValue({ pinId: 'pin-order-001', txids: [paymentTxid] })
+    const createPin = vi
+      .fn()
+      .mockResolvedValueOnce({ pinId: 'service-order-pin-001', txids: ['service-order-txid'] })
+      .mockResolvedValueOnce({ pinId: 'simplemsg-pin-001', txids: [paymentTxid] })
 
     const result = await executePayAndRequest({
       service: paidService,
@@ -171,14 +178,33 @@ describe('executePayAndRequest', () => {
       ],
     })
     expect(transfer.mock.invocationCallOrder[0]).toBeLessThan(
+      createPin.mock.invocationCallOrder[0],
+    )
+    expect(createPin.mock.invocationCallOrder[0]).toBeLessThan(
       ecdh.mock.invocationCallOrder[0],
     )
     expect(ecdh.mock.invocationCallOrder[0]).toBeLessThan(
-      createPin.mock.invocationCallOrder[0],
+      createPin.mock.invocationCallOrder[1],
     )
     expect(ecdh).toHaveBeenCalledWith({ externalPubKey: provider.chatPubkey })
-    expect(createPin).toHaveBeenCalledOnce()
-    const pinArgs = createPin.mock.calls[0][0] as {
+    expect(createPin).toHaveBeenCalledTimes(2)
+    const serviceOrderArgs = createPin.mock.calls[0][0] as {
+      chain: string
+      dataList: Array<{ metaidData: { path: string; body: string; contentType: string } }>
+    }
+    expect(serviceOrderArgs.chain).toBe('mvc')
+    expect(serviceOrderArgs.dataList[0].metaidData.path).toBe('/protocols/skill-service-order')
+    expect(serviceOrderArgs.dataList[0].metaidData.contentType).toBe('application/json')
+    expect(JSON.parse(serviceOrderArgs.dataList[0].metaidData.body)).toEqual({
+      servicePinId: paidService.currentPinId,
+      paymentTxid,
+      price: paidService.price,
+      currency: paidService.currency,
+      settlementKind: paidService.settlementKind,
+      metadata: '',
+    })
+    expect(serviceOrderArgs.dataList[0].metaidData.body).not.toContain('orderId')
+    const pinArgs = createPin.mock.calls[1][0] as {
       chain: string
       dataList: Array<{ metaidData: { path: string; body: string } }>
     }
@@ -196,16 +222,20 @@ describe('executePayAndRequest', () => {
     expect(result.paymentTxid).toBe(paymentTxid)
     expect(result.paymentCommitTxid).toBe('')
     expect(result.orderReference).toBe('')
-    expect(result.orderPinId).toBe('pin-order-001')
-    expect(result.sessionKey).toBe(`${provider.globalMetaId}:${paymentTxid}`)
+    expect(result.orderPinId).toBe('service-order-pin-001')
+    expect(result.sessionKey).toBe(`${provider.globalMetaId}:service-order-pin-001`)
     expect(result.orderPayload).toContain(`txid: ${paymentTxid}`)
+    expect(result.orderPayload).toContain('order pin id: service-order-pin-001')
     expect(result.displaySummary).toBe('Please deliver my fortune reading.')
   })
 
   it('happy path: free order skips transfer and uses order reference', async () => {
     const transfer = vi.fn()
     const ecdh = vi.fn().mockResolvedValue({ sharedSecret: 'bb'.repeat(32) })
-    const createPin = vi.fn().mockResolvedValue({ pinId: 'pin-free-order' })
+    const createPin = vi
+      .fn()
+      .mockResolvedValueOnce({ pinId: 'service-order-free-pin' })
+      .mockResolvedValueOnce({ pinId: 'simplemsg-free-pin' })
 
     vi.spyOn(crypto, 'getRandomValues').mockImplementation((array) => {
       if (array instanceof Uint8Array) {
@@ -224,8 +254,24 @@ describe('executePayAndRequest', () => {
 
     expect(transfer).not.toHaveBeenCalled()
     expect(ecdh).toHaveBeenCalledWith({ externalPubKey: provider.chatPubkey })
-    expect(createPin).toHaveBeenCalledOnce()
-    const pinArgs = createPin.mock.calls[0][0] as {
+    expect(createPin).toHaveBeenCalledTimes(2)
+    expect(createPin.mock.invocationCallOrder[0]).toBeLessThan(
+      ecdh.mock.invocationCallOrder[0],
+    )
+    const serviceOrderArgs = createPin.mock.calls[0][0] as {
+      dataList: Array<{ metaidData: { path: string; body: string } }>
+    }
+    expect(serviceOrderArgs.dataList[0].metaidData.path).toBe('/protocols/skill-service-order')
+    expect(JSON.parse(serviceOrderArgs.dataList[0].metaidData.body)).toMatchObject({
+      servicePinId: freeService.currentPinId,
+      paymentTxid: '',
+      price: freeService.price,
+      currency: freeService.currency,
+      settlementKind: freeService.settlementKind,
+      metadata: '',
+    })
+    expect(serviceOrderArgs.dataList[0].metaidData.body).not.toContain('orderId')
+    const pinArgs = createPin.mock.calls[1][0] as {
       dataList: Array<{ metaidData: { path: string; body: string } }>
     }
     expect(pinArgs.dataList[0].metaidData.path).toBe('/protocols/simplemsg')
@@ -240,12 +286,14 @@ describe('executePayAndRequest', () => {
     expect(result.paymentTxid).toBe('')
     expect(result.paymentCommitTxid).toBe('')
     expect(result.orderReference).toBe(generateRandomHex(32))
-    expect(result.sessionKey).toBe(`${provider.globalMetaId}:${result.orderReference}`)
+    expect(result.orderPinId).toBe('service-order-free-pin')
+    expect(result.sessionKey).toBe(`${provider.globalMetaId}:service-order-free-pin`)
     expect(result.orderPayload).toContain(`order id: ${result.orderReference}`)
+    expect(result.orderPayload).toContain('order pin id: service-order-free-pin')
     expect(result.displaySummary).toBe('Free reading please.')
   })
 
-  it('happy path: free order resolves a nested Metalet txid response to a simplemsg pin id', async () => {
+  it('happy path: free order resolves a nested Metalet txid response to a service order pin id', async () => {
     const orderTxid = 'a'.repeat(64)
     const transfer = vi.fn()
     const ecdh = vi.fn().mockResolvedValue({ sharedSecret: 'bb'.repeat(32) })
@@ -287,13 +335,17 @@ describe('executePayAndRequest', () => {
     expect(result.paymentTxid).toBe('')
     expect(result.paymentCommitTxid).toBe('')
     expect(result.orderReference).toBe(generateRandomHex(32))
-    expect(result.sessionKey).toBe(`${provider.globalMetaId}:${result.orderReference}`)
+    expect(result.sessionKey).toBe(`${provider.globalMetaId}:${result.orderPinId}`)
+    expect(result.orderPayload).toContain(`order pin id: ${result.orderPinId}`)
   })
 
   it('treats a resolved free order createPin without a parseable pin id as broadcast success', async () => {
     const transfer = vi.fn()
     const ecdh = vi.fn().mockResolvedValue({ sharedSecret: 'bb'.repeat(32) })
-    const createPin = vi.fn().mockResolvedValue({ status: 'Task Finished' })
+    const createPin = vi
+      .fn()
+      .mockResolvedValueOnce({ pinId: 'service-order-indeterminate-simplemsg' })
+      .mockResolvedValueOnce({ status: 'Task Finished' })
 
     vi.spyOn(crypto, 'getRandomValues').mockImplementation((array) => {
       if (array instanceof Uint8Array) {
@@ -312,25 +364,29 @@ describe('executePayAndRequest', () => {
     })
 
     expect(transfer).not.toHaveBeenCalled()
-    expect(createPin).toHaveBeenCalledOnce()
-    expect(result.orderPinId).toBe('')
+    expect(createPin).toHaveBeenCalledTimes(2)
+    expect(result.orderPinId).toBe('service-order-indeterminate-simplemsg')
     expect(result.paymentTxid).toBe('')
     expect(result.paymentCommitTxid).toBe('')
     expect(result.orderReference).toBe(expectedOrderReference)
-    expect(result.sessionKey).toBe(`${provider.globalMetaId}:${expectedOrderReference}`)
+    expect(result.sessionKey).toBe(`${provider.globalMetaId}:service-order-indeterminate-simplemsg`)
     expect(result.orderPayload).toContain(`order id: ${expectedOrderReference}`)
+    expect(result.orderPayload).toContain('order pin id: service-order-indeterminate-simplemsg')
   })
 
   it('treats a resolved free order explorer open-url envelope as broadcast success', async () => {
     const orderTxid = 'b'.repeat(64)
     const transfer = vi.fn()
     const ecdh = vi.fn().mockResolvedValue({ sharedSecret: 'bb'.repeat(32) })
-    const createPin = vi.fn().mockResolvedValue({
-      error: {
-        code: 'open-url',
-        openUrl: `https://www.mvcscan.com/tx/${orderTxid}`,
-      },
-    })
+    const createPin = vi
+      .fn()
+      .mockResolvedValueOnce({ pinId: 'service-order-open-url' })
+      .mockResolvedValueOnce({
+        error: {
+          code: 'open-url',
+          openUrl: `https://www.mvcscan.com/tx/${orderTxid}`,
+        },
+      })
 
     vi.spyOn(crypto, 'getRandomValues').mockImplementation((array) => {
       if (array instanceof Uint8Array) {
@@ -349,21 +405,24 @@ describe('executePayAndRequest', () => {
     })
 
     expect(transfer).not.toHaveBeenCalled()
-    expect(result.orderPinId).toBe(`${orderTxid}i0`)
+    expect(result.orderPinId).toBe('service-order-open-url')
     expect(result.paymentTxid).toBe('')
     expect(result.paymentCommitTxid).toBe('')
     expect(result.orderReference).toBe(expectedOrderReference)
-    expect(result.sessionKey).toBe(`${provider.globalMetaId}:${expectedOrderReference}`)
+    expect(result.sessionKey).toBe(`${provider.globalMetaId}:service-order-open-url`)
   })
 
   it('treats a free order Chrome extension response-loss reject as pending broadcast success', async () => {
     const transfer = vi.fn()
     const ecdh = vi.fn().mockResolvedValue({ sharedSecret: 'bb'.repeat(32) })
-    const createPin = vi.fn().mockRejectedValue(
-      new Error(
-        'A listener indicated an asynchronous response by returning true, but the message channel closed before a response was received',
-      ),
-    )
+    const createPin = vi
+      .fn()
+      .mockResolvedValueOnce({ pinId: 'service-order-response-lost' })
+      .mockRejectedValueOnce(
+        new Error(
+          'A listener indicated an asynchronous response by returning true, but the message channel closed before a response was received',
+        ),
+      )
 
     vi.spyOn(crypto, 'getRandomValues').mockImplementation((array) => {
       if (array instanceof Uint8Array) {
@@ -382,12 +441,12 @@ describe('executePayAndRequest', () => {
     })
 
     expect(transfer).not.toHaveBeenCalled()
-    expect(createPin).toHaveBeenCalledOnce()
-    expect(result.orderPinId).toBe('')
+    expect(createPin).toHaveBeenCalledTimes(2)
+    expect(result.orderPinId).toBe('service-order-response-lost')
     expect(result.paymentTxid).toBe('')
     expect(result.paymentCommitTxid).toBe('')
     expect(result.orderReference).toBe(expectedOrderReference)
-    expect(result.sessionKey).toBe(`${provider.globalMetaId}:${expectedOrderReference}`)
+    expect(result.sessionKey).toBe(`${provider.globalMetaId}:service-order-response-lost`)
   })
 
   it('surfaces payment failure when transfer returns no txid', async () => {
@@ -529,7 +588,10 @@ describe('executePayAndRequest', () => {
         metalet: {
           transfer: vi.fn().mockResolvedValue({ txids: [paymentTxid] }),
           ecdh: vi.fn().mockResolvedValue({ sharedSecret: 'aa'.repeat(32) }),
-          createPin: vi.fn().mockRejectedValue(new Error('network down')),
+          createPin: vi
+            .fn()
+            .mockResolvedValueOnce({ pinId: 'service-order-paid-failed-simplemsg' })
+            .mockRejectedValueOnce(new Error('network down')),
         },
       }),
     ).rejects.toMatchObject({
@@ -543,8 +605,9 @@ describe('executePayAndRequest', () => {
           paymentCommitTxid: '',
           orderReference: '',
         },
-        sessionKey: `${provider.globalMetaId}:${paymentTxid}`,
+        sessionKey: `${provider.globalMetaId}:service-order-paid-failed-simplemsg`,
         orderPayload: expect.stringContaining(`txid: ${paymentTxid}`),
+        serviceOrderPinId: 'service-order-paid-failed-simplemsg',
         encryptedContent: expect.any(String),
         simplemsgBody: expect.stringContaining('"content"'),
         displaySummary: 'Paid request that should be recoverable.',
@@ -571,7 +634,10 @@ describe('executePayAndRequest', () => {
         metalet: {
           transfer: vi.fn(),
           ecdh: vi.fn().mockResolvedValue({ sharedSecret: 'bb'.repeat(32) }),
-          createPin: vi.fn().mockRejectedValue(new Error('network down')),
+          createPin: vi
+            .fn()
+            .mockResolvedValueOnce({ pinId: 'service-order-free-failed-simplemsg' })
+            .mockRejectedValueOnce(new Error('network down')),
         },
       }),
     ).rejects.toMatchObject({
@@ -582,13 +648,15 @@ describe('executePayAndRequest', () => {
           paymentCommitTxid: '',
           orderReference: expectedOrderReference,
         },
-        sessionKey: `${provider.globalMetaId}:${expectedOrderReference}`,
+        sessionKey: `${provider.globalMetaId}:service-order-free-failed-simplemsg`,
+        serviceOrderPinId: 'service-order-free-failed-simplemsg',
       },
     })
     expect(getLastCreatePinDiagnostic()).toMatchObject({
       phase: 'rejected',
       providerGlobalMetaId: provider.globalMetaId,
       orderReference: expectedOrderReference,
+      sessionKey: `${provider.globalMetaId}:service-order-free-failed-simplemsg`,
       errorMessage: 'network down',
     })
   })
@@ -611,7 +679,10 @@ describe('executePayAndRequest', () => {
         metalet: {
           transfer: vi.fn(),
           ecdh: vi.fn().mockResolvedValue({ sharedSecret: 'bb'.repeat(32) }),
-          createPin: vi.fn().mockResolvedValue({ status: 'canceled' }),
+          createPin: vi
+            .fn()
+            .mockResolvedValueOnce({ pinId: 'service-order-free-canceled-simplemsg' })
+            .mockResolvedValueOnce({ status: 'canceled' }),
         },
       }),
     ).rejects.toMatchObject({
@@ -623,7 +694,8 @@ describe('executePayAndRequest', () => {
           paymentCommitTxid: '',
           orderReference: expectedOrderReference,
         },
-        sessionKey: `${provider.globalMetaId}:${expectedOrderReference}`,
+        sessionKey: `${provider.globalMetaId}:service-order-free-canceled-simplemsg`,
+        serviceOrderPinId: 'service-order-free-canceled-simplemsg',
       },
     })
   })
@@ -646,7 +718,10 @@ describe('executePayAndRequest', () => {
         metalet: {
           transfer: vi.fn(),
           ecdh: vi.fn().mockResolvedValue({ sharedSecret: 'bb'.repeat(32) }),
-          createPin: vi.fn().mockResolvedValue({ error: 'user canceled' }),
+          createPin: vi
+            .fn()
+            .mockResolvedValueOnce({ pinId: 'service-order-free-error-simplemsg' })
+            .mockResolvedValueOnce({ error: 'user canceled' }),
         },
       }),
     ).rejects.toMatchObject({
@@ -658,7 +733,8 @@ describe('executePayAndRequest', () => {
           paymentCommitTxid: '',
           orderReference: expectedOrderReference,
         },
-        sessionKey: `${provider.globalMetaId}:${expectedOrderReference}`,
+        sessionKey: `${provider.globalMetaId}:service-order-free-error-simplemsg`,
+        serviceOrderPinId: 'service-order-free-error-simplemsg',
       },
     })
   })
@@ -671,7 +747,7 @@ describe('executePayAndRequest', () => {
       }
       return array
     })
-    const createPin = vi.fn()
+    const createPin = vi.fn().mockResolvedValueOnce({ pinId: 'service-order-before-ecdh-timeout' })
     let caught: unknown
 
     try {
@@ -699,7 +775,7 @@ describe('executePayAndRequest', () => {
       code: 'encryption_failed',
       message: 'Order encryption timed out waiting for Metalet ECDH response',
     })
-    expect(createPin).not.toHaveBeenCalled()
+    expect(createPin).toHaveBeenCalledOnce()
   })
 
   it('waits past the old 90s limit before timing out a free order broadcast', async () => {
@@ -723,7 +799,10 @@ describe('executePayAndRequest', () => {
         metalet: {
           transfer: vi.fn(),
           ecdh: vi.fn().mockResolvedValue({ sharedSecret: 'bb'.repeat(32) }),
-          createPin: vi.fn().mockReturnValue(new Promise(() => {})),
+          createPin: vi
+            .fn()
+            .mockResolvedValueOnce({ pinId: 'service-order-before-simplemsg-timeout' })
+            .mockReturnValueOnce(new Promise(() => {})),
         },
       }).catch((err: unknown) => {
         settled = true
@@ -750,7 +829,8 @@ describe('executePayAndRequest', () => {
           paymentCommitTxid: '',
           orderReference: expectedOrderReference,
         },
-        sessionKey: `${provider.globalMetaId}:${expectedOrderReference}`,
+        sessionKey: `${provider.globalMetaId}:service-order-before-simplemsg-timeout`,
+        serviceOrderPinId: 'service-order-before-simplemsg-timeout',
         orderPayload: expect.stringContaining(`order id: ${expectedOrderReference}`),
       },
     })
