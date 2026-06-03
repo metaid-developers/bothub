@@ -390,6 +390,7 @@ describe('delivery conversation workspace', () => {
         order({
           id: `${SELF}:${PROVIDER}:order-pin-1`,
           orderPinId: 'order-pin-1',
+          paymentTxid: 'pay-tx-1',
           orderReference: 'legacy-ref-1',
         }),
       ],
@@ -403,6 +404,26 @@ describe('delivery conversation workspace', () => {
         workspace,
         conversationParam: null,
         orderParam: `${SELF}:${PROVIDER}:order-pin-1`,
+        sessionParam: null,
+        walletGlobalMetaId: SELF,
+      }),
+    ).toEqual({ conversationId: PROVIDER, tabId: 'order:order-pin-1' })
+
+    expect(
+      resolveDeliveryRouteSelection({
+        workspace,
+        conversationParam: null,
+        orderParam: 'pay-tx-1',
+        sessionParam: null,
+        walletGlobalMetaId: SELF,
+      }),
+    ).toEqual({ conversationId: PROVIDER, tabId: 'order:order-pin-1' })
+
+    expect(
+      resolveDeliveryRouteSelection({
+        workspace,
+        conversationParam: null,
+        orderParam: 'legacy-ref-1',
         sessionParam: null,
         walletGlobalMetaId: SELF,
       }),

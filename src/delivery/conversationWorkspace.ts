@@ -108,6 +108,8 @@ interface OrderContext {
   aliases: Set<string>
 }
 
+const routeAliasesByThread = new WeakMap<DeliveryOrderThread, Set<string>>()
+
 function uniqueById<T>(items: T[], idFor: (item: T) => string): T[] {
   const output = new Map<string, T>()
   for (const item of items) {
@@ -126,6 +128,19 @@ function sortMessagesAsc(messages: DeliveryMessage[]): DeliveryMessage[] {
 
 function tabIdForOrderCorrelation(orderCorrelationId: string): string {
   return `order:${orderCorrelationId.trim()}`
+}
+
+function routeCandidatesForThread(thread: DeliveryOrderThread): string[] {
+  return [
+    thread.tabId,
+    thread.orderCorrelationId,
+    thread.orderId,
+    thread.order.id,
+    thread.order.sessionId,
+    thread.order.sessionKey,
+    thread.order.paymentReference,
+    ...Array.from(routeAliasesByThread.get(thread) ?? []),
+  ].filter((candidate): candidate is string => Boolean(candidate?.trim()))
 }
 
 function normalize(value: string | null | undefined): string {
@@ -621,7 +636,7 @@ export function buildDeliveryConversations(
         const lastMessageAt = threadMessages[threadMessages.length - 1]?.timestamp ?? 0
         const lastActivityAt = Math.max(context.order.lastActivityAt, lastMessageAt)
 
-        return {
+        const thread = {
           id: context.order.id,
           tabId: tabIdForOrderCorrelation(orderCorrelationId),
           orderId: context.order.id,
@@ -636,6 +651,8 @@ export function buildDeliveryConversations(
           messages: threadMessages,
           assets: threadAssets,
         }
+        routeAliasesByThread.set(thread, new Set(context.aliases))
+        return thread
       }),
     )
 
@@ -784,15 +801,7 @@ function findThreadByRouteValue(
 
   for (const conversation of workspace.conversations) {
     for (const thread of conversation.orderThreads) {
-      const candidates = [
-        thread.tabId,
-        thread.orderCorrelationId,
-        thread.orderId,
-        thread.order.id,
-        thread.order.sessionId,
-        thread.order.sessionKey,
-        thread.order.paymentReference,
-      ]
+      const candidates = routeCandidatesForThread(thread)
       if (candidates.some((candidate) => normalize(candidate) === target)) {
         return { conversation, thread }
       }
