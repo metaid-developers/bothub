@@ -390,6 +390,52 @@ describe('delivery workspace', () => {
     })
   })
 
+  it('keeps orderPinId canonical when a legacy session still uses the payment txid', () => {
+    const row = order({
+      id: `${SELF}:${PROVIDER}:order-pin-i0`,
+      paymentTxid: 'pay-tx',
+      orderReference: 'legacy-ref',
+      orderPinId: 'order-pin-i0',
+    })
+
+    const workspace = buildDeliveryWorkspace({
+      walletGlobalMetaId: SELF,
+      orders: [row],
+      sessions: [
+        session({
+          id: `${SELF}:${PROVIDER}:pay-tx`,
+          orderCorrelationId: 'pay-tx',
+          status: 'active',
+          lastMessageId: 'legacy-payment-status',
+          lastActivityAt: 55,
+        }),
+      ],
+      byPeer: {
+        [PROVIDER]: [
+          message({
+            id: 'legacy-payment-status',
+            content: '[ORDER_STATUS:pay-tx] Working on it',
+            rawContent: '[ORDER_STATUS:pay-tx] Working on it',
+            orderCorrelationId: undefined,
+            timestamp: 55,
+          }),
+        ],
+      },
+      assetsBySession: {},
+    })
+
+    expect(workspace.orders).toHaveLength(1)
+    expect(workspace.orders[0]).toMatchObject({
+      id: `${SELF}:${PROVIDER}:order-pin-i0`,
+      orderCorrelationId: 'order-pin-i0',
+      paymentReference: 'pay-tx',
+      messageCount: 1,
+    })
+    expect(workspace.orders[0]?.messages.map((row) => row.id)).toEqual([
+      'legacy-payment-status',
+    ])
+  })
+
   it('merges unscoped same-batch protocol replies into a recoverable paid order', () => {
     const txid = '05b77d20aef740a7f97341d89577b14286fd2a0e960a0809f29c4e65b0865dca'
     const orderRow = order({
