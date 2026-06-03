@@ -8,7 +8,6 @@ describe('user profile API client', () => {
   const avatarPin = `${'a'.repeat(64)}i0`
   const fallbackAvatarPin = `${'b'.repeat(64)}i0`
   const expectedAvatarContent = `https://manapi.metaid.io/content/${avatarPin}`
-  const expectedFallbackAvatarContent = `https://manapi.metaid.io/content/${fallbackAvatarPin}`
 
   beforeEach(() => {
     vi.stubEnv('VITE_META_SOCKET_BASE_URL', '/meta-socket/')
