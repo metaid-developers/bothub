@@ -7,6 +7,7 @@ import { avatarColor, avatarInitials } from '@/lib/avatar'
 
 export function WalletConnectButton() {
   const { identity, status, errorMessage, connect, disconnect } = useWallet()
+  const [avatarFailed, setAvatarFailed] = useState(false)
 
   const handleConnect = async () => {
     try {
@@ -23,7 +24,6 @@ export function WalletConnectButton() {
     const shortGlobalMetaId = truncateGlobalMetaId(identity.globalMetaId)
     const initials = avatarInitials(displayName)
     const bgColor = avatarColor(displayName)
-    const [avatarFailed, setAvatarFailed] = useState(false)
 
     return (
       <div className="flex items-center gap-3">
