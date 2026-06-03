@@ -24,7 +24,7 @@ Checked on 2026-06-03 CST from branch `codex/delivery-conversation-first`.
 | `npm test` | passed | 62 test files, 513 tests passed. |
 | `npm run typecheck` | passed | `tsc -b --noEmit` exited 0. |
 | `npm run lint` | passed | `eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0` exited 0. |
-| `npm run build` | passed with warning | Production build completed; Vite warned that `dist/assets/index-Dm6a6QeE.js` is 541.53 kB after minification. |
+| `npm run build` | passed with warning | Production build completed; Vite warned that `dist/assets/index-Ca2PQVFr.js` is 542.17 kB after minification. |
 | `npm run smoke:meta-socket` | passed | Default `http://127.0.0.1:18091` smoke passed with health `ok`, service count 3, detail schema `botHubSkillServiceDetail.v1`, Socket.IO heartbeat ack, and private-chat checks skipped because metaids were not provided. |
 | `META_SOCKET_BASE_URL=https://socket.metaid.io npm run smoke:meta-socket` | not run | Default local smoke passed, so the documented public endpoint fallback was not needed. |
 | Browser acceptance on `/delivery` | passed | In-app Browser verified the no-wallet state with public meta-socket config. Terminal Playwright then seeded a connected wallet, two orders for one provider, and mixed private/order messages; it verified one provider conversation row, `All` plus two order tabs, All-only composer, read-only order tabs, scoped asset labels, and no page errors. |
