@@ -26,7 +26,7 @@ export function DeliveryConversationHeader({
       <div
         role="status"
         aria-label={t('delivery.workspace.noConversationSelectedAria')}
-        className="border-b border-hub-border px-4 py-3"
+        className="shrink-0 border-b border-hub-border px-4 py-3"
       >
         <p className="text-sm font-semibold text-white">
           {t('delivery.workspace.noConversationSelectedTitle')}
@@ -41,7 +41,7 @@ export function DeliveryConversationHeader({
   const name = displayName(conversation)
 
   return (
-    <header className="border-b border-hub-border px-4 py-3">
+    <header className="shrink-0 border-b border-hub-border px-4 py-3">
       <div className="flex items-center gap-3">
         <PeerAvatar
           name={conversation.providerName}

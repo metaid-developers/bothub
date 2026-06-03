@@ -546,63 +546,73 @@ export function DeliveryPage() {
   )
 
   return (
-    <section aria-labelledby="delivery-heading" className="space-y-4">
-      <div>
+    <section
+      aria-labelledby="delivery-heading"
+      className="flex h-[calc(100dvh-6.5rem)] min-h-0 flex-col gap-4 overflow-hidden"
+    >
+      <div className="shrink-0">
         <h1 id="delivery-heading" className="font-display text-2xl font-semibold">
           {t('delivery.title')}
         </h1>
         <p className="mt-2 max-w-xl text-hub-muted">{t('delivery.subtitle')}</p>
       </div>
 
-      <WsErrorBanner />
+      <WsErrorBanner className="shrink-0" />
 
-      <div className="grid min-h-[560px] overflow-hidden rounded-card border border-hub-border bg-hub-surface/30 md:grid-cols-[minmax(220px,280px)_minmax(0,1fr)_minmax(220px,280px)] md:grid-rows-[minmax(0,1fr)_auto]">
+      <div
+        aria-label="我的交付工作区"
+        className="grid min-h-0 flex-1 grid-rows-[minmax(9rem,14rem)_minmax(0,1fr)_auto_auto] overflow-hidden rounded-card border border-hub-border bg-hub-surface/30 md:grid-cols-[minmax(220px,280px)_minmax(0,1fr)_minmax(220px,280px)] md:grid-rows-[minmax(0,1fr)_auto]"
+      >
         <aside
           aria-label={t('delivery.workspace.conversations')}
-          className="border-b border-hub-border p-3 md:row-span-2 md:border-b-0 md:border-r"
+          className="flex min-h-0 flex-col overflow-hidden border-b border-hub-border p-3 md:row-span-2 md:border-b-0 md:border-r"
         >
-          <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-hub-muted">
+          <h2 className="mb-2 shrink-0 text-xs font-semibold uppercase tracking-wide text-hub-muted">
             {t('delivery.workspace.conversations')}
           </h2>
-          <DeliveryConversationList
-            conversations={workspace.conversations.map((conversation) =>
-              mergeConversationProfile(
-                conversation,
-                resolveConversationProviderProfile(conversation, providerProfiles),
-              ),
-            )}
-            selectedConversationId={selectedConversation?.id ?? null}
-            walletConnected={walletConnected}
-            syncStatus={syncStatus}
-            failedPeerCount={syncFailedPeerCount}
-            onSelectConversation={selectConversation}
-          />
+          <div data-delivery-conversation-scroll className="min-h-0 flex-1 overflow-y-auto pr-1">
+            <DeliveryConversationList
+              conversations={workspace.conversations.map((conversation) =>
+                mergeConversationProfile(
+                  conversation,
+                  resolveConversationProviderProfile(conversation, providerProfiles),
+                ),
+              )}
+              selectedConversationId={selectedConversation?.id ?? null}
+              walletConnected={walletConnected}
+              syncStatus={syncStatus}
+              failedPeerCount={syncFailedPeerCount}
+              onSelectConversation={selectConversation}
+            />
+          </div>
         </aside>
 
-        <div className="flex min-w-0 flex-col md:col-start-2 md:row-start-1">
+        <div className="flex min-h-0 min-w-0 flex-col overflow-hidden md:col-start-2 md:row-start-1">
           <DeliveryConversationHeader conversation={selectedConversationWithProfile} />
           <DeliveryOrderTabs
             conversation={selectedConversationWithProfile}
             selectedTabId={selectedTab.id}
             onSelectTab={selectTab}
           />
-          {selectedTab.kind === 'order' ? (
-            <>
-              <DeliveryWorkspaceHeader order={selectedOrderWithProfile} />
+          <div data-delivery-thread-scroll className="min-h-0 flex-1 overflow-y-auto">
+            {selectedTab.kind === 'order' ? (
+              <>
+                <DeliveryWorkspaceHeader order={selectedOrderWithProfile} />
+                <DeliveryStatusTimeline
+                  mode="order"
+                  order={orderForTimeline}
+                  selfGlobalMetaId={selfGlobalMetaId}
+                />
+              </>
+            ) : (
               <DeliveryStatusTimeline
-                mode="order"
-                order={orderForTimeline}
+                mode="all"
+                order={null}
+                messages={messagesWithProfileFallback}
                 selfGlobalMetaId={selfGlobalMetaId}
               />
-            </>
-          ) : (
-            <DeliveryStatusTimeline
-              mode="all"
-              order={null}
-              messages={messagesWithProfileFallback}
-              selfGlobalMetaId={selfGlobalMetaId}
-            />
-          )}
+            )}
+          </div>
         </div>
 
         <DeliveryAssetLibrary assets={selectedAssets} scopeLabel={selectedAssetScopeLabel} />

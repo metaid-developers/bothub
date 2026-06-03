@@ -87,7 +87,7 @@ export function DeliveryComposer(props: {
     <form
       aria-label={t('delivery.composerLabel')}
       onSubmit={handleSubmit}
-      className="border-t border-hub-border p-3 md:col-start-2 md:row-start-2"
+      className="shrink-0 border-t border-hub-border p-3 md:col-start-2 md:row-start-2"
     >
       <div className="flex items-end gap-2 rounded-card border border-hub-border bg-hub-surface2/70 px-3 py-2">
         <textarea

@@ -196,6 +196,26 @@ describe('DeliveryPage layout', () => {
     expectBefore(assets, composer)
   })
 
+  it('keeps delivery navigation and composer fixed while panes scroll internally', () => {
+    const { container } = renderDeliveryPage()
+
+    const page = screen.getByLabelText('我的交付')
+    const workspace = screen.getByLabelText('我的交付工作区')
+    const conversationPane = screen.getByLabelText('服务方会话')
+    const conversationScroll = container.querySelector('[data-delivery-conversation-scroll]')
+    const threadScroll = container.querySelector('[data-delivery-thread-scroll]')
+    const tabs = screen.getByRole('tablist', { name: '交付请求' })
+    const composer = screen.getByRole('form', { name: '交付沟通输入框' })
+
+    expect(page).toHaveClass('overflow-hidden')
+    expect(workspace).toHaveClass('min-h-0', 'flex-1', 'overflow-hidden')
+    expect(conversationPane).toHaveClass('min-h-0', 'overflow-hidden')
+    expect(conversationScroll).toHaveClass('min-h-0', 'flex-1', 'overflow-y-auto')
+    expect(threadScroll).toHaveClass('min-h-0', 'flex-1', 'overflow-y-auto')
+    expect(tabs).toHaveClass('shrink-0')
+    expect(composer).toHaveClass('shrink-0')
+  })
+
   it('keeps the composer wallet-gated when a disconnected wallet has a cached identity', () => {
     mocks.walletState.identity = {
       globalMetaId: 'idqbuyer',

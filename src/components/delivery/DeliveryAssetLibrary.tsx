@@ -96,7 +96,7 @@ export function DeliveryAssetLibrary({ assets, scopeLabel }: DeliveryAssetLibrar
     return (
       <aside
         aria-label={t('delivery.workspace.assets')}
-        className="min-h-40 border-t border-hub-border bg-hub-surface/30 p-4 md:border-l md:border-t-0 md:col-start-3 md:row-span-2 md:row-start-1"
+        className="min-h-0 overflow-y-auto border-t border-hub-border bg-hub-surface/30 p-4 md:col-start-3 md:row-span-2 md:row-start-1 md:border-l md:border-t-0"
       >
         <div className="flex items-center justify-between gap-3">
           <h2 className="text-xs font-semibold uppercase tracking-wide text-hub-muted">
@@ -123,7 +123,7 @@ export function DeliveryAssetLibrary({ assets, scopeLabel }: DeliveryAssetLibrar
     <>
       <aside
         aria-label={t('delivery.workspace.assets')}
-        className="min-h-40 border-t border-hub-border bg-hub-surface/30 p-4 md:border-l md:border-t-0 md:col-start-3 md:row-span-2 md:row-start-1"
+        className="min-h-0 overflow-y-auto border-t border-hub-border bg-hub-surface/30 p-4 md:col-start-3 md:row-span-2 md:row-start-1 md:border-l md:border-t-0"
       >
         <div className="flex items-center justify-between gap-3">
           <h2 className="text-xs font-semibold uppercase tracking-wide text-hub-muted">

@@ -71,7 +71,7 @@ export function DeliveryStatusTimeline({
       return (
         <div
           role="status"
-          className="flex min-h-[320px] flex-col items-center justify-center rounded-card border border-dashed border-hub-border bg-hub-surface/50 px-6 py-16 text-center"
+          className="flex min-h-full flex-col items-center justify-center rounded-card border border-dashed border-hub-border bg-hub-surface/50 px-6 py-16 text-center"
         >
           <p className="font-display text-lg font-semibold text-white">
             {t('delivery.noMessagesTitle')}
@@ -84,7 +84,7 @@ export function DeliveryStatusTimeline({
     }
 
     return (
-      <div className="flex min-h-0 flex-col overflow-auto">
+      <div className="flex min-h-0 flex-col">
         {decryptGap && (
           <div className="px-4 py-3">
             <div
@@ -124,7 +124,7 @@ export function DeliveryStatusTimeline({
     return (
       <div
         role="status"
-        className="flex flex-col items-center justify-center rounded-card border border-dashed border-hub-border bg-hub-surface/50 px-6 py-12 text-center min-h-[320px] py-16"
+        className="flex min-h-full flex-col items-center justify-center rounded-card border border-dashed border-hub-border bg-hub-surface/50 px-6 py-16 text-center"
       >
         <p className="font-display text-lg font-semibold text-white">
           {t('delivery.workspace.noSelectedTitle')}
@@ -138,7 +138,7 @@ export function DeliveryStatusTimeline({
   const decryptGap = hasDecryptGap(messages)
 
   return (
-    <div className="flex min-h-0 flex-col overflow-auto">
+    <div className="flex min-h-0 flex-col">
       <div className="px-4 py-3">
         <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-hub-muted">
           {t('delivery.workspace.progress')}
