@@ -26,6 +26,9 @@ The product boundary is fixed:
 - The composer renders only in `All`.
 - Messages sent from `All` are ordinary private chat follow-ups with no order correlation.
 - Explicit order correlation wins; unscoped protocol messages attach only when one active order is unambiguous; ambiguous multi-order messages remain only in `All`.
+- New skill-service orders key by the `/protocols/skill-service-order` pin id
+  (`orderPinId` or `serviceOrderPinId`). `paymentTxid` and legacy
+  `orderReference` values are aliases/payment references only.
 - Keep current IndexedDB stores; use additive selectors and compatibility only.
 
 ## Execution Rules
@@ -63,6 +66,18 @@ Create:
 
 Modify:
 
+- `src/order/payAndRequestStages.ts` - publish and use the
+  `skill-service-order` pin id as the new order's canonical session key.
+- `src/order/orderMessage.ts` - include the canonical order pin id in outbound
+  order/request payloads when available.
+- `src/delivery/orderStore.ts` - persist buyer orders, sessions, and messages
+  with `orderPinId` as the canonical order correlation for new orders.
+- `src/delivery/orderParser.ts` - parse `order pin id: <pinid>` and normalize
+  explicit protocol ids to the order pin id when both ids are present.
+- `src/delivery/protocol.ts` - expose protocol helpers for order pin id metadata
+  if parser or message builders need one shared implementation point.
+- `src/delivery/sessionGrouping.ts` - keep route/session compatibility aliases
+  while preferring `orderPinId` for new grouped rows.
 - `src/routes/Delivery.tsx` - select conversation and tab from URL, hydrate profiles by visible conversations, render the new hierarchy, and pass a null order correlation to the composer.
 - `src/components/delivery/DeliveryWorkspaceHeader.tsx` - make it an order-tab summary surface that accepts `WorkspaceOrder | null` and a scoped title.
 - `src/components/delivery/DeliveryStatusTimeline.tsx` - keep milestones for order tabs and support an `All` timeline mode that renders messages without order progress milestones.
@@ -152,6 +167,134 @@ export function assetsForConversation(conversation: DeliveryConversation | null,
 export function resolveDeliveryRouteSelection(input: { workspace: DeliveryConversationWorkspace; conversationParam?: string | null; orderParam?: string | null; sessionParam?: string | null; walletGlobalMetaId: string }): { conversationId: string | null; tabId: string }
 ```
 
+## Task 0: Canonical Skill-Service Order Pin Ids
+
+**Owner:** Order identity subagent.
+
+**Why this is first:** IDBots A2A now publishes a
+`/protocols/skill-service-order` pin before sending the simplemsg order request.
+The pin id is the unique order id. BotHub must adopt that id before building
+conversation tabs, otherwise the new UI will be keyed by deprecated
+`paymentTxid` or random `orderReference` values.
+
+**Files:**
+
+- Modify: `src/order/payAndRequestStages.ts`
+- Modify: `src/order/orderMessage.ts`
+- Modify: `src/delivery/orderStore.ts`
+- Modify: `src/delivery/workspace.ts`
+- Modify: `src/delivery/orderParser.ts`
+- Modify: `src/delivery/protocol.ts` only if shared parsing/building helpers are needed.
+- Modify: `src/delivery/sessionGrouping.ts`
+- Modify: `tests/order/buildOrderPayload.test.ts`
+- Modify: `tests/order/flow.test.ts`
+- Modify: `tests/delivery/orderStore.test.ts`
+- Modify: `tests/delivery/workspace.test.ts`
+- Modify: `tests/delivery/orderParser.test.ts`
+- Modify: `tests/delivery/protocol.test.ts`
+- Modify: `tests/delivery/sessionGrouping.test.ts`
+
+- [ ] **Step 1: Write failing canonical id tests**
+
+Add focused tests proving these behaviors:
+
+```ts
+it('uses the skill-service-order pin id as the new order session key', async () => {
+  // Mock payment tx/reference plus publish result.
+  // The returned sessionKey/orderCorrelationId must equal serviceOrderPinId,
+  // not paymentTxid and not the free-order random orderReference.
+})
+```
+
+```ts
+it('persists orderPinId as the buyer order and session correlation id', async () => {
+  // persistPendingOrder({ orderPinId: 'order-pin-i0', paymentTxid: 'pay-tx' })
+  // BuyerOrder.id, DeliverySessionRecord.orderCorrelationId, and the initial
+  // order message orderCorrelationId all use 'order-pin-i0'.
+  // paymentTxid remains available as payment reference metadata.
+})
+```
+
+```ts
+it('prefers orderPinId over paymentTxid and orderReference when deriving workspace rows', () => {
+  // orderCorrelationIdFor(orderWithAllIds) === 'order-pin-i0'
+  // orderCorrelationCandidates(orderWithAllIds) still contains legacy aliases.
+})
+```
+
+```ts
+it('parses order pin id metadata from protocol messages as the canonical id', () => {
+  // A message containing both an old [ORDER_STATUS:pay-tx] tag and
+  // "order pin id: order-pin-i0" resolves to 'order-pin-i0'.
+})
+```
+
+```ts
+it('keeps legacy paymentTxid and orderReference records routable when orderPinId is absent', () => {
+  // Existing data without an order pin id still produces the same correlation
+  // ids and session deep-link behavior as before.
+})
+```
+
+- [ ] **Step 2: Run tests and verify failure**
+
+Run:
+
+```bash
+npm test -- tests/order/flow.test.ts tests/order/buildOrderPayload.test.ts tests/delivery/orderStore.test.ts tests/delivery/workspace.test.ts tests/delivery/orderParser.test.ts tests/delivery/protocol.test.ts tests/delivery/sessionGrouping.test.ts
+```
+
+Expected: failures show new orders still key by `paymentTxid` or
+`orderReference`, and protocol parsing does not canonicalize `order pin id`.
+
+- [ ] **Step 3: Implement canonical order identity**
+
+Implementation rules:
+
+- Publish or recover the `/protocols/skill-service-order` pin before creating
+  the simplemsg order request, following the IDBots A2A order sequence.
+- Set `serviceOrderPinId` or `orderPinId` from the published pin id.
+- Use that pin id as `sessionKey`, `BuyerOrder.id` suffix,
+  `BuyerOrder.orderPinId`, `DeliverySessionRecord.orderCorrelationId`,
+  initial order-message `orderCorrelationId`, conversation tab id, and future
+  URL `order` parameter.
+- Keep `paymentTxid`, `paymentCommitTxid`, and `orderReference` as payment or
+  legacy alias fields. Do not discard them.
+- Update `orderCorrelationIdFor()` and any sibling helper to return
+  `orderPinId` first, then legacy ids only when the pin id is absent.
+- Include all aliases in correlation candidate matching so old protocol tags and
+  stored assets still recover.
+- Parse `order pin id: <pinid>`, `orderPinId`, and `serviceOrderPinId` metadata
+  from inbound order/status/delivery/end/rating messages. When both a tag id and
+  order pin id appear, normalize assignment to the order pin id.
+- Do not publish an `orderId` field inside the `skill-service-order` content.
+  The pin id of that record is the order id.
+- Failed-to-send orders that never obtain a `skill-service-order` pin may keep
+  the existing generated fallback id because no canonical order pin exists.
+
+- [ ] **Step 4: Run canonical id tests**
+
+Run:
+
+```bash
+npm test -- tests/order/flow.test.ts tests/order/buildOrderPayload.test.ts tests/delivery/orderStore.test.ts tests/delivery/workspace.test.ts tests/delivery/orderParser.test.ts tests/delivery/protocol.test.ts tests/delivery/sessionGrouping.test.ts
+```
+
+Expected: all tests pass.
+
+- [ ] **Step 5: Commit and journal**
+
+Run:
+
+```bash
+git add src/order/payAndRequestStages.ts src/order/orderMessage.ts src/delivery/orderStore.ts src/delivery/workspace.ts src/delivery/orderParser.ts src/delivery/protocol.ts src/delivery/sessionGrouping.ts tests/order/flow.test.ts tests/order/buildOrderPayload.test.ts tests/delivery/orderStore.test.ts tests/delivery/workspace.test.ts tests/delivery/orderParser.test.ts tests/delivery/protocol.test.ts tests/delivery/sessionGrouping.test.ts
+git diff --cached --check
+git commit -m "feat: use skill service order pin ids"
+```
+
+Post a Lisa Hahn buzz with commit hash, canonical order-id behavior, legacy
+compatibility, and verification command.
+
 ## Task 1: Conversation Workspace Selectors
 
 **Owner:** Selector subagent.
@@ -166,20 +309,24 @@ export function resolveDeliveryRouteSelection(input: { workspace: DeliveryConver
 
 Create `tests/delivery/conversationWorkspace.test.ts` with fixtures mirroring `tests/delivery/workspace.test.ts`. Include these test cases:
 
+Unless a test is explicitly about legacy data, order fixtures must include
+`orderPinId` and use that pin id as the expected `orderCorrelationId`. Include
+`paymentTxid` or `orderReference` only to prove they remain aliases.
+
 ```ts
 it('groups multiple orders from one provider into one conversation with order tabs', () => {
   const workspace = buildDeliveryConversations({
     walletGlobalMetaId: SELF,
     orders: [
-      order({ id: `${SELF}:${PROVIDER}:order-1`, orderReference: 'order-1', updatedAt: 10 }),
-      order({ id: `${SELF}:${PROVIDER}:order-2`, orderReference: 'order-2', updatedAt: 20 }),
+      order({ id: `${SELF}:${PROVIDER}:order-pin-1`, orderPinId: 'order-pin-1', paymentTxid: 'pay-tx-1', updatedAt: 10 }),
+      order({ id: `${SELF}:${PROVIDER}:order-pin-2`, orderPinId: 'order-pin-2', paymentTxid: 'pay-tx-2', updatedAt: 20 }),
     ],
     sessions: [],
     byPeer: {
       [PROVIDER]: [
         message({ id: 'chat-1', content: 'Can I try this first?', orderCorrelationId: undefined, timestamp: 5 }),
-        message({ id: 'status-1', content: '[ORDER_STATUS:order-1] Working', orderCorrelationId: undefined, timestamp: 30 }),
-        message({ id: 'delivery-2', content: '[DELIVERY:order-2] Ready metafile://two.png', orderCorrelationId: undefined, timestamp: 40 }),
+        message({ id: 'status-1', content: '[ORDER_STATUS:order-pin-1] Working', orderCorrelationId: undefined, timestamp: 30 }),
+        message({ id: 'delivery-2', content: '[DELIVERY:order-pin-2] Ready metafile://two.png', orderCorrelationId: undefined, timestamp: 40 }),
       ],
     },
     assetsBySession: {},
@@ -187,7 +334,7 @@ it('groups multiple orders from one provider into one conversation with order ta
 
   expect(workspace.conversations).toHaveLength(1)
   expect(workspace.conversations[0]?.providerGlobalMetaId).toBe(PROVIDER)
-  expect(workspace.conversations[0]?.orderThreads.map((thread) => thread.orderCorrelationId)).toEqual(['order-2', 'order-1'])
+  expect(workspace.conversations[0]?.orderThreads.map((thread) => thread.orderCorrelationId)).toEqual(['order-pin-2', 'order-pin-1'])
   expect(workspace.conversations[0]?.messages.map((row) => row.id)).toEqual(['chat-1', 'status-1', 'delivery-2'])
 })
 ```
@@ -199,8 +346,8 @@ it('keeps ambiguous unscoped protocol messages only in All when multiple active 
   const workspace = buildDeliveryConversations({
     walletGlobalMetaId: SELF,
     orders: [
-      order({ id: `${SELF}:${PROVIDER}:order-1`, orderReference: 'order-1', status: 'waiting', updatedAt: 10 }),
-      order({ id: `${SELF}:${PROVIDER}:order-2`, orderReference: 'order-2', status: 'waiting', updatedAt: 11 }),
+      order({ id: `${SELF}:${PROVIDER}:order-pin-1`, orderPinId: 'order-pin-1', status: 'waiting', updatedAt: 10 }),
+      order({ id: `${SELF}:${PROVIDER}:order-pin-2`, orderPinId: 'order-pin-2', status: 'waiting', updatedAt: 11 }),
     ],
     sessions: [],
     byPeer: {
@@ -223,18 +370,18 @@ it('keeps ambiguous unscoped protocol messages only in All when multiple active 
 it('assigns terminal and rating protocol messages to All and the explicit order tab', () => {
   const workspace = buildDeliveryConversations({
     walletGlobalMetaId: SELF,
-    orders: [order({ id: `${SELF}:${PROVIDER}:order-1`, orderReference: 'order-1' })],
+    orders: [order({ id: `${SELF}:${PROVIDER}:order-pin-1`, orderPinId: 'order-pin-1' })],
     sessions: [],
     byPeer: {
       [PROVIDER]: [
-        message({ id: 'end-1', content: '[ORDER_END:order-1] Done', orderCorrelationId: undefined, timestamp: 20 }),
-        message({ id: 'rating-1', content: '[NeedsRating:order-1] Please rate', orderCorrelationId: undefined, timestamp: 21 }),
+        message({ id: 'end-1', content: '[ORDER_END:order-pin-1] Done', orderCorrelationId: undefined, timestamp: 20 }),
+        message({ id: 'rating-1', content: '[NeedsRating:order-pin-1] Please rate', orderCorrelationId: undefined, timestamp: 21 }),
       ],
     },
     assetsBySession: {},
   })
   const conversation = workspace.conversations[0]!
-  const orderTab = { kind: 'order' as const, id: 'order:order-1', orderCorrelationId: 'order-1', orderId: `${SELF}:${PROVIDER}:order-1` }
+  const orderTab = { kind: 'order' as const, id: 'order:order-pin-1', orderCorrelationId: 'order-pin-1', orderId: `${SELF}:${PROVIDER}:order-pin-1` }
 
   expect(messagesForConversation(conversation, { kind: 'all', id: 'all' }).map((row) => row.id)).toEqual(['end-1', 'rating-1'])
   expect(messagesForConversation(conversation, orderTab).map((row) => row.id)).toEqual(['end-1', 'rating-1'])
@@ -249,11 +396,12 @@ it('merges provider aliases only when chat pubkey and profile fields do not conf
     walletGlobalMetaId: SELF,
     orders: [
       order({
-        id: `${SELF}:${providerAddress}:order-1`,
+        id: `${SELF}:${providerAddress}:order-pin-1`,
         providerGlobalMetaId: providerAddress,
         providerChatPubkey: 'same-chat-key',
         providerName: 'Render Bot',
-        orderReference: 'order-1',
+        orderPinId: 'order-pin-1',
+        orderReference: 'legacy-ref-1',
       }),
     ],
     sessions: [],
@@ -287,11 +435,12 @@ it('does not merge provider aliases when profile fields conflict', () => {
     walletGlobalMetaId: SELF,
     orders: [
       order({
-        id: `${SELF}:${providerAddress}:order-1`,
+        id: `${SELF}:${providerAddress}:order-pin-1`,
         providerGlobalMetaId: providerAddress,
         providerChatPubkey: 'same-chat-key',
         providerName: 'Render Bot',
-        orderReference: 'order-1',
+        orderPinId: 'order-pin-1',
+        orderReference: 'legacy-ref-1',
       }),
     ],
     sessions: [],
@@ -323,20 +472,20 @@ it('scopes assets to All or a selected order tab', () => {
   const workspace = buildDeliveryConversations({
     walletGlobalMetaId: SELF,
     orders: [
-      order({ id: `${SELF}:${PROVIDER}:order-1`, orderReference: 'order-1' }),
-      order({ id: `${SELF}:${PROVIDER}:order-2`, orderReference: 'order-2' }),
+      order({ id: `${SELF}:${PROVIDER}:order-pin-1`, orderPinId: 'order-pin-1' }),
+      order({ id: `${SELF}:${PROVIDER}:order-pin-2`, orderPinId: 'order-pin-2' }),
     ],
     sessions: [],
     byPeer: {
       [PROVIDER]: [
-        message({ id: 'delivery-1', content: '[DELIVERY:order-1] Ready metafile://one.png', orderCorrelationId: undefined, timestamp: 10 }),
-        message({ id: 'delivery-2', content: '[DELIVERY:order-2] Ready metafile://two.png', orderCorrelationId: undefined, timestamp: 11 }),
+        message({ id: 'delivery-1', content: '[DELIVERY:order-pin-1] Ready metafile://one.png', orderCorrelationId: undefined, timestamp: 10 }),
+        message({ id: 'delivery-2', content: '[DELIVERY:order-pin-2] Ready metafile://two.png', orderCorrelationId: undefined, timestamp: 11 }),
       ],
     },
     assetsBySession: {},
   })
   const conversation = workspace.conversations[0]!
-  const orderOneTab = { kind: 'order' as const, id: 'order:order-1', orderCorrelationId: 'order-1', orderId: `${SELF}:${PROVIDER}:order-1` }
+  const orderOneTab = { kind: 'order' as const, id: 'order:order-pin-1', orderCorrelationId: 'order-pin-1', orderId: `${SELF}:${PROVIDER}:order-pin-1` }
 
   expect(assetsForConversation(conversation, { kind: 'all', id: 'all' }).map((asset) => asset.filename)).toEqual(['one.png', 'two.png'])
   expect(assetsForConversation(conversation, orderOneTab).map((asset) => asset.filename)).toEqual(['one.png'])
@@ -347,7 +496,7 @@ it('scopes assets to All or a selected order tab', () => {
 it('resolves old order and session URL params to conversation plus order tab', () => {
   const workspace = buildDeliveryConversations({
     walletGlobalMetaId: SELF,
-    orders: [order({ id: `${SELF}:${PROVIDER}:order-1`, orderReference: 'order-1' })],
+    orders: [order({ id: `${SELF}:${PROVIDER}:order-pin-1`, orderPinId: 'order-pin-1', orderReference: 'legacy-ref-1' })],
     sessions: [],
     byPeer: {},
     assetsBySession: {},
@@ -356,18 +505,18 @@ it('resolves old order and session URL params to conversation plus order tab', (
   expect(resolveDeliveryRouteSelection({
     workspace,
     conversationParam: null,
-    orderParam: `${SELF}:${PROVIDER}:order-1`,
+    orderParam: `${SELF}:${PROVIDER}:order-pin-1`,
     sessionParam: null,
     walletGlobalMetaId: SELF,
-  })).toEqual({ conversationId: PROVIDER, tabId: 'order:order-1' })
+  })).toEqual({ conversationId: PROVIDER, tabId: 'order:order-pin-1' })
 
   expect(resolveDeliveryRouteSelection({
     workspace,
     conversationParam: null,
     orderParam: null,
-    sessionParam: `${PROVIDER}:order-1`,
+    sessionParam: `${PROVIDER}:order-pin-1`,
     walletGlobalMetaId: SELF,
-  })).toEqual({ conversationId: PROVIDER, tabId: 'order:order-1' })
+  })).toEqual({ conversationId: PROVIDER, tabId: 'order:order-pin-1' })
 })
 ```
 
@@ -389,6 +538,9 @@ Create `src/delivery/conversationWorkspace.ts` using these rules:
   fields, status, and asset recovery. Do not use `WorkspaceOrder.messages` as
   the source of truth for order-tab membership.
 - Build order threads from `orderWorkspace.orders.filter((order) => order.orderCorrelationId)`.
+- For new records, `order.orderCorrelationId` must be the
+  `skill-service-order` pin id. Treat `paymentTxid` and `orderReference` only as
+  aliases when matching legacy protocol tags, old session ids, or stored assets.
 - Conversation `All` messages are the sorted union of all raw `input.byPeer`
   messages for the provider conversation plus any normalized explicit-order
   messages recovered by `buildDeliveryWorkspace()`.
@@ -398,8 +550,11 @@ Create `src/delivery/conversationWorkspace.ts` using these rules:
   - explicit ids parsed from `[ORDER_STATUS:<id>]`, `[DELIVERY:<id>]`,
     `[ORDER_END:<id>]`, `[NeedsRating:<id>]`, parsed `[ORDER]` metadata, or
     known ids mentioned in message text,
+  - `order pin id: <pinid>`, `orderPinId`, or `serviceOrderPinId` metadata,
   - unscoped protocol messages only when exactly one active order candidate
     exists for that provider conversation.
+- If a message exposes both an old payment/reference tag and an order pin id,
+  assign it to the order pin id thread.
 - If two or more active order threads could receive an unscoped protocol
   message, keep that message in `All` only and exclude it from every order tab.
 - For this selector, active order candidates are order threads whose status is
@@ -608,7 +763,7 @@ it('renders All plus one tab per order and reports selection', () => {
 
   expect(screen.getByRole('tab', { name: 'All' })).toHaveAttribute('aria-selected', 'true')
   fireEvent.click(screen.getByRole('tab', { name: /Image Render/ }))
-  expect(onSelectTab).toHaveBeenCalledWith('order:order-1')
+  expect(onSelectTab).toHaveBeenCalledWith('order:order-pin-1')
 })
 ```
 
@@ -625,7 +780,7 @@ it('renders an All conversation timeline without progress milestones', () => {
       order={null}
       messages={[
         message({ id: 'chat-1', content: 'Can I try this first?', orderCorrelationId: undefined, timestamp: 1 }),
-        message({ id: 'delivery-1', content: '[DELIVERY:order-1] Ready', orderCorrelationId: 'order-1', timestamp: 2 }),
+        message({ id: 'delivery-1', content: '[DELIVERY:order-pin-1] Ready', orderCorrelationId: 'order-pin-1', timestamp: 2 }),
       ]}
       selfGlobalMetaId="idqbuyer"
       mode="all"
@@ -633,7 +788,7 @@ it('renders an All conversation timeline without progress milestones', () => {
   )
 
   expect(screen.getByText('Can I try this first?')).toBeInTheDocument()
-  expect(screen.getByText('[DELIVERY:order-1] Ready')).toBeInTheDocument()
+  expect(screen.getByText('[DELIVERY:order-pin-1] Ready')).toBeInTheDocument()
   expect(screen.queryByText('交付进度')).not.toBeInTheDocument()
 })
 ```
@@ -739,8 +894,8 @@ it('renders one left-nav row per provider and puts orders into tabs', () => {
   mocks.messageState.byPeer = {
     idqprovider: [
       deliveryMessage({ id: 'chat-1', peerGlobalMetaId: 'idqprovider', content: 'hello', timestamp: 1 }),
-      deliveryMessage({ id: 'order-1', peerGlobalMetaId: 'idqprovider', content: '[ORDER] one\\norder id: order-1', orderCorrelationId: 'order-1', timestamp: 2 }),
-      deliveryMessage({ id: 'order-2', peerGlobalMetaId: 'idqprovider', content: '[ORDER] two\\norder id: order-2', orderCorrelationId: 'order-2', timestamp: 3 }),
+      deliveryMessage({ id: 'order-pin-1', peerGlobalMetaId: 'idqprovider', content: '[ORDER] one\\norder pin id: order-pin-1', orderCorrelationId: 'order-pin-1', timestamp: 2 }),
+      deliveryMessage({ id: 'order-pin-2', peerGlobalMetaId: 'idqprovider', content: '[ORDER] two\\norder pin id: order-pin-2', orderCorrelationId: 'order-pin-2', timestamp: 3 }),
     ],
   }
 
@@ -759,7 +914,7 @@ it('shows the composer only in All and hides it on order tabs', () => {
   mocks.walletState.status = 'connected'
   mocks.messageState.byPeer = {
     idqprovider: [
-      deliveryMessage({ id: 'order-1', peerGlobalMetaId: 'idqprovider', content: '[ORDER_STATUS:order-1] Working', orderCorrelationId: 'order-1', timestamp: 1 }),
+      deliveryMessage({ id: 'order-pin-1', peerGlobalMetaId: 'idqprovider', content: '[ORDER_STATUS:order-pin-1] Working', orderCorrelationId: 'order-pin-1', timestamp: 1 }),
     ],
   }
 
@@ -767,7 +922,7 @@ it('shows the composer only in All and hides it on order tabs', () => {
   expect(screen.getByRole('textbox', { name: '补充需求或询问进度' })).toBeInTheDocument()
 
   view.rerender(
-    <MemoryRouter initialEntries={['/delivery?conversation=idqprovider&order=order-1']} future={{ v7_relativeSplatPath: true, v7_startTransition: true }}>
+    <MemoryRouter initialEntries={['/delivery?conversation=idqprovider&order=order-pin-1']} future={{ v7_relativeSplatPath: true, v7_startTransition: true }}>
       <DeliveryPage />
     </MemoryRouter>,
   )
@@ -781,7 +936,7 @@ it('sends All follow-ups without order correlation', async () => {
   mocks.walletState.status = 'connected'
   mocks.messageState.byPeer = {
     idqprovider: [
-      deliveryMessage({ id: 'order-1', peerGlobalMetaId: 'idqprovider', peerChatPubkey: 'provider-key', content: '[ORDER_STATUS:order-1] Working', orderCorrelationId: 'order-1', timestamp: 1 }),
+      deliveryMessage({ id: 'order-pin-1', peerGlobalMetaId: 'idqprovider', peerChatPubkey: 'provider-key', content: '[ORDER_STATUS:order-pin-1] Working', orderCorrelationId: 'order-pin-1', timestamp: 1 }),
     ],
   }
 
@@ -797,7 +952,7 @@ it('sends All follow-ups without order correlation', async () => {
 })
 ```
 
-Add an old URL recovery test for `/delivery?session=idqprovider:order-1`.
+Add an old URL recovery test for `/delivery?session=idqprovider:order-pin-1`.
 
 Add a protocol coverage route test:
 
@@ -807,22 +962,22 @@ it('shows ORDER_END and NeedsRating in All and the matching order tab', () => {
   mocks.walletState.status = 'connected'
   mocks.messageState.byPeer = {
     idqprovider: [
-      deliveryMessage({ id: 'end-1', peerGlobalMetaId: 'idqprovider', content: '[ORDER_END:order-1] Done', orderCorrelationId: undefined, timestamp: 1 }),
-      deliveryMessage({ id: 'rating-1', peerGlobalMetaId: 'idqprovider', content: '[NeedsRating:order-1] Please rate', orderCorrelationId: undefined, timestamp: 2 }),
+      deliveryMessage({ id: 'end-1', peerGlobalMetaId: 'idqprovider', content: '[ORDER_END:order-pin-1] Done', orderCorrelationId: undefined, timestamp: 1 }),
+      deliveryMessage({ id: 'rating-1', peerGlobalMetaId: 'idqprovider', content: '[NeedsRating:order-pin-1] Please rate', orderCorrelationId: undefined, timestamp: 2 }),
     ],
   }
 
   const view = renderDeliveryPage('/delivery?conversation=idqprovider')
-  expect(screen.getByText('[ORDER_END:order-1] Done')).toBeInTheDocument()
-  expect(screen.getByText('[NeedsRating:order-1] Please rate')).toBeInTheDocument()
+  expect(screen.getByText('[ORDER_END:order-pin-1] Done')).toBeInTheDocument()
+  expect(screen.getByText('[NeedsRating:order-pin-1] Please rate')).toBeInTheDocument()
 
   view.rerender(
-    <MemoryRouter initialEntries={['/delivery?conversation=idqprovider&order=order-1']} future={{ v7_relativeSplatPath: true, v7_startTransition: true }}>
+    <MemoryRouter initialEntries={['/delivery?conversation=idqprovider&order=order-pin-1']} future={{ v7_relativeSplatPath: true, v7_startTransition: true }}>
       <DeliveryPage />
     </MemoryRouter>,
   )
-  expect(screen.getByText('[ORDER_END:order-1] Done')).toBeInTheDocument()
-  expect(screen.getByText('[NeedsRating:order-1] Please rate')).toBeInTheDocument()
+  expect(screen.getByText('[ORDER_END:order-pin-1] Done')).toBeInTheDocument()
+  expect(screen.getByText('[NeedsRating:order-pin-1] Please rate')).toBeInTheDocument()
 })
 ```
 
@@ -1046,7 +1201,7 @@ fix separately, then restart Task 6 from Step 1.
 Run:
 
 ```bash
-npm test -- tests/delivery/conversationWorkspace.test.ts tests/delivery/workspace.test.ts tests/delivery/sessionGrouping.test.ts tests/delivery/messageStore.test.ts tests/components/delivery/DeliveryPage.test.tsx tests/components/delivery/DeliveryConversationList.test.tsx tests/components/delivery/DeliveryConversationHeader.test.tsx tests/components/delivery/DeliveryOrderTabs.test.tsx tests/components/delivery/DeliveryStatusTimeline.test.tsx tests/components/delivery/DeliveryWorkspaceHeader.test.tsx tests/components/delivery/DeliveryAssetLibrary.test.tsx tests/components/delivery/DeliveryComposer.test.tsx
+npm test -- tests/order/flow.test.ts tests/order/buildOrderPayload.test.ts tests/delivery/orderStore.test.ts tests/delivery/orderParser.test.ts tests/delivery/protocol.test.ts tests/delivery/conversationWorkspace.test.ts tests/delivery/workspace.test.ts tests/delivery/sessionGrouping.test.ts tests/delivery/messageStore.test.ts tests/components/delivery/DeliveryPage.test.tsx tests/components/delivery/DeliveryConversationList.test.tsx tests/components/delivery/DeliveryConversationHeader.test.tsx tests/components/delivery/DeliveryOrderTabs.test.tsx tests/components/delivery/DeliveryStatusTimeline.test.tsx tests/components/delivery/DeliveryWorkspaceHeader.test.tsx tests/components/delivery/DeliveryAssetLibrary.test.tsx tests/components/delivery/DeliveryComposer.test.tsx
 ```
 
 Expected: all listed suites pass.

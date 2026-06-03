@@ -46,8 +46,14 @@ and non-conflicting.
 ### Secondary Entity: Order Thread
 
 Each conversation derives zero or more order threads. An order thread is the
-existing order-aware grouping concept, keyed by an order correlation id such as
-`paymentTxid`, `orderReference`, `orderPinId`, or a protocol tag id.
+existing order-aware grouping concept. For new skill-service orders, the
+`/protocols/skill-service-order` pin id is the canonical order id and must be
+stored and routed as `orderPinId` or `serviceOrderPinId`.
+
+`paymentTxid` and old random `orderReference` values are compatibility aliases
+and payment references, not the primary order id. Legacy records that do not
+have an order pin id still resolve through `paymentTxid`, `orderReference`, or a
+protocol tag id.
 
 Order threads are used for:
 
@@ -110,8 +116,10 @@ Order-thread assignment uses a hybrid rule:
 
 1. Explicit correlation wins. Use persisted `orderCorrelationId`,
    `[ORDER_STATUS:<id>]`, `[DELIVERY:<id>]`, `[ORDER_END:<id>]`,
-   `[NeedsRating:<id>]`, parsed `[ORDER]` metadata, or known ids mentioned in
-   message text.
+   `[NeedsRating:<id>]`, parsed `[ORDER]` metadata, `order pin id: <pinid>`,
+   `orderPinId`, `serviceOrderPinId`, or known ids mentioned in message text.
+   If both a payment/reference id and an order pin id are present, normalize to
+   the order pin id.
 2. If no explicit id exists, assign protocol-like order messages to a single
    active order when timing makes the match unambiguous.
 3. If multiple orders are active and the message has no explicit id, leave it
@@ -148,6 +156,9 @@ destructive migration:
 - derive conversations from `messages`, `orders`, and historical `sessions`,
 - derive order threads inside each conversation using current correlation logic,
 - keep current session ids as aliases for asset recovery,
+- write new skill-service orders with the `skill-service-order` pin id as the
+  canonical `orderCorrelationId`, session/order suffix, tab id, and URL `order`
+  parameter,
 - write any new follow-up message against the provider conversation and no order
   correlation unless the inbound protocol later provides one.
 
@@ -189,7 +200,8 @@ Support both current and future links:
 
 - `?conversation=<providerGlobalMetaId>` selects a provider conversation.
 - `?conversation=<providerGlobalMetaId>&order=<orderCorrelationId>` opens the
-  provider conversation and selects an order tab.
+  provider conversation and selects an order tab. For new skill-service orders,
+  `<orderCorrelationId>` is the `skill-service-order` pin id.
 - Existing `?order=` or `?session=` links should resolve to the corresponding
   provider conversation and order tab when possible.
 
@@ -205,6 +217,7 @@ missing or unreliable:
 - stable peer identity for both directions of a private chat,
 - provider profile/chat pubkey aliases,
 - message timestamp and pin/tx identifiers,
+- `skill-service-order` pin path and pin id for new service orders,
 - historical page coverage for a selected wallet,
 - order protocol payloads needed to recover correlation ids.
 
@@ -225,6 +238,8 @@ Unit coverage should prove:
 - the composer is available only in `All`,
 - asset library scopes correctly for `All` and order tabs,
 - existing order/session deep links still recover to the new conversation view,
+- new skill-service order tabs key by `skill-service-order` pin id while
+  `paymentTxid` and `orderReference` continue to work for legacy data,
 - persisted assets survive reload even when live messages have not hydrated yet.
 
 Component coverage should prove:
