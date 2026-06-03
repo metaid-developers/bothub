@@ -508,6 +508,44 @@ describe('messageStore', () => {
     ])
   })
 
+  it('persists outgoing general provider chat without an order correlation', async () => {
+    await useMessageStore.getState().appendOutgoingFollowUp({
+      wallet: {
+        globalMetaId: SELF,
+        mvcAddress: '1SelfMvc',
+        btcAddress: 'bc1self',
+        dogeAddress: 'Dself',
+      },
+      session: {
+        sessionKey: 'idqpeer',
+        peerGlobalMetaId: 'idqpeer',
+        providerChatPubkey: 'stored-provider-key',
+        orderCorrelationId: null,
+        serviceLabel: null,
+      },
+      content: 'General follow-up.',
+      rawContent: 'encrypted-follow-up',
+      pinId: 'pin-follow-up',
+    })
+
+    const sessionId = `${SELF}:idqpeer:uncorrelated`
+    expect(await getSessionsForWallet(SELF)).toEqual([
+      expect.objectContaining({
+        id: sessionId,
+        orderCorrelationId: undefined,
+        serviceLabel: undefined,
+        lastMessageId: 'pin-follow-up',
+      }),
+    ])
+    expect(await getMessagesForSession(sessionId)).toEqual([
+      expect.objectContaining({
+        id: 'pin-follow-up',
+        orderCorrelationId: undefined,
+        content: 'General follow-up.',
+      }),
+    ])
+  })
+
   it('persists parsed delivery assets and updates the session asset count', async () => {
     const message = sampleMessage({
       id: 'pin-delivery-1',

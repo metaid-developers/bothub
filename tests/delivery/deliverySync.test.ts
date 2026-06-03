@@ -17,6 +17,7 @@ import {
   mergePrivateChatItem,
   syncKnownPrivateChatHistory,
 } from '@/delivery/deliverySync'
+import { persistPendingOrder } from '@/delivery/orderStore'
 import { persistDeliveryMessage, useMessageStore } from '@/delivery/messageStore'
 import type { WalletIdentity } from '@/wallet/types'
 import { WS_SERVER_NOTIFY_PRIVATE_CHAT, type SocketEnvelope } from '@/ws/envelope'
@@ -297,6 +298,89 @@ describe('deliverySync', () => {
     ])
   })
 
+  it('recovers provider replies to the actual simplemsg pin while keeping the order pin canonical', async () => {
+    const serviceOrderPinId = 'service-order-pin-i0'
+    const simplemsgPinId = 'simplemsg-pin-i0'
+    await persistPendingOrder({
+      wallet,
+      provider: {
+        metaid: 'provider-metaid',
+        globalMetaId: PEER,
+        address: '1Provider',
+        name: 'Provider Bot',
+        avatar: null,
+        chatPubkey: 'provider-chat-key',
+      },
+      service: {
+        id: 'svc-paid',
+        currentPinId: 'svc-current',
+        sourceServicePinId: 'svc-source',
+        serviceName: 'Paid Delivery',
+        displayName: 'Paid Delivery',
+        description: 'desc',
+        serviceIcon: '',
+        providerSkill: 'paid-delivery',
+        outputType: 'text',
+        price: '1',
+        currency: 'SPACE',
+        settlementKind: 'native',
+        paymentChain: 'mvc',
+        mrc20Ticker: null,
+        mrc20Id: null,
+        paymentAddress: '1Payment',
+        status: 0,
+        operation: 'create',
+        disabled: false,
+        chainName: 'mvc',
+        createdAt: 0,
+        updatedAt: 0,
+      },
+      prompt: 'Paid request',
+      result: {
+        paymentTxid: 'paid-txid-i0',
+        paymentCommitTxid: '',
+        orderReference: '',
+        orderPinId: serviceOrderPinId,
+        simplemsgPinId,
+        sessionKey: `${PEER}:${serviceOrderPinId}`,
+        orderPayload: `[ORDER] Paid request\norder pin id: ${serviceOrderPinId}\ntxid: paid-txid-i0`,
+        displaySummary: 'Paid request',
+      },
+    })
+
+    await mergePrivateChatItem({
+      item: privateChatItem({
+        pinId: 'pin-reply-to-simplemsg',
+        replyPin: simplemsgPinId,
+        content: 'Reply without embedded order metadata.',
+        timestamp: 1_700_000_000_100,
+      }),
+      selfGlobalMetaId: SELF,
+      walletIdentity: wallet,
+    })
+
+    expect(useMessageStore.getState().messagesForSession(`${PEER}:${serviceOrderPinId}`, SELF)).toEqual([
+      expect.objectContaining({
+        id: 'pin-reply-to-simplemsg',
+        orderCorrelationId: serviceOrderPinId,
+      }),
+    ])
+    expect(useMessageStore.getState().messagesForSession(PEER, SELF)).toEqual([])
+    const persistedMessages = await getMessagesForSession(`${SELF}:${PEER}:${serviceOrderPinId}`)
+    expect(persistedMessages).toHaveLength(2)
+    expect(persistedMessages).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        id: simplemsgPinId,
+        pinId: simplemsgPinId,
+        orderCorrelationId: serviceOrderPinId,
+      }),
+      expect.objectContaining({
+        id: 'pin-reply-to-simplemsg',
+        orderCorrelationId: serviceOrderPinId,
+      }),
+    ]))
+  })
+
   it('matches paid history replies that mention the payment txid to the paid order session', async () => {
     const paymentTxid = 'paid-history-txid'
     await putOrder({
@@ -359,6 +443,183 @@ describe('deliverySync', () => {
       expect.objectContaining({
         id: 'pin-paid-history-reply',
         orderCorrelationId: paymentTxid,
+      }),
+    ])
+  })
+
+  it('normalizes synced provider messages with order pin metadata to the order pin id', async () => {
+    const paymentTxid = 'paid-history-txid'
+    const orderPinId = 'order-pin-i0'
+    await putOrder({
+      id: `${SELF}:${PEER}:${orderPinId}`,
+      walletGlobalMetaId: SELF,
+      providerGlobalMetaId: PEER,
+      providerChatPubkey: 'provider-chat-key',
+      providerName: 'Paid Provider',
+      providerAvatarUrl: 'https://cdn.example/paid-provider.png',
+      serviceId: 'svc-paid',
+      serviceName: 'Paid Delivery',
+      skillName: 'paid-delivery',
+      outputType: 'image',
+      rawRequest: 'Paid request',
+      displaySummary: 'Paid request',
+      price: '9',
+      currency: 'SPACE',
+      settlementKind: 'native',
+      paymentChain: 'mvc',
+      paymentTxid,
+      orderReference: 'legacy-order-ref',
+      orderPinId,
+      status: 'waiting',
+      createdAt: 1_700_000_000_000,
+      updatedAt: 1_700_000_000_000,
+    })
+    await putSession({
+      id: `${SELF}:${PEER}:${orderPinId}`,
+      walletGlobalMetaId: SELF,
+      providerGlobalMetaId: PEER,
+      providerChatPubkey: 'provider-chat-key',
+      providerName: 'Paid Provider',
+      providerAvatarUrl: 'https://cdn.example/paid-provider.png',
+      orderCorrelationId: orderPinId,
+      serviceId: 'svc-paid',
+      serviceLabel: 'Paid Delivery',
+      status: 'waiting',
+      lastMessageId: orderPinId,
+      lastActivityAt: 1_700_000_000_000,
+      assetCount: 0,
+      unreadCount: 0,
+    })
+
+    await mergePrivateChatItem({
+      item: privateChatItem({
+        pinId: 'pin-paid-order-pin-reply',
+        content: `[ORDER_STATUS:${paymentTxid}] Working\norder pin id: ${orderPinId}`,
+        timestamp: 1_700_000_000_200,
+      }),
+      selfGlobalMetaId: SELF,
+      walletIdentity: wallet,
+    })
+
+    expect(useMessageStore.getState().messagesForSession(`${PEER}:${orderPinId}`, SELF)).toEqual([
+      expect.objectContaining({
+        id: 'pin-paid-order-pin-reply',
+        orderCorrelationId: orderPinId,
+      }),
+    ])
+    expect(useMessageStore.getState().messagesForSession(`${PEER}:${paymentTxid}`, SELF)).toEqual([])
+    expect(await getMessagesForSession(`${SELF}:${PEER}:${orderPinId}`)).toEqual([
+      expect.objectContaining({
+        id: 'pin-paid-order-pin-reply',
+        orderCorrelationId: orderPinId,
+      }),
+    ])
+  })
+
+  it.each([
+    [
+      'orderPinId',
+      '[DELIVERY:paid-history-txid] {"orderPinId":"order-pin-i0","result":"Ready"}',
+    ],
+    [
+      'serviceOrderPinId',
+      '[DELIVERY:paid-history-txid] {"serviceOrderPinId":"order-pin-i0","result":"Ready"}',
+    ],
+  ] as const)(
+    'normalizes synced provider messages with %s metadata to the order pin id',
+    async (_label, content) => {
+      const paymentTxid = 'paid-history-txid'
+      const orderPinId = 'order-pin-i0'
+      await putOrder({
+        id: `${SELF}:${PEER}:${orderPinId}`,
+        walletGlobalMetaId: SELF,
+        providerGlobalMetaId: PEER,
+        providerChatPubkey: 'provider-chat-key',
+        serviceId: 'svc-paid',
+        serviceName: 'Paid Delivery',
+        skillName: 'paid-delivery',
+        outputType: 'image',
+        rawRequest: 'Paid request',
+        displaySummary: 'Paid request',
+        price: '9',
+        currency: 'SPACE',
+        settlementKind: 'native',
+        paymentChain: 'mvc',
+        paymentTxid,
+        orderPinId,
+        status: 'waiting',
+        createdAt: 1_700_000_000_000,
+        updatedAt: 1_700_000_000_000,
+      })
+
+      await mergePrivateChatItem({
+        item: privateChatItem({
+          pinId: `pin-paid-${_label}-reply`,
+          content,
+          timestamp: 1_700_000_000_200,
+        }),
+        selfGlobalMetaId: SELF,
+        walletIdentity: wallet,
+      })
+
+      expect(useMessageStore.getState().messagesForSession(`${PEER}:${orderPinId}`, SELF)).toEqual([
+        expect.objectContaining({
+          id: `pin-paid-${_label}-reply`,
+          orderCorrelationId: orderPinId,
+        }),
+      ])
+      expect(await getMessagesForSession(`${SELF}:${PEER}:${orderPinId}`)).toEqual([
+        expect.objectContaining({
+          id: `pin-paid-${_label}-reply`,
+          orderCorrelationId: orderPinId,
+        }),
+      ])
+    },
+  )
+
+  it('keeps legacy orderReference records routable when orderPinId is absent', async () => {
+    const orderReference = 'legacy-order-ref'
+    await putOrder({
+      id: `${SELF}:${PEER}:${orderReference}`,
+      walletGlobalMetaId: SELF,
+      providerGlobalMetaId: PEER,
+      providerChatPubkey: 'provider-chat-key',
+      serviceId: 'svc-free',
+      serviceName: 'Free Delivery',
+      skillName: 'free-delivery',
+      outputType: 'text',
+      rawRequest: 'Free request',
+      displaySummary: 'Free request',
+      price: '0',
+      currency: 'SPACE',
+      settlementKind: 'native',
+      paymentChain: 'mvc',
+      orderReference,
+      status: 'waiting',
+      createdAt: 1_700_000_000_000,
+      updatedAt: 1_700_000_000_000,
+    })
+
+    await mergePrivateChatItem({
+      item: privateChatItem({
+        pinId: 'pin-legacy-order-ref-reply',
+        content: `[ORDER_STATUS:${orderReference}] Working`,
+        timestamp: 1_700_000_000_200,
+      }),
+      selfGlobalMetaId: SELF,
+      walletIdentity: wallet,
+    })
+
+    expect(useMessageStore.getState().messagesForSession(`${PEER}:${orderReference}`, SELF)).toEqual([
+      expect.objectContaining({
+        id: 'pin-legacy-order-ref-reply',
+        orderCorrelationId: orderReference,
+      }),
+    ])
+    expect(await getMessagesForSession(`${SELF}:${PEER}:${orderReference}`)).toEqual([
+      expect.objectContaining({
+        id: 'pin-legacy-order-ref-reply',
+        orderCorrelationId: orderReference,
       }),
     ])
   })

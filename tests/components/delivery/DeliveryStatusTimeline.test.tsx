@@ -103,6 +103,13 @@ describe('DeliveryStatusTimeline', () => {
     expect(screen.getByText('这条交付记录暂时无法显示，已保留原始记录')).toBeInTheDocument()
     expect(screen.queryByText('U2FsdGVkX1cipher')).not.toBeInTheDocument()
     expect(screen.queryByText('missing peer key')).not.toBeInTheDocument()
+
+    const nestedDetailsButton = screen.getAllByRole('button', { name: '技术详情' })[1]
+    fireEvent.click(nestedDetailsButton)
+
+    expect(screen.getByText('原始记录暂未显示')).toBeInTheDocument()
+    expect(screen.queryByText('U2FsdGVkX1cipher')).not.toBeInTheDocument()
+    expect(screen.queryByText('missing peer key')).not.toBeInTheDocument()
   })
 
   it('hides raw ecdh content behind diagnostics even without a stored error', () => {
@@ -133,6 +140,109 @@ describe('DeliveryStatusTimeline', () => {
     expect(detailsButton).toHaveAttribute('aria-expanded', 'true')
     expect(screen.getByText('这条交付记录暂时无法显示，已保留原始记录')).toBeInTheDocument()
     expect(screen.queryByText('U2FsdGVkX1rawcipher')).not.toBeInTheDocument()
+
+    const nestedDetailsButton = screen.getAllByRole('button', { name: '技术详情' })[1]
+    fireEvent.click(nestedDetailsButton)
+
+    expect(screen.getByText('原始记录暂未显示')).toBeInTheDocument()
+    expect(screen.queryByText('U2FsdGVkX1rawcipher')).not.toBeInTheDocument()
+  })
+
+  it('renders an All conversation timeline with buyer-readable message bubbles', () => {
+    render(
+      <DeliveryStatusTimeline
+        order={null}
+        messages={[
+          message({
+            id: 'chat-1',
+            peerName: 'Render Bot',
+            fromGlobalMetaId: 'idqprovider',
+            toGlobalMetaId: 'idqbuyer',
+            content: 'I can start now.',
+            orderCorrelationId: undefined,
+            timestamp: 1,
+          }),
+          message({
+            id: 'delivery-1',
+            fromGlobalMetaId: 'idqprovider',
+            toGlobalMetaId: 'idqbuyer',
+            content: '[DELIVERY:order-pin-1] Ready metafile://image.png',
+            orderCorrelationId: 'order-pin-1',
+            timestamp: 2,
+          }),
+        ]}
+        selfGlobalMetaId="idqbuyer"
+        mode="all"
+      />,
+    )
+
+    expect(screen.getByText('Render Bot')).toBeInTheDocument()
+    expect(screen.getByText('I can start now.')).toBeInTheDocument()
+    const deliveryCard = screen.getByLabelText('交付成果')
+    expect(within(deliveryCard).getByText('Ready metafile://image.png')).toBeInTheDocument()
+    expect(within(deliveryCard).getByText('1 个成果')).toBeInTheDocument()
+    expect(screen.getByLabelText('image.png')).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: '下载' })).toBeInTheDocument()
+    expect(screen.queryByText('[DELIVERY:order-pin-1] Ready metafile://image.png')).not.toBeInTheDocument()
+    expect(screen.queryByText('交付进度')).not.toBeInTheDocument()
+  })
+
+  it('renders a safe placeholder for decrypt gaps by default in All mode', () => {
+    render(
+      <DeliveryStatusTimeline
+        order={null}
+        messages={[
+          message({
+            id: 'raw-ecdh',
+            fromGlobalMetaId: 'idqprovider',
+            content: 'U2FsdGVkX1allcipher',
+            rawContent: 'U2FsdGVkX1allcipher',
+            encryption: 'ecdh',
+            decryptError: 'missing peer key',
+          }),
+        ]}
+        selfGlobalMetaId="idqbuyer"
+        mode="all"
+      />,
+    )
+
+    expect(screen.getByText('这条交付记录暂时无法显示，已保留原始记录')).toBeInTheDocument()
+    expect(screen.queryByText('U2FsdGVkX1allcipher')).not.toBeInTheDocument()
+    expect(screen.queryByText('missing peer key')).not.toBeInTheDocument()
+
+    const [topLevelDetailsButton, nestedDetailsButton] = screen.getAllByRole('button', {
+      name: '技术详情',
+    })
+    expect(topLevelDetailsButton).toHaveAttribute('aria-expanded', 'false')
+
+    fireEvent.click(topLevelDetailsButton)
+
+    expect(topLevelDetailsButton).toHaveAttribute('aria-expanded', 'true')
+    expect(screen.queryByText('U2FsdGVkX1allcipher')).not.toBeInTheDocument()
+    expect(screen.queryByText('missing peer key')).not.toBeInTheDocument()
+
+    fireEvent.click(nestedDetailsButton)
+
+    expect(screen.getByText('原始记录暂未显示')).toBeInTheDocument()
+    expect(screen.queryByText('U2FsdGVkX1allcipher')).not.toBeInTheDocument()
+    expect(screen.queryByText('missing peer key')).not.toBeInTheDocument()
+  })
+
+  it('shows conversation empty state in All mode', () => {
+    render(
+      <DeliveryStatusTimeline
+        order={null}
+        messages={[]}
+        selfGlobalMetaId="idqbuyer"
+        mode="all"
+      />,
+    )
+
+    expect(screen.getByText('还没有消息')).toBeInTheDocument()
+    expect(
+      screen.getByText('这个服务方的沟通和交付记录会显示在这里。'),
+    ).toBeInTheDocument()
+    expect(screen.queryByText('选择一个请求查看交付进度')).not.toBeInTheDocument()
   })
 
   it('shows empty state when no order is selected', () => {

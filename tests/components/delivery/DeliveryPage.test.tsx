@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { DeliveryPage } from '@/routes/Delivery'
 import { fetchUserProfileByGlobalMetaId } from '@/api/userProfile'
 import { retryDecryptPeerMessages } from '@/delivery/decryptRetry'
-import type { DeliveryAssetRecord } from '@/delivery/domain'
+import type { BuyerOrder, DeliveryAssetRecord } from '@/delivery/domain'
 import type { DeliveryMessage } from '@/delivery/messageStore'
 import type { WalletIdentity } from '@/wallet/types'
 
@@ -25,7 +25,11 @@ const mocks = vi.hoisted(() => ({
     hydrateFromDb: vi.fn().mockResolvedValue(undefined),
     listSessions: vi.fn(() => []),
     messagesForSession: vi.fn(() => []),
+    appendOutgoingFollowUp: vi.fn().mockResolvedValue(undefined),
   },
+  sendDeliveryFollowUp: vi.fn(),
+  getOrdersForWallet: vi.fn(),
+  loadDeliveryWorkspaceRecords: vi.fn(),
 }))
 
 vi.mock('@/wallet/useWallet', () => ({
@@ -51,6 +55,19 @@ vi.mock('@/delivery/decryptRetry', () => ({
   retryDecryptPeerMessages: vi.fn().mockResolvedValue({ attempted: 1, updated: 1 }),
 }))
 
+vi.mock('@/delivery/sendMessage', () => ({
+  sendDeliveryFollowUp: (...args: unknown[]) => mocks.sendDeliveryFollowUp(...args),
+}))
+
+vi.mock('@/delivery/db', () => ({
+  getOrdersForWallet: (...args: unknown[]) => mocks.getOrdersForWallet(...args),
+}))
+
+vi.mock('@/delivery/workspaceRecovery', () => ({
+  loadDeliveryWorkspaceRecords: (...args: unknown[]) =>
+    mocks.loadDeliveryWorkspaceRecords(...args),
+}))
+
 function expectBefore(first: Element, second: Element) {
   expect(first.compareDocumentPosition(second) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
 }
@@ -60,6 +77,29 @@ const connectedWallet: WalletIdentity = {
   mvcAddress: '1BuyerMvc',
   btcAddress: 'bc1buyer',
   dogeAddress: 'Dbuyer',
+}
+
+function buyerOrder(overrides: Partial<BuyerOrder> = {}): BuyerOrder {
+  return {
+    id: `${connectedWallet.globalMetaId}:idqprovider:order-alpha`,
+    walletGlobalMetaId: connectedWallet.globalMetaId,
+    providerGlobalMetaId: 'idqprovider',
+    serviceId: 'svc-delivery',
+    serviceName: 'Delivery Skill',
+    skillName: 'delivery-skill',
+    outputType: 'text',
+    rawRequest: 'Alpha request',
+    displaySummary: 'Alpha request',
+    price: '0',
+    currency: 'SPACE',
+    settlementKind: 'native',
+    paymentChain: 'mvc',
+    orderPinId: 'order-alpha',
+    status: 'in_progress',
+    createdAt: 1,
+    updatedAt: 1,
+    ...overrides,
+  }
 }
 
 function deliveryMessage(
@@ -114,6 +154,7 @@ function renderDeliveryPage(initialEntry = '/delivery') {
 
 describe('DeliveryPage layout', () => {
   beforeEach(() => {
+    vi.clearAllMocks()
     Element.prototype.scrollIntoView = vi.fn()
     vi.stubGlobal('indexedDB', undefined)
     mocks.walletState.identity = null
@@ -123,19 +164,29 @@ describe('DeliveryPage layout', () => {
     mocks.messageState.selectedSessionKey = null
     vi.mocked(fetchUserProfileByGlobalMetaId).mockResolvedValue({})
     vi.mocked(retryDecryptPeerMessages).mockResolvedValue({ attempted: 1, updated: 1 })
-    vi.clearAllMocks()
+    mocks.messageState.appendOutgoingFollowUp.mockResolvedValue(undefined)
+    mocks.getOrdersForWallet.mockResolvedValue([])
+    mocks.loadDeliveryWorkspaceRecords.mockResolvedValue({
+      orders: [],
+      sessions: [],
+      assetsBySession: {},
+    })
+    mocks.sendDeliveryFollowUp.mockResolvedValue({
+      pinId: 'pin-follow-up',
+      encryptedContent: 'encrypted-follow-up',
+    })
   })
 
   afterEach(() => {
     vi.unstubAllGlobals()
   })
 
-  it('orders the mobile workspace as orders, header, timeline, assets, then composer', () => {
+  it('orders the mobile workspace as conversations, header, timeline, assets, then composer', () => {
     renderDeliveryPage()
 
-    const orders = screen.getByRole('heading', { name: '我的请求' })
-    const header = screen.getByRole('status', { name: '选择一个请求查看交付' })
-    const timeline = screen.getAllByText('选择一个请求查看交付进度')[0]
+    const orders = screen.getByRole('heading', { name: '服务方会话' })
+    const header = screen.getByRole('status', { name: '选择一个服务方会话' })
+    const timeline = screen.getAllByText('这个服务方的沟通和交付记录会显示在这里。')[0]
     const assets = screen.getByRole('heading', { name: '成果库' })
     const composer = screen.getByRole('textbox', { name: '补充需求或询问进度' })
 
@@ -374,14 +425,14 @@ describe('DeliveryPage layout', () => {
     })
     expect(fetchUserProfileByGlobalMetaId).not.toHaveBeenCalledWith('idqselected-complete')
     expect(fetchUserProfileByGlobalMetaId).toHaveBeenCalledTimes(2)
-    const orderList = screen.getByRole('list', { name: '我的请求' })
-    expect(await within(orderList).findByText('Provider Alpha')).toBeInTheDocument()
-    expect(await within(orderList).findByText('Provider Beta')).toBeInTheDocument()
+    const conversationList = screen.getByRole('list', { name: '服务方会话' })
+    expect(await within(conversationList).findByText('Provider Alpha')).toBeInTheDocument()
+    expect(await within(conversationList).findByText('Provider Beta')).toBeInTheDocument()
     expect(
-      within(orderList).getByRole('img', { name: 'Provider Alpha 头像' }),
+      within(conversationList).getByRole('img', { name: 'Provider Alpha 头像' }),
     ).toBeInTheDocument()
     expect(
-      within(orderList).getByRole('img', { name: 'Provider Beta 头像' }),
+      within(conversationList).getByRole('img', { name: 'Provider Beta 头像' }),
     ).toBeInTheDocument()
   })
 
@@ -418,7 +469,7 @@ describe('DeliveryPage layout', () => {
     await waitFor(() =>
       expect(fetchUserProfileByGlobalMetaId).toHaveBeenCalledWith(peerGlobalMetaId),
     )
-    const sessionList = screen.getByRole('list', { name: '我的请求' })
+    const sessionList = screen.getByRole('list', { name: '服务方会话' })
     expect(await within(sessionList).findByText('Visible Plain Provider')).toBeInTheDocument()
     expect(
       within(sessionList).getByRole('img', { name: 'Visible Plain Provider 头像' }),
@@ -596,8 +647,8 @@ describe('DeliveryPage layout', () => {
 
     await waitFor(() => expect(fetchUserProfileByGlobalMetaId).toHaveBeenCalledWith(nextPeer))
     expect(fetchUserProfileByGlobalMetaId).toHaveBeenCalledTimes(2)
-    const orderList = screen.getByRole('list', { name: '我的请求' })
-    expect(await within(orderList).findByText('Next Missing Provider')).toBeInTheDocument()
+    const conversationList = screen.getByRole('list', { name: '服务方会话' })
+    expect(await within(conversationList).findByText('Next Missing Provider')).toBeInTheDocument()
   })
 
   it('does not repeatedly refetch an empty profile in the same mounted page session', async () => {
@@ -649,8 +700,8 @@ describe('DeliveryPage layout', () => {
 
     renderDeliveryPage('/delivery')
 
-    const orderList = screen.getByRole('list', { name: '我的请求' })
-    expect(within(orderList).getAllByText('历史交付').length).toBeGreaterThan(0)
+    const conversationList = screen.getByRole('list', { name: '服务方会话' })
+    expect(within(conversationList).getByRole('button', { name: peerGlobalMetaId })).toBeInTheDocument()
     expect(screen.queryByText(/Unknown service/i)).not.toBeInTheDocument()
   })
 
@@ -724,5 +775,304 @@ describe('DeliveryPage layout', () => {
     expect(
       screen.queryByText(/Wallet not connected|Connect wallet to reply|Message provider/i),
     ).not.toBeInTheDocument()
+  })
+
+  it('groups multiple orders for one provider into one conversation row with All and order tabs', () => {
+    mocks.walletState.identity = connectedWallet
+    mocks.walletState.status = 'connected'
+    mocks.messageState.byPeer = {
+      idqprovider: [
+        deliveryMessage({
+          id: 'pin-order-alpha',
+          peerGlobalMetaId: 'idqprovider',
+          peerChatPubkey: 'provider-key',
+          peerName: 'Provider One',
+          peerAvatarUrl: 'https://cdn.example/provider-one.png',
+          content: '[ORDER] Alpha request\norder id: order-alpha',
+          rawContent: '[ORDER] Alpha request\norder id: order-alpha',
+          orderCorrelationId: 'order-alpha',
+          timestamp: 1,
+        }),
+        deliveryMessage({
+          id: 'pin-order-beta',
+          peerGlobalMetaId: 'idqprovider',
+          peerChatPubkey: 'provider-key',
+          peerName: 'Provider One',
+          peerAvatarUrl: 'https://cdn.example/provider-one.png',
+          content: '[ORDER] Beta request\norder id: order-beta',
+          rawContent: '[ORDER] Beta request\norder id: order-beta',
+          orderCorrelationId: 'order-beta',
+          timestamp: 2,
+        }),
+        deliveryMessage({
+          id: 'pin-chat',
+          peerGlobalMetaId: 'idqprovider',
+          peerChatPubkey: 'provider-key',
+          peerName: 'Provider One',
+          peerAvatarUrl: 'https://cdn.example/provider-one.png',
+          content: 'General provider note',
+          rawContent: 'General provider note',
+          timestamp: 3,
+        }),
+      ],
+    }
+
+    renderDeliveryPage('/delivery')
+
+    const conversationList = screen.getByRole('list', { name: '服务方会话' })
+    expect(within(conversationList).getAllByRole('button', { name: 'Provider One' })).toHaveLength(1)
+    expect(screen.getByRole('tab', { name: 'All' })).toHaveAttribute('aria-selected', 'true')
+    expect(screen.getByRole('tab', { name: /Alpha request/ })).toBeInTheDocument()
+    expect(screen.getByRole('tab', { name: /Beta request/ })).toBeInTheDocument()
+    expect(screen.getAllByText('General provider note').length).toBeGreaterThan(0)
+  })
+
+  it('shows the composer only in All and sends All follow-ups without an order correlation', async () => {
+    mocks.walletState.identity = connectedWallet
+    mocks.walletState.status = 'connected'
+    mocks.messageState.byPeer = {
+      idqprovider: [
+        deliveryMessage({
+          id: 'pin-order-alpha',
+          peerGlobalMetaId: 'idqprovider',
+          peerChatPubkey: 'provider-key',
+          peerName: 'Provider One',
+          content: '[ORDER] Alpha request\norder id: order-alpha',
+          rawContent: '[ORDER] Alpha request\norder id: order-alpha',
+          orderCorrelationId: 'order-alpha',
+          timestamp: 1,
+        }),
+        deliveryMessage({
+          id: 'pin-general',
+          peerGlobalMetaId: 'idqprovider',
+          peerChatPubkey: 'provider-key',
+          peerName: 'Provider One',
+          content: 'General provider note',
+          rawContent: 'General provider note',
+          timestamp: 2,
+        }),
+      ],
+    }
+
+    renderDeliveryPage('/delivery')
+
+    const composer = screen.getByRole('textbox', { name: '补充需求或询问进度' })
+    fireEvent.change(composer, { target: { value: 'Please continue in general chat.' } })
+    const sendButton = screen.getByRole('button', { name: '发送' })
+    await waitFor(() => expect(sendButton).toBeEnabled())
+    fireEvent.click(sendButton)
+
+    await waitFor(() => expect(mocks.sendDeliveryFollowUp).toHaveBeenCalledTimes(1))
+    await waitFor(() => expect(mocks.messageState.appendOutgoingFollowUp).toHaveBeenCalledTimes(1))
+    expect(mocks.messageState.appendOutgoingFollowUp).toHaveBeenCalledWith(
+      expect.objectContaining({
+        session: expect.objectContaining({
+          peerGlobalMetaId: 'idqprovider',
+          orderCorrelationId: null,
+          serviceLabel: null,
+        }),
+      }),
+    )
+
+    fireEvent.click(screen.getByRole('tab', { name: /Alpha request/ }))
+
+    expect(screen.queryByRole('textbox', { name: '补充需求或询问进度' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '发送' })).not.toBeInTheDocument()
+  })
+
+  it('resolves a legacy session URL to the provider conversation and matching order tab', () => {
+    mocks.walletState.identity = connectedWallet
+    mocks.walletState.status = 'connected'
+    mocks.messageState.byPeer = {
+      idqprovider: [
+        deliveryMessage({
+          id: 'pin-order-alpha',
+          peerGlobalMetaId: 'idqprovider',
+          peerChatPubkey: 'provider-key',
+          peerName: 'Provider One',
+          content: '[ORDER] Alpha request\norder id: order-alpha',
+          rawContent: '[ORDER] Alpha request\norder id: order-alpha',
+          orderCorrelationId: 'order-alpha',
+          timestamp: 1,
+        }),
+        deliveryMessage({
+          id: 'pin-order-beta',
+          peerGlobalMetaId: 'idqprovider',
+          peerChatPubkey: 'provider-key',
+          peerName: 'Provider One',
+          content: '[ORDER] Beta request\norder id: order-beta',
+          rawContent: '[ORDER] Beta request\norder id: order-beta',
+          orderCorrelationId: 'order-beta',
+          timestamp: 2,
+        }),
+      ],
+    }
+
+    renderDeliveryPage('/delivery?session=idqprovider:order-beta')
+
+    expect(screen.getByRole('tab', { name: /Beta request/ })).toHaveAttribute(
+      'aria-selected',
+      'true',
+    )
+    expect(screen.getByRole('tab', { name: /Beta request/ })).toBeInTheDocument()
+    expect(screen.getAllByText('Beta request').length).toBeGreaterThan(0)
+    expect(screen.getAllByText('Alpha request').length).toBeGreaterThan(0)
+  })
+
+  it('hydrates an aliased order header from the canonical provider profile and keeps composer usable', async () => {
+    const providerAddress = '1ProviderAddress'
+    const providerCanonical = 'idqproviderCanonical'
+    const order = buyerOrder({
+      id: `${connectedWallet.globalMetaId}:${providerAddress}:order-pin-1`,
+      providerGlobalMetaId: providerAddress,
+      providerChatPubkey: 'same-chat-key',
+      providerName: undefined,
+      providerAvatarUrl: undefined,
+      serviceName: 'Render Skill',
+      displaySummary: 'Render a launch card',
+      rawRequest: 'Render a launch card',
+      orderPinId: 'order-pin-1',
+    })
+    vi.stubGlobal('indexedDB', {})
+    mocks.walletState.identity = connectedWallet
+    mocks.walletState.status = 'connected'
+    mocks.getOrdersForWallet.mockResolvedValue([order])
+    vi.mocked(fetchUserProfileByGlobalMetaId).mockImplementation(async (peerGlobalMetaId) => {
+      if (peerGlobalMetaId === providerCanonical) {
+        return {
+          globalMetaId: providerCanonical,
+          name: 'Canonical Render Bot',
+          avatarUrl: 'https://cdn.example/canonical-render-bot.png',
+          chatPubkey: 'same-chat-key',
+        }
+      }
+      return {}
+    })
+    mocks.messageState.byPeer = {
+      [providerCanonical]: [
+        deliveryMessage({
+          id: 'alias-chat',
+          peerGlobalMetaId: providerCanonical,
+          peerChatPubkey: 'same-chat-key',
+          content: 'Alias side message',
+          rawContent: 'Alias side message',
+          timestamp: 2,
+        }),
+      ],
+    }
+
+    renderDeliveryPage('/delivery')
+
+    await waitFor(() =>
+      expect(fetchUserProfileByGlobalMetaId).toHaveBeenCalledWith(providerCanonical),
+    )
+    await waitFor(() =>
+      expect(screen.getAllByText('Canonical Render Bot').length).toBeGreaterThanOrEqual(2),
+    )
+    expect(screen.getByRole('textbox', { name: '补充需求或询问进度' })).toBeEnabled()
+
+    fireEvent.click(await screen.findByRole('tab', { name: /Render Skill/ }))
+
+    await waitFor(() =>
+      expect(screen.getAllByText('Canonical Render Bot').length).toBeGreaterThanOrEqual(3),
+    )
+    expect(screen.queryByText(providerAddress.slice(0, 12))).not.toBeInTheDocument()
+  })
+
+  it('switches asset library scope labels between All and an order tab', async () => {
+    const order = buyerOrder({
+      serviceName: 'Render Skill',
+      displaySummary: 'Render a launch card',
+      rawRequest: 'Render a launch card',
+      providerName: 'Canonical Render Bot',
+      orderPinId: 'order-alpha',
+    })
+    vi.stubGlobal('indexedDB', {})
+    mocks.walletState.identity = connectedWallet
+    mocks.walletState.status = 'connected'
+    mocks.getOrdersForWallet.mockResolvedValue([order])
+    mocks.loadDeliveryWorkspaceRecords.mockResolvedValue({
+      orders: [],
+      sessions: [],
+      assetsBySession: {
+        [order.id]: [
+          deliveryAsset({
+            id: `${order.id}:metafile://render.png`,
+            sessionId: order.id,
+            messageId: 'order-alpha',
+            orderCorrelationId: 'order-alpha',
+            uri: 'metafile://render.png',
+            filename: 'render.png',
+          }),
+        ],
+      },
+    })
+
+    renderDeliveryPage('/delivery')
+
+    expect(await screen.findByText('全部 - Canonical Render Bot')).toBeInTheDocument()
+    fireEvent.click(await screen.findByRole('tab', { name: /Render Skill/ }))
+
+    expect(screen.getByText('当前请求 - Render Skill')).toBeInTheDocument()
+  })
+
+  it('shows order protocol messages in All and the matching order tab', () => {
+    mocks.walletState.identity = connectedWallet
+    mocks.walletState.status = 'connected'
+    mocks.messageState.byPeer = {
+      idqprovider: [
+        deliveryMessage({
+          id: 'pin-order-alpha',
+          peerGlobalMetaId: 'idqprovider',
+          peerChatPubkey: 'provider-key',
+          peerName: 'Provider One',
+          content: '[ORDER] Alpha request\norder id: order-alpha',
+          rawContent: '[ORDER] Alpha request\norder id: order-alpha',
+          orderCorrelationId: 'order-alpha',
+          timestamp: 1,
+        }),
+        deliveryMessage({
+          id: 'pin-order-end',
+          peerGlobalMetaId: 'idqprovider',
+          peerChatPubkey: 'provider-key',
+          peerName: 'Provider One',
+          content: '[ORDER_END:order-alpha] Completed',
+          rawContent: '[ORDER_END:order-alpha] Completed',
+          timestamp: 2,
+        }),
+        deliveryMessage({
+          id: 'pin-needs-rating',
+          peerGlobalMetaId: 'idqprovider',
+          peerChatPubkey: 'provider-key',
+          peerName: 'Provider One',
+          content: '[NeedsRating:order-alpha] Rating will be requested later',
+          rawContent: '[NeedsRating:order-alpha] Rating will be requested later',
+          timestamp: 3,
+        }),
+        deliveryMessage({
+          id: 'pin-general',
+          peerGlobalMetaId: 'idqprovider',
+          peerChatPubkey: 'provider-key',
+          peerName: 'Provider One',
+          content: 'General All-only message',
+          rawContent: 'General All-only message',
+          timestamp: 4,
+        }),
+      ],
+    }
+
+    renderDeliveryPage('/delivery')
+
+    expect(screen.getByRole('status', { name: '订单已完成' })).toBeInTheDocument()
+    expect(screen.getByRole('status', { name: '评价待开放' })).toBeInTheDocument()
+    expect(screen.getAllByText('General All-only message').length).toBeGreaterThan(0)
+
+    fireEvent.click(screen.getByRole('tab', { name: /Alpha request/ }))
+
+    expect(screen.getByRole('status', { name: '订单已完成' })).toBeInTheDocument()
+    expect(screen.getByRole('status', { name: '评价待开放' })).toBeInTheDocument()
+    const orderMessages = screen.getByText('消息记录').closest('details')
+    expect(orderMessages).not.toBeNull()
+    expect(within(orderMessages as HTMLElement).queryByText('General All-only message')).not.toBeInTheDocument()
   })
 })

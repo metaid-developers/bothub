@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from 'react'
+import { useState, useMemo, useCallback, useEffect } from 'react'
 import { clsx } from 'clsx'
 import type { ParsedDeliveryAsset } from '@/delivery/assetParser'
 import type { DeliveryAssetRecord } from '@/delivery/domain'
@@ -13,6 +13,7 @@ type FilterKind = 'all' | AssetKind
 
 interface DeliveryAssetLibraryProps {
   assets: ParsedDeliveryAsset[]
+  scopeLabel?: string
 }
 
 const FILTER_LABELS: Record<string, string> = {
@@ -29,10 +30,11 @@ function kindCount(assets: ParsedDeliveryAsset[], kind: AssetKind): number {
   return assets.filter((a) => a.kind === kind).length
 }
 
-export function DeliveryAssetLibrary({ assets }: DeliveryAssetLibraryProps) {
+export function DeliveryAssetLibrary({ assets, scopeLabel }: DeliveryAssetLibraryProps) {
   const [filter, setFilter] = useState<FilterKind>('all')
   const [previewAsset, setPreviewAsset] = useState<ParsedDeliveryAsset | null>(null)
   const [copyError, setCopyError] = useState<string | null>(null)
+  const trimmedScopeLabel = scopeLabel?.trim()
 
   const counts = useMemo(() => {
     const result: Record<string, number> = { all: assets.length }
@@ -51,6 +53,12 @@ export function DeliveryAssetLibrary({ assets }: DeliveryAssetLibraryProps) {
     const kinds: FilterKind[] = ['all', 'image', 'video', 'audio', 'document', 'archive', 'other']
     return kinds.filter((k) => (k === 'all' ? true : counts[k] > 0))
   }, [counts])
+
+  useEffect(() => {
+    if (filter !== 'all' && !filtersWithCounts.includes(filter)) {
+      setFilter('all')
+    }
+  }, [filter, filtersWithCounts])
 
   async function copyAllLinks() {
     if (!navigator.clipboard) {
@@ -96,6 +104,11 @@ export function DeliveryAssetLibrary({ assets }: DeliveryAssetLibraryProps) {
           </h2>
           <span className="text-[11px] text-hub-muted">0</span>
         </div>
+        {trimmedScopeLabel && (
+          <p className="mt-1 truncate text-[11px] text-hub-muted/80" title={trimmedScopeLabel}>
+            {trimmedScopeLabel}
+          </p>
+        )}
         <div className="flex flex-col items-center justify-center py-8 text-center">
           <p className="text-sm font-semibold text-white">还没有收到成果</p>
           <p className="mt-1 max-w-xs text-xs text-hub-muted">
@@ -120,6 +133,11 @@ export function DeliveryAssetLibrary({ assets }: DeliveryAssetLibraryProps) {
             {assets.length} 个成果
           </span>
         </div>
+        {trimmedScopeLabel && (
+          <p className="mt-1 truncate text-[11px] text-hub-muted/80" title={trimmedScopeLabel}>
+            {trimmedScopeLabel}
+          </p>
+        )}
         <div className="mt-3 flex flex-wrap items-center gap-1.5">
           {filtersWithCounts.map((kind) => (
             <button

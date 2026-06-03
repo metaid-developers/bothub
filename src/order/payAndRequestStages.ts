@@ -23,6 +23,7 @@ import {
 
 const SATOSHI_PER_UNIT = 100_000_000
 const SIMPLEMSG_PATH = '/protocols/simplemsg'
+const SKILL_SERVICE_ORDER_PATH = '/protocols/skill-service-order'
 
 export class PayAndRequestError extends Error {
   constructor(
@@ -69,11 +70,13 @@ export interface PreparedPayAndRequest {
   encryptedContent: string
   simplemsgBody: string
   sessionKey: string
+  serviceOrderPinId?: string
   displaySummary: string
 }
 
 export interface ExecutePayAndRequestResult extends PayAndRequestPaymentResult {
   orderPinId: string
+  simplemsgPinId?: string
   sessionKey: string
   orderPayload: string
   displaySummary: string
@@ -151,6 +154,25 @@ export function validatePayAndRequestInput(
     displaySummary,
     providerGlobalMetaId,
     providerChatPubkey,
+  }
+}
+
+async function resolveOrderSharedSecret(input: ValidatedPayAndRequestInput): Promise<string> {
+  try {
+    const ecdhResult = await withWalletResponseTimeout(
+      input.metalet.ecdh({ externalPubKey: input.providerChatPubkey }),
+      'Order encryption timed out waiting for Metalet ECDH response',
+      ECDH_WALLET_RESPONSE_TIMEOUT_MS,
+    )
+    return ecdhResult.sharedSecret
+  } catch (err) {
+    const message =
+      err instanceof WalletResponseTimeoutError
+        ? err.message
+        : err instanceof Error && err.message
+          ? `Order encryption failed: ${err.message}`
+          : 'Order encryption failed'
+    throw new PayAndRequestError(message, 'encryption_failed')
   }
 }
 
@@ -237,15 +259,30 @@ function buildPrivateMessagePayload(toGlobalMetaId: string, encryptedContent: st
   })
 }
 
-function resolvePreparedSessionKey(providerGlobalMetaId: string, payment: PayAndRequestPaymentResult): string {
-  const correlationId = payment.paymentTxid || payment.orderReference
+function resolvePreparedSessionKey(
+  providerGlobalMetaId: string,
+  payment: PayAndRequestPaymentResult,
+  serviceOrderPinId = '',
+): string {
+  const correlationId = serviceOrderPinId || payment.paymentTxid || payment.orderReference
   return correlationId ? `${providerGlobalMetaId}:${correlationId}` : providerGlobalMetaId
 }
 
 export async function prepareEncryptedOrderMessage(
   input: ValidatedPayAndRequestInput,
   payment: PayAndRequestPaymentResult,
+  serviceOrderPinId = '',
 ): Promise<PreparedPayAndRequest> {
+  const sharedSecret = await resolveOrderSharedSecret(input)
+  return buildPreparedOrderMessage(input, payment, serviceOrderPinId, sharedSecret)
+}
+
+function buildPreparedOrderMessage(
+  input: ValidatedPayAndRequestInput,
+  payment: PayAndRequestPaymentResult,
+  serviceOrderPinId: string,
+  sharedSecret: string,
+): PreparedPayAndRequest {
   const orderPayload = buildOrderPayload({
     displayText: input.displaySummary,
     rawRequest: input.rawRequest,
@@ -254,6 +291,7 @@ export async function prepareEncryptedOrderMessage(
     paymentTxid: isFreeServicePrice(input.service.price) ? '' : payment.paymentTxid,
     paymentCommitTxid: payment.paymentCommitTxid || undefined,
     orderReference: isFreeServicePrice(input.service.price) ? payment.orderReference : '',
+    orderPinId: serviceOrderPinId,
     paymentChain: input.service.paymentChain,
     settlementKind: input.service.settlementKind,
     mrc20Ticker: input.service.mrc20Ticker ?? undefined,
@@ -263,24 +301,6 @@ export async function prepareEncryptedOrderMessage(
     serviceName: input.service.serviceName,
     outputType: input.service.outputType,
   })
-
-  let sharedSecret: string
-  try {
-    const ecdhResult = await withWalletResponseTimeout(
-      input.metalet.ecdh({ externalPubKey: input.providerChatPubkey }),
-      'Order encryption timed out waiting for Metalet ECDH response',
-      ECDH_WALLET_RESPONSE_TIMEOUT_MS,
-    )
-    sharedSecret = ecdhResult.sharedSecret
-  } catch (err) {
-    const message =
-      err instanceof WalletResponseTimeoutError
-        ? err.message
-        : err instanceof Error && err.message
-          ? `Order encryption failed: ${err.message}`
-          : 'Order encryption failed'
-    throw new PayAndRequestError(message, 'encryption_failed')
-  }
 
   const encryptedContent = ecdhEncryptWithSharedSecret(orderPayload, sharedSecret)
   const simplemsgBody = buildPrivateMessagePayload(input.providerGlobalMetaId, encryptedContent)
@@ -293,7 +313,8 @@ export async function prepareEncryptedOrderMessage(
     orderPayload,
     encryptedContent,
     simplemsgBody,
-    sessionKey: resolvePreparedSessionKey(input.providerGlobalMetaId, payment),
+    sessionKey: resolvePreparedSessionKey(input.providerGlobalMetaId, payment, serviceOrderPinId),
+    serviceOrderPinId,
     displaySummary: input.displaySummary,
   }
 }
@@ -330,6 +351,92 @@ function buildCreatePinDiagnosticContext(
   }
 }
 
+function normalizeProtocolSettlementKind(value: string): string {
+  const normalized = value.trim().toLowerCase()
+  if (normalized === 'fiat') return 'fiat'
+  return 'native'
+}
+
+function buildSkillServiceOrderPayload(
+  input: ValidatedPayAndRequestInput,
+  payment: PayAndRequestPaymentResult,
+): Record<string, string> {
+  return {
+    servicePinId:
+      input.service.currentPinId.trim() ||
+      input.service.sourceServicePinId.trim() ||
+      input.service.id.trim(),
+    paymentTxid: isFreeServicePrice(input.service.price) ? '' : payment.paymentTxid.trim(),
+    price: input.service.price.trim(),
+    currency: resolveProtocolCurrency(input.service),
+    settlementKind: normalizeProtocolSettlementKind(input.service.settlementKind),
+    metadata: '',
+  }
+}
+
+async function createPinWithWallet(
+  metalet: Pick<PayAndRequestMetalet, 'createPin'>,
+  params: Record<string, unknown>,
+  timeoutMessage: string,
+): Promise<unknown> {
+  return withWalletResponseTimeout(metalet.createPin(params), timeoutMessage)
+}
+
+async function publishSkillServiceOrderPin(
+  input: ValidatedPayAndRequestInput,
+  payment: PayAndRequestPaymentResult,
+): Promise<string> {
+  const payload = buildSkillServiceOrderPayload(input, payment)
+  if (!payload.servicePinId) {
+    throw new PayAndRequestError('Skill service order requires a service pin id.', 'broadcast_failed')
+  }
+
+  let pinResult: unknown
+  try {
+    pinResult = await createPinWithWallet(
+      input.metalet,
+      {
+        chain: resolveCreatePinChain(input.service),
+        dataList: [
+          {
+            metaidData: {
+              operation: 'create',
+              path: SKILL_SERVICE_ORDER_PATH,
+              body: JSON.stringify(payload),
+              contentType: 'application/json',
+              encryption: '0',
+              version: '1.0.0',
+            },
+          },
+        ],
+      },
+      'Skill service order pin broadcast timed out waiting for wallet response',
+    )
+  } catch (err) {
+    const message =
+      err instanceof WalletResponseTimeoutError
+        ? err.message
+        : err instanceof Error && err.message
+          ? `Skill service order pin broadcast failed: ${err.message}`
+          : 'Skill service order pin broadcast failed'
+    throw new PayAndRequestError(message, 'broadcast_failed')
+  }
+
+  const pinId = resolvePrimaryPinId(pinResult)
+  const failure = getResolvedCreatePinFailureMessage(pinResult)
+  if (pinId) return pinId
+  if (failure) {
+    throw new PayAndRequestError(
+      `Skill service order pin broadcast failed: ${failure}`,
+      'broadcast_failed',
+    )
+  }
+  throw new PayAndRequestError(
+    'Skill service order pin broadcast did not return a pin id',
+    'broadcast_failed',
+  )
+}
+
 function recordCreatePinAttempt(input: {
   phase: CreatePinDiagnosticPhase
   prepared: PreparedPayAndRequest
@@ -356,8 +463,9 @@ export async function broadcastPreparedOrder(
 ): Promise<string> {
   let pinResult: unknown
   try {
-    pinResult = await withWalletResponseTimeout(
-      metalet.createPin({
+    pinResult = await createPinWithWallet(
+      metalet,
+      {
         chain: resolveCreatePinChain(prepared.service),
         dataList: [
           {
@@ -371,7 +479,7 @@ export async function broadcastPreparedOrder(
             },
           },
         ],
-      }),
+      },
       'Order pin broadcast timed out waiting for wallet response',
     )
   } catch (err) {
@@ -419,17 +527,29 @@ export async function executePayAndRequest(
 ): Promise<ExecutePayAndRequestResult> {
   const validated = validatePayAndRequestInput(input)
   const payment = await executeServicePayment(validated.service, validated.metalet)
-  const prepared = await prepareEncryptedOrderMessage(validated, payment)
-  const orderPinId = await broadcastPreparedOrder(prepared, validated.metalet)
-  const sessionKey =
-    prepared.sessionKey === validated.providerGlobalMetaId && orderPinId
-      ? `${validated.providerGlobalMetaId}:${orderPinId}`
-      : prepared.sessionKey
+  const sharedSecret = await resolveOrderSharedSecret(validated)
+  let serviceOrderPinId: string
+  try {
+    serviceOrderPinId = await publishSkillServiceOrderPin(validated, payment)
+  } catch (err) {
+    if (err instanceof PayAndRequestBroadcastError) {
+      throw err
+    }
+    const partial = buildPreparedOrderMessage(validated, payment, '', sharedSecret)
+    const message =
+      err instanceof Error && err.message
+        ? err.message
+        : 'Skill service order pin broadcast failed'
+    throw new PayAndRequestBroadcastError(message, partial, err)
+  }
+  const prepared = buildPreparedOrderMessage(validated, payment, serviceOrderPinId, sharedSecret)
+  const simplemsgPinId = await broadcastPreparedOrder(prepared, validated.metalet)
 
   return {
     ...payment,
-    orderPinId,
-    sessionKey,
+    orderPinId: serviceOrderPinId || simplemsgPinId,
+    simplemsgPinId,
+    sessionKey: prepared.sessionKey,
     orderPayload: prepared.orderPayload,
     displaySummary: prepared.displaySummary,
   }

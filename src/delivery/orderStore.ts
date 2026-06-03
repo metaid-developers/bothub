@@ -29,7 +29,7 @@ export interface PersistFailedToSendOrderInput {
 }
 
 function resolveOrderCorrelationId(result: ExecutePayAndRequestResult): string {
-  return (result.paymentTxid || result.orderReference).trim()
+  return (result.orderPinId || result.paymentTxid || result.orderReference).trim()
 }
 
 function normalizePaymentChain(value: string): BuyerOrder['paymentChain'] {
@@ -107,7 +107,8 @@ export async function persistPendingOrder(
     orderCorrelationId,
   })
   const orderId = buildOrderId(walletGlobalMetaId, providerGlobalMetaId, orderCorrelationId)
-  const messageId = input.result.orderPinId || `${sessionId}:order`
+  const simplemsgPinId = input.result.simplemsgPinId?.trim() || ''
+  const messageId = simplemsgPinId || input.result.orderPinId || `${sessionId}:order`
 
   const order: BuyerOrder = {
     id: orderId,
@@ -167,7 +168,7 @@ export async function persistPendingOrder(
     encryption: 'plain',
     protocolTag: 'order',
     orderCorrelationId,
-    pinId: input.result.orderPinId,
+    pinId: simplemsgPinId || input.result.orderPinId || undefined,
     timestamp: now,
     decryptStatus: 'plain',
   }
@@ -190,7 +191,9 @@ export async function persistFailedToSendOrder(
   const providerName = input.provider.name?.trim() || undefined
   const providerAvatarUrl = normalizeAvatarUrl(input.provider.avatar?.trim() || undefined)
   const orderCorrelationId = (
-    input.partial.payment.paymentTxid || input.partial.payment.orderReference
+    input.partial.serviceOrderPinId ||
+    input.partial.payment.paymentTxid ||
+    input.partial.payment.orderReference
   ).trim()
   if (!walletGlobalMetaId) {
     throw new Error('Wallet globalMetaId is required to persist a failed order')
@@ -231,7 +234,7 @@ export async function persistFailedToSendOrder(
     paymentTxid: input.partial.payment.paymentTxid,
     paymentCommitTxid: input.partial.payment.paymentCommitTxid,
     orderReference: input.partial.payment.orderReference,
-    orderPinId: undefined,
+    orderPinId: input.partial.serviceOrderPinId || undefined,
     status: 'failed_to_send',
     createdAt: now,
     updatedAt: now,

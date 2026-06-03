@@ -120,7 +120,7 @@ export function RequestModal({ open, onClose, service, provider, wallet }: Reque
       let deliveryPath = buildDeliverySessionPath(result.sessionKey)
       try {
         const persisted = await persistPendingOrder({ wallet, service, provider, prompt, result })
-        deliveryPath = buildDeliveryOrderPath(persisted.order.id)
+        deliveryPath = buildDeliveryOrderPath(persisted.order)
         try {
           await useMessageStore.getState().hydrateFromDb(wallet.globalMetaId)
         } catch (hydrateError) {
@@ -147,7 +147,7 @@ export function RequestModal({ open, onClose, service, provider, wallet }: Reque
             prompt,
             partial: err.partial,
           })
-          deliveryPath = buildDeliveryOrderPath(persisted.order.id)
+          deliveryPath = buildDeliveryOrderPath(persisted.order)
           savedForRecovery = true
           try {
             await useMessageStore.getState().hydrateFromDb(wallet.globalMetaId)

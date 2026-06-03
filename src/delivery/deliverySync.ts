@@ -266,6 +266,7 @@ async function resolveKnownOrderCorrelationId(input: {
   for (const order of orders) {
     if (order.providerGlobalMetaId.trim() !== peer) continue
     const canonical =
+      order.orderPinId?.trim() ||
       order.paymentTxid?.trim() ||
       order.orderReference?.trim() ||
       compositeIdTail(order.id)

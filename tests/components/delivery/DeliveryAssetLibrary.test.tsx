@@ -31,6 +31,7 @@ describe('DeliveryAssetLibrary', () => {
   it('groups and filters delivered assets', async () => {
     render(
       <DeliveryAssetLibrary
+        scopeLabel="全部 - Canonical Render Bot"
         assets={[
           asset({ kind: 'image', filename: 'image.png', extension: '.png' }),
           asset({ kind: 'video', filename: 'clip.mp4', extension: '.mp4' }),
@@ -40,11 +41,44 @@ describe('DeliveryAssetLibrary', () => {
     )
 
     expect(screen.getByText('3 个成果')).toBeInTheDocument()
+    expect(screen.getByText('全部 - Canonical Render Bot')).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: '图片 1' }))
 
     expect(screen.getByText('image.png')).toBeInTheDocument()
     expect(screen.queryByText('clip.mp4')).not.toBeInTheDocument()
     expect(screen.queryByText('brief.pdf')).not.toBeInTheDocument()
+  })
+
+  it('resets a stale kind filter when the selected scope has different asset kinds', async () => {
+    const { rerender } = render(
+      <DeliveryAssetLibrary
+        scopeLabel="全部 - Canonical Render Bot"
+        assets={[
+          asset({ kind: 'image', filename: 'image.png', extension: '.png' }),
+        ]}
+      />,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: '图片 1' }))
+
+    rerender(
+      <DeliveryAssetLibrary
+        scopeLabel="当前请求 - Document Skill"
+        assets={[
+          asset({
+            kind: 'document',
+            filename: 'brief.pdf',
+            extension: '.pdf',
+          }),
+        ]}
+      />,
+    )
+
+    expect(screen.getByText('当前请求 - Document Skill')).toBeInTheDocument()
+    await waitFor(() => {
+      expect(screen.getByText('brief.pdf')).toBeInTheDocument()
+    })
+    expect(screen.queryByText('image.png')).not.toBeInTheDocument()
   })
 
   it('copies one link and all links', async () => {
@@ -94,8 +128,9 @@ describe('DeliveryAssetLibrary', () => {
   })
 
   it('shows a buyer-facing empty state', () => {
-    render(<DeliveryAssetLibrary assets={[]} />)
+    render(<DeliveryAssetLibrary assets={[]} scopeLabel="当前请求 - Render Skill" />)
 
+    expect(screen.getByText('当前请求 - Render Skill')).toBeInTheDocument()
     expect(screen.getByText('还没有收到成果')).toBeInTheDocument()
     expect(
       screen.getByText(

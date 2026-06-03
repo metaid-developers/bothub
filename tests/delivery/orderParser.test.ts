@@ -61,4 +61,54 @@ describe('orderParser', () => {
     expect(parsed?.serviceId).toBe('pin-rt')
     expect(parsed?.skillName).toBe('rt-skill')
   })
+
+  it('parses order pin id metadata as the canonical order correlation', () => {
+    const payload = buildOrderPayload({
+      displayText: 'Canonical order',
+      rawRequest: 'Do the canonical thing',
+      price: '1',
+      currency: 'SPACE',
+      paymentTxid: 'pay-tx',
+      orderReference: 'legacy-ref',
+      orderPinId: 'order-pin-i0',
+      serviceId: 'pin-canonical',
+      skillName: 'canonical-skill',
+      outputType: 'text',
+    })
+    const parsed = parseOrderMessage(payload)
+
+    expect(parsed?.paymentTxid).toBe('pay-tx')
+    expect(parsed?.orderReference).toBe('')
+    expect(parsed?.orderPinId).toBe('order-pin-i0')
+    expect(getOrderCorrelationId(parsed!)).toBe('order-pin-i0')
+  })
+
+  it.each([
+    ['orderPinId', 'order-pin-camel-i0'],
+    ['serviceOrderPinId', 'service-order-pin-camel-i0'],
+  ] as const)(
+    'parses %s metadata as the canonical order correlation over legacy tags',
+    (metadataKey, orderPinId) => {
+      const payload = [
+        '[ORDER] Camel order',
+        '<raw_request>',
+        'Do the camel thing',
+        '</raw_request>',
+        '支付金额 1 SPACE',
+        'txid: pay-tx',
+        'order id: legacy-ref',
+        `${metadataKey}: ${orderPinId}`,
+        'service id: pin-camel',
+        'skill name: camel-skill',
+        'output type: text',
+      ].join('\n')
+
+      const parsed = parseOrderMessage(payload)
+
+      expect(parsed?.paymentTxid).toBe('pay-tx')
+      expect(parsed?.orderReference).toBe('legacy-ref')
+      expect(parsed?.orderPinId).toBe(orderPinId)
+      expect(getOrderCorrelationId(parsed!)).toBe(orderPinId)
+    },
+  )
 })

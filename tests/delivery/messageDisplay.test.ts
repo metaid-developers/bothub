@@ -60,6 +60,17 @@ describe('sessionPreviewText', () => {
       '已收到交付',
     )
   })
+
+  it('uses a safe placeholder for decrypt-failed ciphertext previews', () => {
+    const preview = sessionPreviewText(
+      'U2FsdGVkX1encrypted-delivery',
+      undefined,
+      'missing peer key',
+    )
+
+    expect(preview).toBe('这条交付记录暂时无法显示，已保留原始记录')
+    expect(preview).not.toContain('U2FsdGVk')
+  })
 })
 
 describe('getMessageVariant', () => {

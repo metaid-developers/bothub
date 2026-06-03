@@ -20,7 +20,7 @@ export function DeliveryWorkspaceHeader({ order }: DeliveryWorkspaceHeaderProps)
         className="border-b border-hub-border px-4 py-3"
       >
         <p className="text-sm font-semibold text-white">
-          {t('delivery.workspace.noSelectedTitle')}
+          {t('delivery.workspace.noSelectedOrderTitle')}
         </p>
         <p className="mt-1 text-xs text-hub-muted">
           {t('delivery.workspace.noSelectedHint')}

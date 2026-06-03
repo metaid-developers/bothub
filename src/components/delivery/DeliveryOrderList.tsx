@@ -133,12 +133,13 @@ function OrderCardList({
   return (
     <ul role="list" aria-label={t('delivery.workspace.orders')} className="space-y-1">
       {orders.map((order) => {
-        const isSelected = order.id === selectedOrderId
+        const selectionId = order.orderCorrelationId?.trim() || order.id
+        const isSelected = selectionId === selectedOrderId || order.id === selectedOrderId
         return (
           <li key={order.id}>
             <button
               type="button"
-              onClick={() => onSelectOrder(order.id)}
+              onClick={() => onSelectOrder(selectionId)}
               aria-label={order.serviceLabel}
               className={clsx(
                 'w-full overflow-hidden rounded-card border px-3 py-2.5 text-left transition',

@@ -157,6 +157,52 @@ describe('sessionGrouping', () => {
     expect(grouped.get(PEER)).toBeUndefined()
   })
 
+  it('groups new order threads by order pin id while keeping payment txid aliases routable', () => {
+    const txid = 'pay-tx-1'
+    const orderPinId = 'order-pin-i0'
+    const orderPayload = buildOrderPayload({
+      displayText: 'Protocol scoped',
+      rawRequest: 'Go',
+      price: '1',
+      currency: 'SPACE',
+      paymentTxid: txid,
+      orderPinId,
+      serviceId: 'pin-protocol',
+      skillName: 'protocol-skill',
+      outputType: 'image',
+    })
+
+    const grouped = groupPeerMessagesBySession(
+      [
+        msg({
+          id: 'order',
+          fromGlobalMetaId: SELF,
+          toGlobalMetaId: PEER,
+          content: orderPayload,
+          timestamp: 1,
+        }),
+        msg({
+          id: 'status',
+          content: `[ORDER_STATUS:${txid}] Generating\norder pin id: ${orderPinId}`,
+          timestamp: 2,
+        }),
+        msg({
+          id: 'delivery',
+          content: `Payment ${txid} delivered metafile://resultpin001i0.png`,
+          timestamp: 3,
+        }),
+      ],
+      SELF,
+    )
+
+    expect(grouped.get(buildSessionKey(PEER, orderPinId))?.map((m) => m.id)).toEqual([
+      'order',
+      'status',
+      'delivery',
+    ])
+    expect(grouped.get(buildSessionKey(PEER, txid))).toBeUndefined()
+  })
+
   it('uses delivery protocol tags as correlation even without a stored field', () => {
     const grouped = groupPeerMessagesBySession(
       [
@@ -351,6 +397,29 @@ describe('sessionGrouping', () => {
         providerProfile: { chatPubkey: 'profile-key' },
       }),
     ).toBe('order-key')
+
+    expect(
+      resolveProviderChatPubkey({
+        session: { ...baseSession, orderCorrelationId: 'service-order-pin-i0' },
+        orders: [
+          {
+            providerGlobalMetaId: PEER,
+            providerChatPubkey: 'legacy-order-key',
+            orderReference: 'legacy-ref',
+            paymentTxid: 'pay-tx',
+          },
+          {
+            providerGlobalMetaId: PEER,
+            providerChatPubkey: 'canonical-order-key',
+            orderPinId: 'service-order-pin-i0',
+            orderReference: 'other-legacy-ref',
+            paymentTxid: 'other-pay-tx',
+          },
+        ],
+        messages,
+        providerProfile: { chatPubkey: 'profile-key' },
+      }),
+    ).toBe('canonical-order-key')
 
     expect(
       resolveProviderChatPubkey({

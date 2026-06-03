@@ -184,8 +184,9 @@ function compositeIdTail(id: string): string {
   return colon >= 0 ? trimmed.slice(colon + 1).trim() : trimmed
 }
 
-function orderCorrelationIdFor(order: BuyerOrder): string {
+export function orderCorrelationIdFor(order: BuyerOrder): string {
   return (
+    order.orderPinId?.trim() ||
     order.paymentTxid?.trim() ||
     order.orderReference?.trim() ||
     compositeIdTail(order.id) ||
@@ -193,14 +194,14 @@ function orderCorrelationIdFor(order: BuyerOrder): string {
   )
 }
 
-function orderCorrelationCandidates(order: BuyerOrder): string[] {
+export function orderCorrelationCandidates(order: BuyerOrder): string[] {
   const canonical = orderCorrelationIdFor(order)
   return uniqueValues([
     canonical,
+    order.orderPinId,
     order.paymentTxid,
     order.paymentCommitTxid,
     order.orderReference,
-    order.orderPinId,
     order.id,
   ])
 }
@@ -221,14 +222,30 @@ function addKnownCorrelation(
   providerGlobalMetaId: string,
   value: string | null | undefined,
   canonical: string | null | undefined,
+  options: { overwrite?: boolean } = {},
 ): void {
   const peer = providerGlobalMetaId.trim()
   const rawValue = value?.trim()
   const rawCanonical = canonical?.trim()
   if (!peer || !rawValue || !rawCanonical) return
   const peerKnown = known.get(peer) ?? new Map<string, string>()
+  if (options.overwrite === false && peerKnown.has(rawValue)) {
+    known.set(peer, peerKnown)
+    return
+  }
   peerKnown.set(rawValue, rawCanonical)
   known.set(peer, peerKnown)
+}
+
+function knownCorrelationFor(
+  known: Map<string, Map<string, string>>,
+  providerGlobalMetaId: string,
+  value: string | null | undefined,
+): string {
+  const peer = providerGlobalMetaId.trim()
+  const rawValue = value?.trim()
+  if (!peer || !rawValue) return ''
+  return known.get(peer)?.get(rawValue) ?? rawValue
 }
 
 function buildKnownCorrelations(input: {
@@ -245,9 +262,21 @@ function buildKnownCorrelations(input: {
   }
 
   for (const session of input.sessions) {
-    const canonical = sessionCorrelationIdFor(session)
-    addKnownCorrelation(known, session.providerGlobalMetaId, session.id, canonical)
-    addKnownCorrelation(known, session.providerGlobalMetaId, session.orderCorrelationId, canonical)
+    const canonical = knownCorrelationFor(
+      known,
+      session.providerGlobalMetaId,
+      sessionCorrelationIdFor(session),
+    )
+    addKnownCorrelation(known, session.providerGlobalMetaId, session.id, canonical, {
+      overwrite: false,
+    })
+    addKnownCorrelation(
+      known,
+      session.providerGlobalMetaId,
+      session.orderCorrelationId,
+      canonical,
+      { overwrite: false },
+    )
   }
 
   return known
@@ -778,7 +807,14 @@ export function selectWorkspaceOrder(
 ): WorkspaceOrder | null {
   const target = selectedId?.trim()
   if (target) {
-    const match = workspace.orders.find((order) => order.id === target)
+    const match = workspace.orders.find((order) =>
+      [
+        order.orderCorrelationId,
+        order.sessionKey,
+        order.sessionId,
+        order.id,
+      ].some((value) => value?.trim() === target),
+    )
     if (match) return match
   }
   return workspace.orders[0] ?? null

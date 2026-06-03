@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import {
   buildDeliveryWorkspace,
+  orderCorrelationCandidates,
+  orderCorrelationIdFor,
   selectWorkspaceOrder,
   type WorkspaceOrder,
 } from '@/delivery/workspace'
@@ -153,6 +155,35 @@ describe('delivery workspace', () => {
 
     expect(selectWorkspaceOrder(workspace, `${SELF}:${PROVIDER}:order-1`)?.orderCorrelationId).toBe(
       'order-1',
+    )
+  })
+
+  it('resolves selected canonical order pin ids while keeping legacy ids routable', () => {
+    const legacyId = `${SELF}:${PROVIDER}:legacy-ref`
+    const workspace = buildDeliveryWorkspace({
+      walletGlobalMetaId: SELF,
+      orders: [
+        order({
+          id: `${SELF}:${PROVIDER}:other-ref`,
+          orderReference: 'other-ref',
+          orderPinId: 'other-order-pin-i0',
+          updatedAt: 20,
+        }),
+        order({
+          id: legacyId,
+          orderReference: 'legacy-ref',
+          orderPinId: 'service-order-pin-i0',
+          updatedAt: 10,
+        }),
+      ],
+      sessions: [],
+      byPeer: {},
+      assetsBySession: {},
+    })
+
+    expect(selectWorkspaceOrder(workspace, 'service-order-pin-i0')?.id).toBe(legacyId)
+    expect(selectWorkspaceOrder(workspace, legacyId)?.orderCorrelationId).toBe(
+      'service-order-pin-i0',
     )
   })
 
@@ -310,6 +341,99 @@ describe('delivery workspace', () => {
       paymentReference: txid,
     })
     expect(paidOrder?.messages.map((row) => row.id)).toEqual(['paid-delivery'])
+  })
+
+  it('prefers orderPinId over payment txid and order reference while retaining aliases', () => {
+    const row = order({
+      id: `${SELF}:${PROVIDER}:order-pin-i0`,
+      paymentTxid: 'pay-tx',
+      paymentCommitTxid: 'commit-tx',
+      orderReference: 'legacy-ref',
+      orderPinId: 'order-pin-i0',
+    })
+
+    expect(orderCorrelationIdFor(row)).toBe('order-pin-i0')
+    expect(orderCorrelationCandidates(row)).toEqual(
+      expect.arrayContaining([
+        'order-pin-i0',
+        'pay-tx',
+        'commit-tx',
+        'legacy-ref',
+        `${SELF}:${PROVIDER}:order-pin-i0`,
+      ]),
+    )
+
+    const workspace = buildDeliveryWorkspace({
+      walletGlobalMetaId: SELF,
+      orders: [row],
+      sessions: [],
+      byPeer: {
+        [PROVIDER]: [
+          message({
+            id: 'legacy-payment-delivery',
+            content: 'Payment pay-tx delivered metafile://paid.png',
+            rawContent: 'Payment pay-tx delivered metafile://paid.png',
+            orderCorrelationId: undefined,
+          }),
+        ],
+      },
+      assetsBySession: {},
+    })
+
+    expect(workspace.orders).toHaveLength(1)
+    expect(workspace.orders[0]).toMatchObject({
+      id: `${SELF}:${PROVIDER}:order-pin-i0`,
+      orderCorrelationId: 'order-pin-i0',
+      paymentReference: 'pay-tx',
+      messageCount: 1,
+      assetCount: 1,
+    })
+  })
+
+  it('keeps orderPinId canonical when a legacy session still uses the payment txid', () => {
+    const row = order({
+      id: `${SELF}:${PROVIDER}:order-pin-i0`,
+      paymentTxid: 'pay-tx',
+      orderReference: 'legacy-ref',
+      orderPinId: 'order-pin-i0',
+    })
+
+    const workspace = buildDeliveryWorkspace({
+      walletGlobalMetaId: SELF,
+      orders: [row],
+      sessions: [
+        session({
+          id: `${SELF}:${PROVIDER}:pay-tx`,
+          orderCorrelationId: 'pay-tx',
+          status: 'active',
+          lastMessageId: 'legacy-payment-status',
+          lastActivityAt: 55,
+        }),
+      ],
+      byPeer: {
+        [PROVIDER]: [
+          message({
+            id: 'legacy-payment-status',
+            content: '[ORDER_STATUS:pay-tx] Working on it',
+            rawContent: '[ORDER_STATUS:pay-tx] Working on it',
+            orderCorrelationId: undefined,
+            timestamp: 55,
+          }),
+        ],
+      },
+      assetsBySession: {},
+    })
+
+    expect(workspace.orders).toHaveLength(1)
+    expect(workspace.orders[0]).toMatchObject({
+      id: `${SELF}:${PROVIDER}:order-pin-i0`,
+      orderCorrelationId: 'order-pin-i0',
+      paymentReference: 'pay-tx',
+      messageCount: 1,
+    })
+    expect(workspace.orders[0]?.messages.map((row) => row.id)).toEqual([
+      'legacy-payment-status',
+    ])
   })
 
   it('merges unscoped same-batch protocol replies into a recoverable paid order', () => {
