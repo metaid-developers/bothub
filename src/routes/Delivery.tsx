@@ -47,6 +47,33 @@ function hasDisplayProfile(input: {
   return Boolean(input.peerName?.trim() && input.peerAvatarUrl?.trim())
 }
 
+function uniqueProviderIds(values: Array<string | null | undefined>): string[] {
+  return Array.from(
+    new Set(values.map((value) => value?.trim() ?? '').filter(Boolean)),
+  )
+}
+
+function providerIdsForConversation(
+  conversation: DeliveryConversation | null,
+): string[] {
+  if (!conversation) return []
+  return uniqueProviderIds([
+    conversation.providerGlobalMetaId,
+    conversation.id,
+    ...conversation.orderThreads.map((thread) => thread.order.providerGlobalMetaId),
+    ...conversation.messages.map((message) => message.peerGlobalMetaId),
+  ])
+}
+
+function resolveConversationProviderProfile(
+  conversation: DeliveryConversation | null,
+  providerProfiles: Record<string, UserProfile>,
+): UserProfile | undefined {
+  return providerIdsForConversation(conversation)
+    .map((providerId) => providerProfiles[providerId])
+    .find((profile) => profile != null)
+}
+
 function conversationToComposerSession(
   conversation: DeliveryConversation,
   resolvedProviderChatPubkey: string,
@@ -190,10 +217,20 @@ export function DeliveryPage() {
     [selectedConversation, selectedTab],
   )
 
+  const selectedProviderIds = useMemo(
+    () => providerIdsForConversation(selectedConversation),
+    [selectedConversation],
+  )
+
+  const selectedProviderProfile = useMemo(
+    () => resolveConversationProviderProfile(selectedConversation, providerProfiles),
+    [providerProfiles, selectedConversation],
+  )
+
   const messagesWithProfileFallback = useMemo(
     () =>
       selectedMessages.map((message) => {
-        const profile = providerProfiles[message.peerGlobalMetaId]
+        const profile = providerProfiles[message.peerGlobalMetaId] ?? selectedProviderProfile
         if (!profile) return message
         return {
           ...message,
@@ -202,7 +239,7 @@ export function DeliveryPage() {
           peerAvatarUrl: message.peerAvatarUrl?.trim() || profile.avatarUrl?.trim() || undefined,
         }
       }),
-    [selectedMessages, providerProfiles],
+    [selectedMessages, providerProfiles, selectedProviderProfile],
   )
 
   const selectedHasDecryptGap = useMemo(
@@ -240,22 +277,19 @@ export function DeliveryPage() {
           orderReference: order.orderReference,
         })),
         messages: selectedConversation?.messages ?? [],
-        providerProfile: selectedConversation?.providerGlobalMetaId
-          ? providerProfiles[selectedConversation.providerGlobalMetaId]
-          : undefined,
+        providerProfile: selectedProviderProfile,
       }),
-    [orders, providerProfiles, selectedConversation, selectedTab],
+    [orders, selectedConversation, selectedProviderProfile, selectedTab],
   )
 
   const composerSession = useMemo(() => {
     if (!selectedConversation || selectedTab.kind !== 'all') return null
-    const profile = providerProfiles[selectedConversation.providerGlobalMetaId]
     return conversationToComposerSession(
       selectedConversation,
       selectedProviderChatPubkey,
-      profile,
+      selectedProviderProfile,
     )
-  }, [providerProfiles, selectedConversation, selectedProviderChatPubkey, selectedTab])
+  }, [selectedConversation, selectedProviderChatPubkey, selectedProviderProfile, selectedTab])
 
   const retryDecryptWithProviderProfile = useCallback(
     (peerGlobalMetaId: string, profile: UserProfile): void => {
@@ -354,15 +388,14 @@ export function DeliveryPage() {
 
   useEffect(() => {
     if (!selectedConversation || !selectedProviderChatPubkey || !selectedHasDecryptGap) return
-    const profile = providerProfiles[selectedConversation.providerGlobalMetaId]
-    if (!profile) return
-    retryDecryptWithProviderProfile(selectedConversation.providerGlobalMetaId, profile)
+    if (!selectedProviderProfile) return
+    retryDecryptWithProviderProfile(selectedConversation.providerGlobalMetaId, selectedProviderProfile)
   }, [
     retryDecryptWithProviderProfile,
     selectedHasDecryptGap,
     selectedProviderChatPubkey,
     selectedConversation,
-    providerProfiles,
+    selectedProviderProfile,
   ])
 
   useEffect(() => {
@@ -449,19 +482,19 @@ export function DeliveryPage() {
       selectedConversation
         ? mergeConversationProfile(
             selectedConversation,
-            providerProfiles[selectedConversation.providerGlobalMetaId],
+            selectedProviderProfile,
           )
         : null,
-    [providerProfiles, selectedConversation],
+    [selectedConversation, selectedProviderProfile],
   )
 
   const selectedOrderWithProfile = useMemo(() => {
     if (!selectedOrderThread) return null
     return mergeWorkspaceOrderProfile(
       selectedOrderThread.order,
-      providerProfiles[selectedOrderThread.order.providerGlobalMetaId],
+      selectedProviderProfile,
     )
-  }, [selectedOrderThread, providerProfiles])
+  }, [selectedOrderThread, selectedProviderProfile])
 
   const orderForTimeline = useMemo(() => {
     if (!selectedOrderWithProfile) return null
@@ -499,7 +532,7 @@ export function DeliveryPage() {
             conversations={workspace.conversations.map((conversation) =>
               mergeConversationProfile(
                 conversation,
-                providerProfiles[conversation.providerGlobalMetaId],
+                resolveConversationProviderProfile(conversation, providerProfiles),
               ),
             )}
             selectedConversationId={selectedConversation?.id ?? null}
@@ -542,9 +575,8 @@ export function DeliveryPage() {
             wallet={walletConnected ? identity : null}
             session={composerSession}
             providerChatPubkey={selectedProviderChatPubkey}
-            providerKeyLoading={Boolean(
-              selectedConversation?.providerGlobalMetaId &&
-              providerProfileLoading[selectedConversation.providerGlobalMetaId],
+            providerKeyLoading={selectedProviderIds.some(
+              (providerId) => providerProfileLoading[providerId],
             )}
             onFetchProviderKey={
               selectedConversation
