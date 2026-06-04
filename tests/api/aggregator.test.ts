@@ -158,7 +158,7 @@ describe('aggregator client', () => {
       )
       expect(data.list[0]).toMatchObject({
         providerName: 'Fresh Profile Name',
-        providerAvatar: `https://man.metaid.io/content/${avatarPin}`,
+        providerAvatar: `https://file.metaid.io/metafile-indexer/content/${avatarPin}`,
         providerChatPubkey: '04fresh-chat-key',
       })
     })
@@ -204,16 +204,13 @@ describe('aggregator client', () => {
 
       expect(data.provider).toMatchObject({
         name: 'Fresh Detail Name',
-        avatar: `https://man.metaid.io/content/${avatarPin}`,
+        avatar: `https://file.metaid.io/metafile-indexer/content/${avatarPin}`,
         chatPubkey: '04fresh-detail-chat-key',
       })
     })
 
     it('throws AggregatorError for 40400 envelope', async () => {
-      vi.stubGlobal(
-        'fetch',
-        vi.fn().mockResolvedValue({ json: async () => error40400 }),
-      )
+      vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ json: async () => error40400 }))
 
       const { getServiceDetail, AggregatorError } = await loadAggregator()
       await expect(getServiceDetail('missing-id')).rejects.toMatchObject({
@@ -225,10 +222,7 @@ describe('aggregator client', () => {
     })
 
     it('throws AggregatorError for 40000 envelope', async () => {
-      vi.stubGlobal(
-        'fetch',
-        vi.fn().mockResolvedValue({ json: async () => error40000 }),
-      )
+      vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ json: async () => error40000 }))
 
       const { listServices } = await loadAggregator()
       await expect(listServices({ cursor: 'bad' })).rejects.toMatchObject({

@@ -117,7 +117,7 @@ describe('useWallet store', () => {
 
     expect(result.current.identity).toMatchObject({
       avatar: `/content/${avatarPin}`,
-      avatarUrl: `https://man.metaid.io/content/${avatarPin}`,
+      avatarUrl: `https://file.metaid.io/metafile-indexer/content/${avatarPin}`,
     })
   })
 

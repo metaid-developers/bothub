@@ -1,5 +1,9 @@
 import { getNormalizedMetaSocketBaseUrl } from '@/api/config'
-import { fetchUserProfileByGlobalMetaId, type UserProfile } from '@/api/userProfile'
+import {
+  fetchUserProfileByGlobalMetaId,
+  normalizeAvatarUrl,
+  type UserProfile,
+} from '@/api/userProfile'
 import { extractLlmFromBio } from '@/lib/llmBio'
 
 export interface OnlineBot {
@@ -17,8 +21,11 @@ export interface OnlineBotsResult {
 }
 
 interface OnlineUserItem {
+  metaid?: string
   metaId?: string
   globalMetaId?: string
+  type?: string
+  connectedAt?: number
   lastSeenAgoSeconds?: number
   lastSeenAt?: number
   userInfo?: {
@@ -26,7 +33,12 @@ interface OnlineUserItem {
     globalMetaId?: string
     name?: string
     avatar?: string
+    avatarUrl?: string
+    avatarURL?: string
     avatarImage?: string
+    avatarImg?: string
+    avatarId?: string
+    avatarPinId?: string
     bio?: unknown
     chatPublicKey?: string
   }
@@ -35,6 +47,7 @@ interface OnlineUserItem {
 interface OnlineListData {
   total?: number
   list?: OnlineUserItem[]
+  items?: OnlineUserItem[]
 }
 
 interface OnlineListResponse {
@@ -47,18 +60,30 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
 }
 
+function readString(record: Record<string, unknown> | undefined, keys: string[]): string {
+  if (!record) return ''
+  for (const key of keys) {
+    const value = record[key]
+    if (typeof value === 'string' && value.trim()) return value.trim()
+  }
+  return ''
+}
+
 function resolveAvatar(userInfo: Record<string, unknown> | undefined): string {
-  if (!userInfo) return ''
-  const avatar = userInfo['avatar'] as string | undefined
-  const avatarImage = userInfo['avatarImage'] ?? userInfo['avatarImg'] as string | undefined
-  return (typeof avatarImage === 'string' ? avatarImage.trim() : '') ||
-    (typeof avatar === 'string' ? avatar.trim() : '')
+  const avatar = readString(userInfo, [
+    'avatarUrl',
+    'avatarURL',
+    'avatarImage',
+    'avatarImg',
+    'avatar',
+  ])
+  const avatarId = readString(userInfo, ['avatarId', 'avatarPinId'])
+  return normalizeAvatarUrl(avatar || undefined, avatarId || undefined) ?? avatar
 }
 
 function resolveName(userInfo: Record<string, unknown> | undefined, globalMetaId: string): string {
-  if (!userInfo) return compactGlobalMetaId(globalMetaId)
-  const name = userInfo['name']
-  if (typeof name === 'string' && name.trim()) return name.trim()
+  const name = readString(userInfo, ['name'])
+  if (name) return name
   return compactGlobalMetaId(globalMetaId)
 }
 
@@ -68,18 +93,21 @@ function compactGlobalMetaId(globalMetaId: string): string {
 }
 
 function normalizeOnlineBot(item: OnlineUserItem): OnlineBot | null {
-  const userInfo = item.userInfo
-  const globalMetaId = userInfo?.globalMetaId || item.globalMetaId || ''
+  const userInfo = isRecord(item.userInfo) ? item.userInfo : undefined
+  const globalMetaId =
+    readString(userInfo, ['globalMetaId']) ||
+    item.globalMetaId?.trim() ||
+    item.metaid?.trim() ||
+    item.metaId?.trim() ||
+    ''
   if (!globalMetaId) return null
-  if (!userInfo?.chatPublicKey) return null
-
-  const userInfoRecord = isRecord(userInfo) ? userInfo : undefined
+  if (userInfo && !readString(userInfo, ['chatPublicKey']) && item.type !== 'app') return null
 
   return {
     globalMetaId,
-    metaId: (typeof userInfo?.metaid === 'string' ? userInfo.metaid : '') || item.metaId || '',
-    name: resolveName(userInfoRecord, globalMetaId),
-    avatar: resolveAvatar(userInfoRecord),
+    metaId: readString(userInfo, ['metaid']) || item.metaId?.trim() || item.metaid?.trim() || '',
+    name: resolveName(userInfo, globalMetaId),
+    avatar: resolveAvatar(userInfo),
     llm: '',
     lastSeenAgoSeconds: item.lastSeenAgoSeconds || 0,
   }
@@ -89,11 +117,16 @@ async function enrichOnlineBotBio(bot: OnlineBot): Promise<OnlineBot> {
   try {
     const profile: UserProfile = await fetchUserProfileByGlobalMetaId(bot.globalMetaId)
     const llm = extractLlmFromBio(profile.bio)
-    if (llm) {
-      return { ...bot, llm }
-    }
-    if (profile.avatarUrl && !bot.avatar) {
-      return { ...bot, avatar: profile.avatarUrl }
+    const avatar = profile.avatarUrl ?? normalizeAvatarUrl(bot.avatar) ?? bot.avatar
+    if (llm || profile.name || profile.globalMetaId || profile.metaid || avatar !== bot.avatar) {
+      return {
+        ...bot,
+        globalMetaId: profile.globalMetaId ?? bot.globalMetaId,
+        metaId: profile.metaid ?? bot.metaId,
+        name: profile.name ?? bot.name,
+        avatar,
+        llm: llm ?? bot.llm,
+      }
     }
   } catch {
     // Keep bot as-is
@@ -121,10 +154,7 @@ async function enrichOnlineBotsBio(bots: OnlineBot[]): Promise<OnlineBot[]> {
   return enriched
 }
 
-export async function getOnlineBots(
-  page = 1,
-  size = 100,
-): Promise<OnlineBotsResult> {
+export async function getOnlineBots(page = 1, size = 100): Promise<OnlineBotsResult> {
   const baseUrl = getNormalizedMetaSocketBaseUrl()
   const url = `${baseUrl}/socket/online/list?page=${page}&size=${size}`
 
@@ -136,7 +166,7 @@ export async function getOnlineBots(
   }
 
   const data = envelope.data
-  const list = data.list || []
+  const list = data.list || data.items || []
 
   const bots: OnlineBot[] = []
   for (const item of list) {

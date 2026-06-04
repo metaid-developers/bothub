@@ -6,9 +6,13 @@ import {
   peerProfileNeedsHydration,
 } from '@/delivery/peerProfile'
 
+function expectedAvatarUrl(pinId: string): string {
+  return `https://file.metaid.io/metafile-indexer/content/${pinId}`
+}
+
 describe('peerProfile', () => {
   const avatarPin = `${'a'.repeat(64)}i0`
-  const expectedAvatarUrl = `https://man.metaid.io/content/${avatarPin}`
+  const expectedAvatar = expectedAvatarUrl(avatarPin)
 
   beforeEach(() => {
     vi.stubEnv('VITE_META_SOCKET_BASE_URL', '/meta-socket/')
@@ -19,43 +23,49 @@ describe('peerProfile', () => {
   })
 
   it('extracts private chat user info aliases into a normalized peer profile', () => {
-    expect(peerProfileFromPrivateChatUserInfo({
-      name: ' Provider Bot ',
-      avatarImage: `metafile://${avatarPin}.png`,
-      chatpubkey: ' provider-chat-key ',
-    })).toEqual({
+    expect(
+      peerProfileFromPrivateChatUserInfo({
+        name: ' Provider Bot ',
+        avatarImage: `metafile://${avatarPin}.png`,
+        chatpubkey: ' provider-chat-key ',
+      }),
+    ).toEqual({
       chatPubkey: 'provider-chat-key',
       name: 'Provider Bot',
-      avatarUrl: expectedAvatarUrl,
+      avatarUrl: expectedAvatar,
     })
   })
 
   it('uses avatar pin aliases when private chat user info has no avatar URL', () => {
-    expect(peerProfileFromPrivateChatUserInfo({
-      avatarPinId: avatarPin,
-      chatPublicKey: 'provider-chat-key',
-    })).toEqual({
+    expect(
+      peerProfileFromPrivateChatUserInfo({
+        avatarPinId: avatarPin,
+        chatPublicKey: 'provider-chat-key',
+      }),
+    ).toEqual({
       chatPubkey: 'provider-chat-key',
-      avatarUrl: expectedAvatarUrl,
+      avatarUrl: expectedAvatar,
     })
   })
 
   it('does not overwrite useful earlier peer profile fields', () => {
-    expect(mergePeerProfiles(
-      {
-        chatPubkey: ' first-key ',
-        name: '  ',
-      },
-      {
-        chatPubkey: 'second-key',
-        name: ' Second Bot ',
-        avatarUrl: ' https://cdn.example/second.png ',
-      },
-      {
-        name: 'Third Bot',
-        avatarUrl: 'https://cdn.example/third.png',
-      },
-    )).toEqual({
+    expect(
+      mergePeerProfiles(
+        {
+          chatPubkey: ' first-key ',
+          name: '  ',
+        },
+        {
+          chatPubkey: 'second-key',
+          name: ' Second Bot ',
+          avatarUrl: ' https://cdn.example/second.png ',
+        },
+        {
+          name: 'Third Bot',
+          avatarUrl: 'https://cdn.example/third.png',
+        },
+      ),
+    ).toEqual({
       chatPubkey: 'first-key',
       name: 'Second Bot',
       avatarUrl: 'https://cdn.example/second.png',
@@ -64,23 +74,29 @@ describe('peerProfile', () => {
 
   it('requires hydration when any useful peer profile field is missing', () => {
     expect(peerProfileNeedsHydration({})).toBe(true)
-    expect(peerProfileNeedsHydration({
-      chatPubkey: 'provider-chat-key',
-      name: 'Provider Bot',
-    })).toBe(true)
-    expect(peerProfileNeedsHydration({
-      chatPubkey: 'provider-chat-key',
-      name: 'Provider Bot',
-      avatarUrl: 'https://cdn.example/provider.png',
-    })).toBe(false)
+    expect(
+      peerProfileNeedsHydration({
+        chatPubkey: 'provider-chat-key',
+        name: 'Provider Bot',
+      }),
+    ).toBe(true)
+    expect(
+      peerProfileNeedsHydration({
+        chatPubkey: 'provider-chat-key',
+        name: 'Provider Bot',
+        avatarUrl: 'https://cdn.example/provider.png',
+      }),
+    ).toBe(false)
   })
 
   it('extracts fetched user profiles into cleaned peer profiles', () => {
-    expect(peerProfileFromUserProfile({
-      name: ' Profile Bot ',
-      avatarUrl: ' https://cdn.example/profile.png ',
-      chatPubkey: ' profile-chat-key ',
-    })).toEqual({
+    expect(
+      peerProfileFromUserProfile({
+        name: ' Profile Bot ',
+        avatarUrl: ' https://cdn.example/profile.png ',
+        chatPubkey: ' profile-chat-key ',
+      }),
+    ).toEqual({
       chatPubkey: 'profile-chat-key',
       name: 'Profile Bot',
       avatarUrl: 'https://cdn.example/profile.png',
@@ -93,14 +109,16 @@ describe('peerProfile', () => {
     ['avatarId', { avatarId: avatarPin }],
     ['avatarPinId', { avatarPinId: avatarPin }],
   ])('normalizes fetched profile %s fallback when avatarUrl is absent', (_fieldName, profile) => {
-    expect(peerProfileFromUserProfile({
-      name: 'Profile Bot',
+    expect(
+      peerProfileFromUserProfile({
+        name: 'Profile Bot',
+        chatPubkey: 'profile-chat-key',
+        ...profile,
+      }),
+    ).toEqual({
       chatPubkey: 'profile-chat-key',
-      ...profile,
-    })).toEqual({
-      chatPubkey: 'profile-chat-key',
       name: 'Profile Bot',
-      avatarUrl: expectedAvatarUrl,
+      avatarUrl: expectedAvatar,
     })
   })
 })
