@@ -7,7 +7,7 @@ async function loadUserProfile() {
 describe('user profile API client', () => {
   const avatarPin = `${'a'.repeat(64)}i0`
   const fallbackAvatarPin = `${'b'.repeat(64)}i0`
-  const expectedAvatarContent = `https://manapi.metaid.io/content/${avatarPin}`
+  const expectedAvatarContent = `https://man.metaid.io/content/${avatarPin}`
 
   beforeEach(() => {
     vi.stubEnv('VITE_META_SOCKET_BASE_URL', '/meta-socket/')
@@ -111,7 +111,7 @@ describe('user profile API client', () => {
 
   it('normalizes delivery avatar URL variants to MetaID content URLs', async () => {
     const pinId = `${'c'.repeat(64)}i0`
-    const expected = `https://manapi.metaid.io/content/${pinId}`
+    const expected = `https://man.metaid.io/content/${pinId}`
 
     const { normalizeAvatarUrl } = await loadUserProfile()
 
@@ -220,6 +220,61 @@ describe('user profile API client', () => {
     expect(profile).toMatchObject({
       name: 'Address Bot',
       avatarUrl: expectedAvatarContent,
+    })
+  })
+
+  it('uses an explicit wallet address fallback when the globalMetaId profile is an empty shell', async () => {
+    const fetchMock = vi.fn(async (url: string) => {
+      if (url === '/meta-socket/api/info/address/12ghVWG1yAgNjzXj4mr3qK9DgyornMUikZ') {
+        return {
+          ok: true,
+          json: async () => ({
+            code: 1,
+            data: {
+              globalMetaId: 'idq1zfazvxaq69uw6txe3ewce30ewyhy9a7mzykgv0',
+              metaid: 'metaid-address-profile',
+              address: '12ghVWG1yAgNjzXj4mr3qK9DgyornMUikZ',
+              name: 'SunnyFung',
+              avatar: `/content/${avatarPin}`,
+              avatarId: avatarPin,
+              chatpubkey: '04address',
+            },
+          }),
+        }
+      }
+      return {
+        ok: true,
+        json: async () => ({
+          code: 1,
+          data: {
+            globalMetaId: 'e3ewce30ewyhy9a7mzykgv0',
+            metaid: 'e3ewce30ewyhy9a7mzykgv0',
+            address: '',
+            avatar: '/content/',
+          },
+        }),
+      }
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    const { fetchUserProfileByGlobalMetaId } = await loadUserProfile()
+    const profile = await fetchUserProfileByGlobalMetaId(
+      'e3ewce30ewyhy9a7mzykgv0',
+      '12ghVWG1yAgNjzXj4mr3qK9DgyornMUikZ',
+    )
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/meta-socket/api/info/globalmetaid/e3ewce30ewyhy9a7mzykgv0',
+    )
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/meta-socket/api/info/address/12ghVWG1yAgNjzXj4mr3qK9DgyornMUikZ',
+    )
+    expect(profile).toMatchObject({
+      globalMetaId: 'idq1zfazvxaq69uw6txe3ewce30ewyhy9a7mzykgv0',
+      address: '12ghVWG1yAgNjzXj4mr3qK9DgyornMUikZ',
+      name: 'SunnyFung',
+      avatarUrl: expectedAvatarContent,
+      chatPubkey: '04address',
     })
   })
 

@@ -23,9 +23,12 @@ const STORAGE_KEY = 'bothub-wallet'
 const WALLET_READINESS_ERROR_RE =
   /Metalet wallet (?:is not connected to this site|is locked|is not logged in|has no wallet set up|did not respond to (?:ping|isConnected|getGlobalMetaid))|Connected Metalet account changed/i
 
-async function fetchProfileBestEffort(globalMetaId: string): Promise<UserProfile | null> {
+async function fetchProfileBestEffort(
+  globalMetaId: string,
+  fallbackAddress?: string,
+): Promise<UserProfile | null> {
   try {
-    return await fetchUserProfileByGlobalMetaId(globalMetaId)
+    return await fetchUserProfileByGlobalMetaId(globalMetaId, fallbackAddress)
   } catch {
     return null
   }
@@ -94,7 +97,7 @@ export const useWallet = create<WalletState>()(
         try {
           await metalet.connect()
           const gmid = await metalet.getGlobalMetaid()
-          const profile = await fetchProfileBestEffort(gmid.globalMetaId)
+          const profile = await fetchProfileBestEffort(gmid.globalMetaId, gmid.mvcAddress)
           const identity = buildWalletIdentity(gmid, profile)
           set({ identity, status: 'connected', errorMessage: null })
         } catch (err) {
@@ -131,7 +134,7 @@ export const useWallet = create<WalletState>()(
         }
         try {
           const gmid = await metalet.ensureReady()
-          const profile = await fetchProfileBestEffort(gmid.globalMetaId)
+          const profile = await fetchProfileBestEffort(gmid.globalMetaId, gmid.mvcAddress)
           set({
             identity: buildWalletIdentity(gmid, profile),
             status: 'connected',

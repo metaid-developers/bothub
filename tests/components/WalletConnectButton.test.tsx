@@ -69,7 +69,7 @@ describe('WalletConnectButton', () => {
 
     expect(screen.getByRole('img', { name: 'Raw Avatar avatar' })).toHaveAttribute(
       'src',
-      `https://manapi.metaid.io/content/${avatarPin}`,
+      `https://man.metaid.io/content/${avatarPin}`,
     )
   })
 
@@ -82,7 +82,7 @@ describe('WalletConnectButton', () => {
         btcAddress: 'bc1',
         dogeAddress: 'Ddoge',
         name: 'Chain Avatar',
-        avatarUrl: 'https://manapi.metaid.io/content/',
+        avatarUrl: 'https://man.metaid.io/content/',
         avatarPinId: avatarPin,
       } as WalletIdentity,
       status: 'connected',
@@ -92,7 +92,7 @@ describe('WalletConnectButton', () => {
 
     expect(screen.getByRole('img', { name: 'Chain Avatar avatar' })).toHaveAttribute(
       'src',
-      `https://manapi.metaid.io/content/${avatarPin}`,
+      `https://man.metaid.io/content/${avatarPin}`,
     )
   })
 

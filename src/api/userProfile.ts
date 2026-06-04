@@ -1,6 +1,6 @@
 import { getNormalizedMetaSocketBaseUrl } from '@/api/config'
 
-const DEFAULT_METAID_AVATAR_CONTENT_BASE = 'https://manapi.metaid.io/content'
+const DEFAULT_METAID_AVATAR_CONTENT_BASE = 'https://man.metaid.io/content'
 
 export interface UserProfile {
   metaid?: string
@@ -138,8 +138,18 @@ function unwrapLegacyInfoEnvelope(raw: unknown): unknown {
   return envelope.data
 }
 
-function avatarNeedsAddressFallback(profile: UserProfile): boolean {
-  if (!profile.address?.trim()) return false
+function resolveFallbackAddress(
+  profile: UserProfile,
+  fallbackAddress?: string | undefined,
+): string {
+  return profile.address?.trim() || fallbackAddress?.trim() || ''
+}
+
+function avatarNeedsAddressFallback(
+  profile: UserProfile,
+  fallbackAddress?: string | undefined,
+): boolean {
+  if (!resolveFallbackAddress(profile, fallbackAddress)) return false
   const avatarUrl = profile.avatarUrl?.trim().toLowerCase()
   if (!avatarUrl) return true
   if (/\/content\/?$/.test(avatarUrl)) return true
@@ -164,7 +174,10 @@ async function fetchUserProfileByAddress(address: string): Promise<UserProfile> 
   }
 }
 
-export async function fetchUserProfileByGlobalMetaId(globalMetaId: string): Promise<UserProfile> {
+export async function fetchUserProfileByGlobalMetaId(
+  globalMetaId: string,
+  fallbackAddress?: string,
+): Promise<UserProfile> {
   const trimmed = globalMetaId.trim()
   if (!trimmed) return {}
 
@@ -172,9 +185,11 @@ export async function fetchUserProfileByGlobalMetaId(globalMetaId: string): Prom
   const response = await fetch(`${baseUrl}/api/info/globalmetaid/${encodeURIComponent(trimmed)}`)
   const payload: unknown = await response.json()
   const profile = normalizeUserProfile(unwrapLegacyInfoEnvelope(payload))
-  if (!avatarNeedsAddressFallback(profile)) return profile
+  if (!avatarNeedsAddressFallback(profile, fallbackAddress)) return profile
 
-  const addressProfile = await fetchUserProfileByAddress(profile.address ?? '')
+  const addressProfile = await fetchUserProfileByAddress(
+    resolveFallbackAddress(profile, fallbackAddress),
+  )
   return {
     ...profile,
     metaid: addressProfile.metaid ?? profile.metaid,

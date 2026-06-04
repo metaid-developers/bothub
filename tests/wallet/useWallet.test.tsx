@@ -57,6 +57,7 @@ describe('useWallet store', () => {
       expect(result.current.status).toBe('connected')
     })
     expect(result.current.identity?.globalMetaId).toBe('idq1abc')
+    expect(fetchUserProfileByGlobalMetaId).toHaveBeenCalledWith('idq1abc', '1mvc')
   })
 
   it('connect hydrates non-sensitive profile fields into wallet identity', async () => {
@@ -116,7 +117,7 @@ describe('useWallet store', () => {
 
     expect(result.current.identity).toMatchObject({
       avatar: `/content/${avatarPin}`,
-      avatarUrl: `https://manapi.metaid.io/content/${avatarPin}`,
+      avatarUrl: `https://man.metaid.io/content/${avatarPin}`,
     })
   })
 
@@ -321,7 +322,7 @@ describe('useWallet store', () => {
     })
 
     expect(metalet.ensureReady).toHaveBeenCalledWith()
-    expect(fetchUserProfileByGlobalMetaId).toHaveBeenCalledWith('idq1new')
+    expect(fetchUserProfileByGlobalMetaId).toHaveBeenCalledWith('idq1new', '1newmvc')
     expect(result.current.identity).toMatchObject({
       globalMetaId: 'idq1new',
       mvcAddress: '1newmvc',

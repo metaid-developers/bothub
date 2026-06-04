@@ -125,7 +125,7 @@ describe('aggregator client', () => {
                   {
                     ...listFixture.data.list[0],
                     providerName: 'Stale List Name',
-                    providerAvatar: 'https://manapi.metaid.io/content/stale-avatar',
+                    providerAvatar: 'https://man.metaid.io/content/stale-avatar',
                     providerChatPubkey: null,
                   },
                 ],
@@ -158,7 +158,7 @@ describe('aggregator client', () => {
       )
       expect(data.list[0]).toMatchObject({
         providerName: 'Fresh Profile Name',
-        providerAvatar: `https://manapi.metaid.io/content/${avatarPin}`,
+        providerAvatar: `https://man.metaid.io/content/${avatarPin}`,
         providerChatPubkey: '04fresh-chat-key',
       })
     })
@@ -175,7 +175,7 @@ describe('aggregator client', () => {
                 provider: {
                   ...detailFixture.data.provider,
                   name: 'Stale Detail Name',
-                  avatar: 'https://manapi.metaid.io/content/stale-detail-avatar',
+                  avatar: 'https://man.metaid.io/content/stale-detail-avatar',
                   chatPubkey: null,
                 },
               },
@@ -204,7 +204,7 @@ describe('aggregator client', () => {
 
       expect(data.provider).toMatchObject({
         name: 'Fresh Detail Name',
-        avatar: `https://manapi.metaid.io/content/${avatarPin}`,
+        avatar: `https://man.metaid.io/content/${avatarPin}`,
         chatPubkey: '04fresh-detail-chat-key',
       })
     })
