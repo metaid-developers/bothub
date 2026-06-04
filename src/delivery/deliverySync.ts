@@ -453,16 +453,26 @@ export async function syncKnownPrivateChatHistory(
 
       try {
         let cursor = ''
+        let timestamp: number | undefined
         let fullyPersisted = true
         let persistenceError: unknown
         let newestTimestamp: number | undefined
+        const requestedPageKeys = new Set<string>()
 
         // Fetch up to 3 pages (150 messages) per peer.
         for (let pageIndex = 0; pageIndex < 3; pageIndex++) {
+          const pageKey = cursor
+            ? `cursor:${cursor}`
+            : timestamp !== undefined
+              ? `timestamp:${timestamp}`
+              : 'latest'
+          if (requestedPageKeys.has(pageKey)) break
+          requestedPageKeys.add(pageKey)
+
           const page = await listPrivateChatHistory({
             metaId,
             otherMetaId: peerGlobalMetaId,
-            cursor,
+            ...(timestamp !== undefined ? { timestamp } : { cursor }),
             size: 50,
           })
 
@@ -493,8 +503,23 @@ export async function syncKnownPrivateChatHistory(
             }
           }
 
-          if (!page.nextCursor) break
-          cursor = page.nextCursor
+          const nextCursor = page.nextCursor?.trim()
+          if (nextCursor) {
+            cursor = nextCursor
+            timestamp = undefined
+            continue
+          }
+          if (
+            page.nextTimestamp !== undefined &&
+            Number.isFinite(page.nextTimestamp) &&
+            page.nextTimestamp > 0 &&
+            page.nextTimestamp !== timestamp
+          ) {
+            cursor = ''
+            timestamp = page.nextTimestamp
+            continue
+          }
+          break
         }
 
         if (!fullyPersisted) {

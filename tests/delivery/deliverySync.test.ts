@@ -660,6 +660,56 @@ describe('deliverySync', () => {
     ])
   })
 
+  it('continues history sync with nextTimestamp when the API does not return a cursor', async () => {
+    mockedHomes.mockResolvedValue([{ metaId: PEER, globalMetaId: PEER }])
+    mockedHistory.mockImplementation(async ({ timestamp }) => {
+      if (timestamp === 1_700_000_000_000) {
+        return {
+          list: [
+            privateChatItem({
+              pinId: 'pin-provider-page-2',
+              timestamp: 1_699_999_999_000,
+              content: '[ORDER_STATUS:order-sync] Provider page 2 update',
+            }),
+          ],
+          nextCursor: '',
+          nextTimestamp: 0,
+        }
+      }
+      return {
+        list: [
+          privateChatItem({
+            pinId: 'pin-provider-page-1',
+            timestamp: 1_700_000_000_000,
+            content: '[ORDER_STATUS:order-sync] Provider page 1 update',
+          }),
+        ],
+        nextCursor: '',
+        nextTimestamp: 1_700_000_000_000,
+      }
+    })
+
+    await syncKnownPrivateChatHistory(wallet)
+
+    expect(mockedHistory).toHaveBeenNthCalledWith(1, {
+      metaId: SELF,
+      otherMetaId: PEER,
+      cursor: '',
+      size: 50,
+    })
+    expect(mockedHistory).toHaveBeenNthCalledWith(2, {
+      metaId: SELF,
+      otherMetaId: PEER,
+      timestamp: 1_700_000_000_000,
+      size: 50,
+    })
+    expect(useMessageStore.getState().messagesForSession(`${PEER}:order-sync`, SELF)).toEqual([
+      expect.objectContaining({ id: 'pin-provider-page-2' }),
+      expect.objectContaining({ id: 'pin-provider-page-1' }),
+    ])
+    expect(await getMessagesForSession(`${SELF}:${PEER}:order-sync`)).toHaveLength(2)
+  })
+
   it('continues syncing remaining peers when one peer history request fails', async () => {
     const failedPeer = 'idqfailed'
     const secondPeer = 'idqsecond'
