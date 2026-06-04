@@ -1216,14 +1216,18 @@ describe('DeliveryPage layout', () => {
 
     renderDeliveryPage('/delivery')
 
-    expect(screen.getByRole('status', { name: '订单已完成' })).toBeInTheDocument()
-    expect(screen.getByRole('status', { name: '评价待开放' })).toBeInTheDocument()
+    expect(screen.getByText('[ORDER_END:order-alpha] Completed')).toBeInTheDocument()
+    expect(
+      screen.getByText('[NeedsRating:order-alpha] Rating will be requested later'),
+    ).toBeInTheDocument()
     expect(screen.getAllByText('General All-only message').length).toBeGreaterThan(0)
 
     fireEvent.click(screen.getByRole('tab', { name: /Alpha request/ }))
 
-    expect(screen.getByRole('status', { name: '订单已完成' })).toBeInTheDocument()
-    expect(screen.getByRole('status', { name: '评价待开放' })).toBeInTheDocument()
+    expect(screen.getByText('[ORDER_END:order-alpha] Completed')).toBeInTheDocument()
+    expect(
+      screen.getByText('[NeedsRating:order-alpha] Rating will be requested later'),
+    ).toBeInTheDocument()
     const orderMessages = screen.getByText('消息记录').closest('details')
     expect(orderMessages).not.toBeNull()
     expect(within(orderMessages as HTMLElement).queryByText('General All-only message')).not.toBeInTheDocument()

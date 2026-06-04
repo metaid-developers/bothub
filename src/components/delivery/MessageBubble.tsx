@@ -411,6 +411,17 @@ export function MessageBubble({
     avatarUrl: selfAvatarUrl,
   }
 
+  if (!isSelf && variant !== 'text' && !message.decryptError) {
+    return (
+      <TextBubble
+        message={message}
+        isSelf={isSelf}
+        body={message.content}
+        selfProfile={selfProfile}
+      />
+    )
+  }
+
   if (variant === 'order') {
     return <OrderBubble message={message} isSelf={isSelf} selfProfile={selfProfile} />
   }

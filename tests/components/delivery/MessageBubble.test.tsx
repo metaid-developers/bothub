@@ -77,10 +77,13 @@ describe('MessageBubble', () => {
     expect(writeText).toHaveBeenCalledWith(txid)
   })
 
-  it('renders status messages as compact timeline events with stripped text', () => {
+  it('renders caller status messages as compact timeline events with stripped text', () => {
     render(
       <MessageBubble
-        message={message('[ORDER_STATUS:order-1] Provider is generating assets')}
+        message={message('[ORDER_STATUS:order-1] Provider is generating assets', {
+          fromGlobalMetaId: 'self',
+          toGlobalMetaId: 'provider',
+        })}
         selfGlobalMetaId="self"
       />,
     )
@@ -90,10 +93,13 @@ describe('MessageBubble', () => {
     expect(screen.queryByText(/\[ORDER_STATUS/)).not.toBeInTheDocument()
   })
 
-  it('renders delivery messages with result text and asset count', () => {
+  it('renders caller delivery messages with result text and asset count', () => {
     render(
       <MessageBubble
-        message={message('[DELIVERY:order-1] {"result":"Ready metafile://pin1.png metafile://pin2.pdf"}')}
+        message={message('[DELIVERY:order-1] {"result":"Ready metafile://pin1.png metafile://pin2.pdf"}', {
+          fromGlobalMetaId: 'self',
+          toGlobalMetaId: 'provider',
+        })}
         selfGlobalMetaId="self"
       />,
     )
@@ -137,7 +143,10 @@ describe('MessageBubble', () => {
   it('counts structured delivery assets without rendering raw payload as body text', () => {
     render(
       <MessageBubble
-        message={message('[DELIVERY:order-1] {"result":"Done","assets":["metafile://pin.png"]}')}
+        message={message('[DELIVERY:order-1] {"result":"Done","assets":["metafile://pin.png"]}', {
+          fromGlobalMetaId: 'self',
+          toGlobalMetaId: 'provider',
+        })}
         selfGlobalMetaId="self"
       />,
     )
@@ -150,7 +159,10 @@ describe('MessageBubble', () => {
   it('renders compact asset previews inside delivery messages', () => {
     render(
       <MessageBubble
-        message={message('[DELIVERY:order-1] {"result":"Done","assets":["metafile://pin.png","metafile://pin.png"]}')}
+        message={message('[DELIVERY:order-1] {"result":"Done","assets":["metafile://pin.png","metafile://pin.png"]}', {
+          fromGlobalMetaId: 'self',
+          toGlobalMetaId: 'provider',
+        })}
         selfGlobalMetaId="self"
       />,
     )
@@ -159,15 +171,21 @@ describe('MessageBubble', () => {
     expect(screen.getAllByRole('link', { name: '下载' })).toHaveLength(1)
   })
 
-  it('renders completion and rating-reserved messages with distinct accessible labels', () => {
+  it('renders caller completion and rating-reserved messages with distinct accessible labels', () => {
     render(
       <>
         <MessageBubble
-          message={message('[ORDER_END:order-1] Order completed')}
+          message={message('[ORDER_END:order-1] Order completed', {
+            fromGlobalMetaId: 'self',
+            toGlobalMetaId: 'provider',
+          })}
           selfGlobalMetaId="self"
         />
         <MessageBubble
-          message={message('[NeedsRating:order-1] Rating will be requested later')}
+          message={message('[NeedsRating:order-1] Rating will be requested later', {
+            fromGlobalMetaId: 'self',
+            toGlobalMetaId: 'provider',
+          })}
           selfGlobalMetaId="self"
         />
       </>,
@@ -181,7 +199,10 @@ describe('MessageBubble', () => {
   it('keeps NeedsRating as a reserved status without rendering rating UI', () => {
     render(
       <MessageBubble
-        message={message('[NeedsRating:order-1] Rating will be requested later')}
+        message={message('[NeedsRating:order-1] Rating will be requested later', {
+          fromGlobalMetaId: 'self',
+          toGlobalMetaId: 'provider',
+        })}
         selfGlobalMetaId="self"
       />,
     )

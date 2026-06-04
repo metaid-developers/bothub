@@ -148,7 +148,7 @@ describe('DeliveryStatusTimeline', () => {
     expect(screen.queryByText('U2FsdGVkX1rawcipher')).not.toBeInTheDocument()
   })
 
-  it('renders an All conversation timeline with buyer-readable message bubbles', () => {
+  it('renders an All conversation timeline with peer message bubbles', () => {
     render(
       <DeliveryStatusTimeline
         order={null}
@@ -178,13 +178,69 @@ describe('DeliveryStatusTimeline', () => {
 
     expect(screen.getByText('Render Bot')).toBeInTheDocument()
     expect(screen.getByText('I can start now.')).toBeInTheDocument()
-    const deliveryCard = screen.getByLabelText('交付成果')
-    expect(within(deliveryCard).getByText('Ready metafile://image.png')).toBeInTheDocument()
-    expect(within(deliveryCard).getByText('1 个成果')).toBeInTheDocument()
-    expect(screen.getByLabelText('image.png')).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: '下载' })).toBeInTheDocument()
-    expect(screen.queryByText('[DELIVERY:order-pin-1] Ready metafile://image.png')).not.toBeInTheDocument()
+    expect(screen.getByText('[DELIVERY:order-pin-1] Ready metafile://image.png')).toBeInTheDocument()
+    expect(screen.queryByLabelText('交付成果')).not.toBeInTheDocument()
     expect(screen.queryByText('交付进度')).not.toBeInTheDocument()
+  })
+
+  it('shows provider protocol messages as peer chat bubbles in All mode', () => {
+    render(
+      <DeliveryStatusTimeline
+        order={null}
+        messages={[
+          message({
+            id: 'status-1',
+            peerName: 'Render Bot',
+            fromGlobalMetaId: 'idqprovider',
+            toGlobalMetaId: 'idqbuyer',
+            content: '[ORDER_STATUS:order-pin-1] Working on the render',
+            rawContent: '[ORDER_STATUS:order-pin-1] Working on the render',
+            timestamp: 1,
+          }),
+          message({
+            id: 'delivery-1',
+            peerName: 'Render Bot',
+            fromGlobalMetaId: 'idqprovider',
+            toGlobalMetaId: 'idqbuyer',
+            content: '[DELIVERY:order-pin-1] Ready metafile://image.png',
+            rawContent: '[DELIVERY:order-pin-1] Ready metafile://image.png',
+            timestamp: 2,
+          }),
+          message({
+            id: 'end-1',
+            peerName: 'Render Bot',
+            fromGlobalMetaId: 'idqprovider',
+            toGlobalMetaId: 'idqbuyer',
+            content: '[ORDER_END:order-pin-1] Completed',
+            rawContent: '[ORDER_END:order-pin-1] Completed',
+            timestamp: 3,
+          }),
+          message({
+            id: 'rating-1',
+            peerName: 'Render Bot',
+            fromGlobalMetaId: 'idqprovider',
+            toGlobalMetaId: 'idqbuyer',
+            content: '[NeedsRating:order-pin-1] Rating will be requested later',
+            rawContent: '[NeedsRating:order-pin-1] Rating will be requested later',
+            timestamp: 4,
+          }),
+        ]}
+        selfGlobalMetaId="idqbuyer"
+        mode="all"
+      />,
+    )
+
+    expect(screen.getAllByText('Render Bot')).toHaveLength(4)
+    expect(screen.getByText('[ORDER_STATUS:order-pin-1] Working on the render')).toBeInTheDocument()
+    expect(screen.getByText('[DELIVERY:order-pin-1] Ready metafile://image.png')).toBeInTheDocument()
+    expect(screen.getByText('[ORDER_END:order-pin-1] Completed')).toBeInTheDocument()
+    expect(
+      screen.getByText('[NeedsRating:order-pin-1] Rating will be requested later'),
+    ).toBeInTheDocument()
+    expect(screen.queryByRole('status', { name: '交付状态更新' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('status', { name: '订单已完成' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('status', { name: '评价待开放' })).not.toBeInTheDocument()
+    expect(screen.queryByLabelText('交付成果')).not.toBeInTheDocument()
   })
 
   it('renders a safe placeholder for decrypt gaps by default in All mode', () => {
