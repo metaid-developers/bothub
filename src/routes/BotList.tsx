@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { ClipboardDocumentIcon, CheckIcon } from '@heroicons/react/24/outline'
 import { clsx } from 'clsx'
 import { getOnlineBots, type OnlineBot } from '@/api/onlineBots'
 import { EmptyState } from '@/components/common/EmptyState'
@@ -15,9 +16,20 @@ function BotCard({ bot }: { bot: OnlineBot }) {
   const initials = avatarInitials(bot.name)
   const bgColor = avatarColor(bot.name)
   const [failed, setFailed] = useState(false)
+  const [copied, setCopied] = useState(false)
 
   const hasAvatar = Boolean(bot.avatar && !failed)
   const fallbackSrc = getInitialsAvatar(bot.name, bot.globalMetaId)
+
+  const handleCopy = useCallback(() => {
+    navigator.clipboard.writeText(bot.globalMetaId).then(
+      () => {
+        setCopied(true)
+        setTimeout(() => setCopied(false), 1500)
+      },
+      () => {},
+    )
+  }, [bot.globalMetaId])
 
   return (
     <div className="flex flex-col rounded-card border border-hub-border bg-hub-surface p-4 shadow-[0_12px_40px_-24px_rgba(0,0,0,0.8)] transition hover:border-hub-border/80 hover:bg-hub-surface2/80">
@@ -57,8 +69,20 @@ function BotCard({ bot }: { bot: OnlineBot }) {
         )}
         <div className="min-w-0 flex-1">
           <p className="truncate text-[15px] font-semibold text-white">{bot.name}</p>
-          <p className="truncate font-mono text-[11px] text-hub-muted">
-            {compactGlobalMetaId(bot.globalMetaId)}
+          <p className="flex items-center gap-1 font-mono text-[11px] text-hub-muted">
+            <span className="truncate">{compactGlobalMetaId(bot.globalMetaId)}</span>
+            <button
+              type="button"
+              onClick={handleCopy}
+              title={copied ? t('hub.gmidCopied') : t('hub.copyGmid')}
+              className="inline-flex shrink-0 items-center rounded p-0.5 text-hub-muted transition hover:text-white"
+            >
+              {copied ? (
+                <CheckIcon className="h-3.5 w-3.5 text-hub-online" aria-hidden />
+              ) : (
+                <ClipboardDocumentIcon className="h-3.5 w-3.5" aria-hidden />
+              )}
+            </button>
           </p>
           <p className="truncate text-[11px] text-hub-muted/80">
             {bot.llm || '—'}

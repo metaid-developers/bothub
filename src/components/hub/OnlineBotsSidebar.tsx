@@ -1,5 +1,6 @@
-import { useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { ClipboardDocumentIcon, CheckIcon } from '@heroicons/react/24/outline'
 import { clsx } from 'clsx'
 import type { SkillServiceListItem } from '@/api/aggregator.types'
 import { EmptyState } from '@/components/common/EmptyState'
@@ -101,6 +102,35 @@ function BotAvatar({ name, avatar, gmid }: { name: string; avatar: string | null
   )
 }
 
+function CopyGmidButton({ globalMetaId }: { globalMetaId: string }) {
+  const [copied, setCopied] = useState(false)
+
+  const handleCopy = useCallback(() => {
+    navigator.clipboard.writeText(globalMetaId).then(
+      () => {
+        setCopied(true)
+        setTimeout(() => setCopied(false), 1500)
+      },
+      () => {},
+    )
+  }, [globalMetaId])
+
+  return (
+    <button
+      type="button"
+      onClick={handleCopy}
+      title={copied ? t('hub.gmidCopied') : t('hub.copyGmid')}
+      className="inline-flex shrink-0 items-center rounded p-0.5 text-hub-muted transition hover:text-white"
+    >
+      {copied ? (
+        <CheckIcon className="h-3.5 w-3.5 text-hub-online" aria-hidden />
+      ) : (
+        <ClipboardDocumentIcon className="h-3.5 w-3.5" aria-hidden />
+      )}
+    </button>
+  )
+}
+
 export interface OnlineBotsSidebarProps {
   services: SkillServiceListItem[]
   className?: string
@@ -143,8 +173,9 @@ export function OnlineBotsSidebar({ services, className, id }: OnlineBotsSidebar
                   <p className="truncate text-sm font-medium text-white">
                     {bot.providerName}
                   </p>
-                  <p className="truncate font-mono text-[11px] text-hub-muted">
-                    {compactGlobalMetaId(bot.providerGlobalMetaId)}
+                  <p className="flex items-center gap-1 font-mono text-[11px] text-hub-muted">
+                    <span className="truncate">{compactGlobalMetaId(bot.providerGlobalMetaId)}</span>
+                    <CopyGmidButton globalMetaId={bot.providerGlobalMetaId} />
                   </p>
                   <p className="truncate text-[11px] text-hub-muted/80">
                     {bot.providerLLM || '—'}

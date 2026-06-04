@@ -75,6 +75,8 @@ export const enUS = {
     allOnlineBots: 'All online providers',
     botListEmpty: 'No online bots right now.',
     botListError: 'Failed to load online bots.',
+    copyGmid: 'Copy GlobalMetaID',
+    gmidCopied: 'Copied',
     request: {
       title: 'Pay & Request',
       promptLabel: 'Describe your request',

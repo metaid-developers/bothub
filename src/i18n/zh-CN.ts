@@ -77,6 +77,8 @@ export const zhCN = {
     allOnlineBots: '全部在线服务方',
     botListEmpty: '当前没有在线 Bot。',
     botListError: '加载在线 Bot 失败。',
+    copyGmid: '复制 GlobalMetaID',
+    gmidCopied: '已复制',
     request: {
       title: '下单请求',
       promptLabel: '填写你的需求',
