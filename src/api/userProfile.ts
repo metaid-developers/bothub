@@ -1,6 +1,7 @@
 import { getNormalizedMetaSocketBaseUrl } from '@/api/config'
 
-const DEFAULT_METAID_AVATAR_CONTENT_BASE = 'https://man.metaid.io/content'
+const FILE_METAID_BASE = 'https://file.metaid.io'
+const FILE_METAID_CONTENT_BASE = `${FILE_METAID_BASE}/metafile-indexer/api/v1/files/content`
 
 export interface UserProfile {
   metaid?: string
@@ -56,13 +57,7 @@ function pinIdFromMetafileAvatar(avatar: string): string | undefined {
 }
 
 function avatarThumbnailUrl(pinId: string): string {
-  return `${DEFAULT_METAID_AVATAR_CONTENT_BASE}/${encodeURIComponent(pinId)}`
-}
-
-function isMetaSocketRelativeAvatarPath(avatar: string): boolean {
-  return /^\/(?:api\/v1\/|users\/avatar\/accelerate\/|metafile-indexer\/|files\/content\/)/i.test(
-    avatar,
-  )
+  return `${FILE_METAID_CONTENT_BASE}/${encodeURIComponent(pinId)}`
 }
 
 export function normalizeAvatarUrl(
@@ -71,32 +66,34 @@ export function normalizeAvatarUrl(
 ): string | undefined {
   const avatar = value?.trim()
   const avatarId = avatarIdValue?.trim()
-  const pinId =
-    (avatar?.toLowerCase().startsWith('metafile://')
-      ? pinIdFromMetafileAvatar(avatar)
-      : extractAvatarPinId(avatar)) ??
-    extractAvatarPinId(avatarId) ??
-    avatarId
 
-  if (pinId) return avatarThumbnailUrl(pinId)
-  if (!avatar || /^\/(?:files\/)?content\/?$/i.test(avatar)) return undefined
-  if (/^https?:\/\//i.test(avatar)) {
+  if (!avatar && !avatarId) return undefined
+  if (avatar && /^\/(?:files\/)?content\/?$/i.test(avatar)) return undefined
+
+  if (avatar && /^https?:\/\//i.test(avatar)) {
     if (/\/content\/?$/i.test(avatar)) return undefined
     return avatar
   }
-  if (avatar.startsWith('/content/')) {
-    return `${getNormalizedMetaSocketBaseUrl()}${avatar}`
+  if (avatar?.startsWith('data:')) return avatar
+
+  if (avatar?.toLowerCase().startsWith('metafile://')) {
+    const pinId = pinIdFromMetafileAvatar(avatar)
+    if (pinId) return avatarThumbnailUrl(pinId)
+    return undefined
   }
-  if (isMetaSocketRelativeAvatarPath(avatar)) {
-    return `${getNormalizedMetaSocketBaseUrl()}${avatar}`
+
+  const pinIdFromValue = extractAvatarPinId(avatar) ?? extractAvatarPinId(avatarId) ?? avatarId
+  if (pinIdFromValue) return avatarThumbnailUrl(pinIdFromValue)
+
+  if (avatar?.startsWith('/')) {
+    return `${FILE_METAID_BASE}${avatar}`
   }
-  if (avatar.startsWith('/')) {
-    return `https://file.metaid.io${avatar}`
+
+  const hexOnly = avatar?.match(/^[a-fA-F0-9]{64}$/)
+  if (hexOnly?.[0]) {
+    return `${FILE_METAID_CONTENT_BASE}/${hexOnly[0]}`
   }
-  const pinIdHexOnly = avatar.match(/^[a-fA-F0-9]{64}$/)
-  if (pinIdHexOnly?.[0]) {
-    return avatarThumbnailUrl(pinIdHexOnly[0])
-  }
+
   return avatar
 }
 
@@ -165,8 +162,6 @@ function avatarNeedsAddressFallback(
   if (!avatarUrl) return true
   if (/\/content\/?$/.test(avatarUrl)) return true
   if (avatarUrl.includes('/users/avatar/accelerate/')) return true
-  if (avatarUrl.includes('file.metaid.io/metafile-indexer/content/')) return true
-  if (avatarUrl.includes('file.metaid.io/metafile-indexer/api/v1/files/content/')) return true
   return false
 }
 

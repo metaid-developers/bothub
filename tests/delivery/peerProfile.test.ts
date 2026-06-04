@@ -8,7 +8,7 @@ import {
 
 describe('peerProfile', () => {
   const avatarPin = `${'a'.repeat(64)}i0`
-  const expectedAvatarUrl = `https://man.metaid.io/content/${avatarPin}`
+  const expectedAvatarUrl = `https://file.metaid.io/metafile-indexer/api/v1/files/content/${avatarPin}`
 
   beforeEach(() => {
     vi.stubEnv('VITE_META_SOCKET_BASE_URL', '/meta-socket/')
