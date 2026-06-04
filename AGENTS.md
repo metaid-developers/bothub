@@ -2,6 +2,11 @@
 
 This file provides guidance to AI coding agents working in this repository.
 
+> **每次修改完成后的强制流程：**
+> 1. 按功能拆分 commit，格式 `<type>: <short description>`（type: feat/fix/refactor/docs/chore）
+> 2. 每次 commit 后立即用 `metabot-post-buzz` skill + Lisa Hahn（`--from lisa-hahn`）发布链上开发日志
+> 3. 完成前确认 `git status` 无遗漏、`typecheck` `lint` `test` 全部通过
+
 ## Project Context
 
 BotHub is a public caller-side React SPA for browsing remote `skill-service`
