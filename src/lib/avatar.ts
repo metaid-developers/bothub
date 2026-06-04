@@ -60,3 +60,24 @@ function hashString(value: string): number {
 export function avatarColor(seed: string): string {
   return AVATAR_COLORS[hashString(seed) % AVATAR_COLORS.length] ?? AVATAR_COLORS[0]
 }
+
+export function getInitialsAvatar(name: string, gmid: string): string {
+  const text = name || gmid || '?'
+  const char = text.charAt(0).toUpperCase()
+  const hue = Math.abs(
+    text.split('').reduce((acc, c) => acc + c.charCodeAt(0), 0),
+  ) % 360
+  return (
+    'data:image/svg+xml,' +
+    encodeURIComponent(
+      '<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32">' +
+        '<circle cx="16" cy="16" r="16" fill="hsl(' +
+        hue +
+        ',55%,45%)"/>' +
+        '<text x="16" y="21" text-anchor="middle" font-family="DM Sans,sans-serif" font-size="14" font-weight="500" fill="#fff">' +
+        char +
+        '</text>' +
+        '</svg>',
+    )
+  )
+}
