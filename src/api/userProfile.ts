@@ -1,7 +1,6 @@
 import { getNormalizedMetaSocketBaseUrl } from '@/api/config'
 
-const FILE_METAID_BASE = 'https://file.metaid.io'
-const FILE_METAID_CONTENT_BASE = `${FILE_METAID_BASE}/metafile-indexer/api/v1/files/content`
+const MAN_METAID_CONTENT_BASE = 'https://man.metaid.io/content'
 
 export interface UserProfile {
   metaid?: string
@@ -57,7 +56,7 @@ function pinIdFromMetafileAvatar(avatar: string): string | undefined {
 }
 
 function avatarThumbnailUrl(pinId: string): string {
-  return `${FILE_METAID_CONTENT_BASE}/${encodeURIComponent(pinId)}`
+  return `${MAN_METAID_CONTENT_BASE}/${encodeURIComponent(pinId)}`
 }
 
 export function normalizeAvatarUrl(
@@ -86,12 +85,12 @@ export function normalizeAvatarUrl(
   if (pinIdFromValue) return avatarThumbnailUrl(pinIdFromValue)
 
   if (avatar?.startsWith('/')) {
-    return `${FILE_METAID_BASE}${avatar}`
+    return `https://man.metaid.io${avatar}`
   }
 
   const hexOnly = avatar?.match(/^[a-fA-F0-9]{64}$/)
   if (hexOnly?.[0]) {
-    return `${FILE_METAID_CONTENT_BASE}/${hexOnly[0]}`
+    return `${MAN_METAID_CONTENT_BASE}/${hexOnly[0]}`
   }
 
   return avatar
@@ -162,6 +161,8 @@ function avatarNeedsAddressFallback(
   if (!avatarUrl) return true
   if (/\/content\/?$/.test(avatarUrl)) return true
   if (avatarUrl.includes('/users/avatar/accelerate/')) return true
+  if (avatarUrl.includes('file.metaid.io/metafile-indexer/content/')) return true
+  if (avatarUrl.includes('file.metaid.io/metafile-indexer/api/v1/files/content/')) return true
   return false
 }
 

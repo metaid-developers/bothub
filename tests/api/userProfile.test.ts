@@ -7,7 +7,7 @@ async function loadUserProfile() {
 describe('user profile API client', () => {
   const avatarPin = `${'a'.repeat(64)}i0`
   const fallbackAvatarPin = `${'b'.repeat(64)}i0`
-  const expectedAvatarContent = `https://file.metaid.io/metafile-indexer/api/v1/files/content/${avatarPin}`
+  const expectedAvatarContent = `https://man.metaid.io/content/${avatarPin}`
 
   beforeEach(() => {
     vi.stubEnv('VITE_META_SOCKET_BASE_URL', '/meta-socket/')
@@ -111,7 +111,7 @@ describe('user profile API client', () => {
 
   it('normalizes delivery avatar URL variants to MetaID content URLs', async () => {
     const pinId = `${'c'.repeat(64)}i0`
-    const expected = `https://file.metaid.io/metafile-indexer/api/v1/files/content/${pinId}`
+    const expected = `https://man.metaid.io/content/${pinId}`
 
     const { normalizeAvatarUrl } = await loadUserProfile()
 
@@ -130,10 +130,10 @@ describe('user profile API client', () => {
     const { normalizeAvatarUrl } = await loadUserProfile()
 
     expect(normalizeAvatarUrl('/metafile-indexer/content/avatar-image.png')).toBe(
-      'https://file.metaid.io/metafile-indexer/content/avatar-image.png',
+      'https://man.metaid.io/metafile-indexer/content/avatar-image.png',
     )
     expect(normalizeAvatarUrl('/api/v1/files/content/avatar-image.png')).toBe(
-      'https://file.metaid.io/api/v1/files/content/avatar-image.png',
+      'https://man.metaid.io/api/v1/files/content/avatar-image.png',
     )
   })
 
@@ -353,9 +353,9 @@ describe('user profile API client', () => {
     const { fetchUserProfileByGlobalMetaId } = await loadUserProfile()
     const profile = await fetchUserProfileByGlobalMetaId('global-file-metaid-fallback')
 
-    expect(fetchMock).toHaveBeenCalledTimes(1)
+    expect(fetchMock).toHaveBeenCalledTimes(2)
     expect(profile.avatarUrl).toBe(
-      `https://file.metaid.io/metafile-indexer/content/${avatarPin}`,
+      `https://man.metaid.io/content/${fallbackAvatarPin}`,
     )
   })
 
