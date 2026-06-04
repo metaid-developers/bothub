@@ -57,6 +57,7 @@ vi.mock('@/api/userProfile', async () => {
 const SELF = 'idqself'
 const MVC_SELF = '1SelfMvcAddress'
 const PEER = 'idqprovider'
+const PEER_ADDRESS = '1ProviderAddress'
 const wallet: WalletIdentity = {
   globalMetaId: SELF,
   mvcAddress: MVC_SELF,
@@ -698,6 +699,116 @@ describe('deliverySync', () => {
     expect(await getSyncState(`${SELF}:${secondPeer}`)).toEqual(
       expect.objectContaining({ cursor: 'second-cursor' }),
     )
+  })
+
+  it('syncs private chat history for both wallet globalMetaId and MVC address identities', async () => {
+    mockedHomes.mockImplementation(async (metaId) => {
+      if (metaId === SELF) {
+        return [{ metaId: 'idqglobalpeer', globalMetaId: 'idqglobalpeer' }]
+      }
+      if (metaId === MVC_SELF) {
+        return [{ metaId: PEER_ADDRESS, globalMetaId: PEER_ADDRESS }]
+      }
+      return []
+    })
+    mockedHistory.mockImplementation(async ({ metaId, otherMetaId }) => ({
+      list: [
+        privateChatItem({
+          fromGlobalMetaId: otherMetaId,
+          toGlobalMetaId: metaId,
+          pinId: `pin-${otherMetaId}`,
+          content: `[ORDER_STATUS:order-${otherMetaId}] Synced`,
+        }),
+      ],
+      nextCursor: `cursor-${otherMetaId}`,
+      nextTimestamp: 1_700_000_000_000,
+    }))
+
+    const result = await syncKnownPrivateChatHistory(wallet)
+
+    expect(mockedHomes).toHaveBeenCalledWith(SELF)
+    expect(mockedHomes).toHaveBeenCalledWith(MVC_SELF)
+    expect(mockedHistory).toHaveBeenCalledWith({
+      metaId: SELF,
+      otherMetaId: 'idqglobalpeer',
+      cursor: '',
+      size: 50,
+    })
+    expect(mockedHistory).toHaveBeenCalledWith({
+      metaId: MVC_SELF,
+      otherMetaId: PEER_ADDRESS,
+      cursor: '',
+      size: 50,
+    })
+    expect(result.syncedPeers).toEqual(['idqglobalpeer', PEER_ADDRESS])
+    expect(useMessageStore.getState().messagesForSession('idqglobalpeer:order-idqglobalpeer', SELF)).toEqual([
+      expect.objectContaining({ id: 'pin-idqglobalpeer' }),
+    ])
+    expect(useMessageStore.getState().messagesForSession(`${PEER_ADDRESS}:order-${PEER_ADDRESS}`, SELF)).toEqual([
+      expect.objectContaining({ id: `pin-${PEER_ADDRESS}` }),
+    ])
+  })
+
+  it('canonicalizes provider address messages to the provider globalMetaId before storing', async () => {
+    await putOrder({
+      id: `${SELF}:${PEER}:order-sync`,
+      walletGlobalMetaId: SELF,
+      providerGlobalMetaId: PEER,
+      providerChatPubkey: 'provider-chat-key',
+      providerName: 'Provider Bot',
+      providerAvatarUrl: 'https://cdn.example/provider.png',
+      serviceId: 'svc-delivery',
+      serviceName: 'Delivery Skill',
+      skillName: 'delivery-skill',
+      outputType: 'text',
+      rawRequest: 'Run this delivery',
+      displaySummary: 'Run this delivery',
+      price: '0',
+      currency: 'SPACE',
+      settlementKind: 'native',
+      paymentChain: 'mvc',
+      orderPinId: 'order-sync',
+      status: 'waiting',
+      createdAt: 1_700_000_000_000,
+      updatedAt: 1_700_000_000_000,
+    })
+    mockedFetchUserProfileByGlobalMetaId.mockResolvedValue({
+      globalMetaId: PEER,
+      address: PEER_ADDRESS,
+      name: 'Provider Bot',
+      avatarUrl: 'https://cdn.example/provider.png',
+      chatPubkey: 'provider-chat-key',
+    })
+
+    await mergePrivateChatItem({
+      item: privateChatItem({
+        fromGlobalMetaId: PEER_ADDRESS,
+        toGlobalMetaId: SELF,
+        fromUserInfo: undefined,
+        pinId: 'pin-provider-address-delivery',
+        content: '[DELIVERY:order-sync] {"result":"Ready"}',
+      }),
+      selfGlobalMetaId: SELF,
+      walletIdentity: wallet,
+    })
+
+    expect(mockedFetchUserProfileByGlobalMetaId).toHaveBeenCalledWith(PEER_ADDRESS)
+    expect(useMessageStore.getState().messagesForSession(`${PEER}:order-sync`, SELF)).toEqual([
+      expect.objectContaining({
+        id: 'pin-provider-address-delivery',
+        peerGlobalMetaId: PEER,
+        fromGlobalMetaId: PEER,
+        orderCorrelationId: 'order-sync',
+      }),
+    ])
+    expect(useMessageStore.getState().messagesForSession(`${PEER_ADDRESS}:order-sync`, SELF)).toEqual([])
+    expect(await getMessagesForSession(`${SELF}:${PEER}:order-sync`)).toEqual([
+      expect.objectContaining({
+        id: 'pin-provider-address-delivery',
+        peerGlobalMetaId: PEER,
+        orderCorrelationId: 'order-sync',
+      }),
+    ])
   })
 
   it('does not advance sync state when history merge cannot persist', async () => {

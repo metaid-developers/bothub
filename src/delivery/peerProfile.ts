@@ -2,6 +2,7 @@ import { normalizeAvatarUrl, type UserProfile } from '@/api/userProfile'
 import type { PrivateChatUserInfo } from '@/ws/privateChat'
 
 export interface PeerProfile {
+  globalMetaId?: string
   chatPubkey?: string
   name?: string
   avatarUrl?: string
@@ -19,6 +20,7 @@ export function mergePeerProfiles(
   const merged: PeerProfile = {}
   for (const profile of profiles) {
     if (!profile) continue
+    merged.globalMetaId ||= cleanString(profile.globalMetaId)
     merged.chatPubkey ||= cleanString(profile.chatPubkey)
     merged.name ||= cleanString(profile.name)
     merged.avatarUrl ||= cleanString(profile.avatarUrl)
@@ -37,6 +39,9 @@ export function peerProfileFromPrivateChatUserInfo(
   if (!info) return {}
 
   const profile: PeerProfile = {}
+  const globalMetaId =
+    cleanString(info.globalMetaId) ??
+    cleanString(info.globalmetaid)
   const chatPubkey =
     cleanString(info.chatPublicKey) ??
     cleanString(info.chatPubkey) ??
@@ -49,6 +54,7 @@ export function peerProfileFromPrivateChatUserInfo(
     cleanString(info.avatarId) ?? cleanString(info.avatarPinId),
   )
 
+  if (globalMetaId) profile.globalMetaId = globalMetaId
   if (chatPubkey) profile.chatPubkey = chatPubkey
   if (name) profile.name = name
   if (avatarUrl) profile.avatarUrl = avatarUrl
@@ -57,6 +63,7 @@ export function peerProfileFromPrivateChatUserInfo(
 
 export function peerProfileFromUserProfile(profile: UserProfile): PeerProfile {
   const peerProfile: PeerProfile = {}
+  const globalMetaId = cleanString(profile.globalMetaId)
   const chatPubkey = cleanString(profile.chatPubkey)
   const name = cleanString(profile.name)
   const avatarUrl = normalizeAvatarUrl(
@@ -66,6 +73,7 @@ export function peerProfileFromUserProfile(profile: UserProfile): PeerProfile {
     cleanString(profile.avatarId) ?? cleanString(profile.avatarPinId),
   )
 
+  if (globalMetaId) peerProfile.globalMetaId = globalMetaId
   if (chatPubkey) peerProfile.chatPubkey = chatPubkey
   if (name) peerProfile.name = name
   if (avatarUrl) peerProfile.avatarUrl = avatarUrl

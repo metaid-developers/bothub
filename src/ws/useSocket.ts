@@ -29,7 +29,8 @@ interface SocketState {
   injectMockEnvelope: (envelope: SocketEnvelope, identity: SocketIdentityInput) => void
 }
 
-let activeController: SocketController | null = null
+let activeControllers: SocketController[] = []
+let activeConnectionStatuses = new Map<string, SocketConnectionStatus>()
 
 function pushDebugLine(lines: string[], line: string): string[] {
   const next = [...lines, line]
@@ -45,6 +46,39 @@ function identityFromInput(input: SocketIdentityInput): WalletIdentity {
     btcAddress: '',
     dogeAddress: '',
   }
+}
+
+function socketMetaIdsForIdentity(identity: WalletIdentity): string[] {
+  return Array.from(
+    new Set(
+      [identity.globalMetaId, identity.mvcAddress]
+        .map((value) => value.trim())
+        .filter(Boolean),
+    ),
+  )
+}
+
+function socketConnectionKey(identity: WalletIdentity): string {
+  return socketMetaIdsForIdentity(identity).join('|')
+}
+
+function disconnectActiveControllers(): void {
+  for (const controller of activeControllers) {
+    controller.disconnect()
+  }
+  activeControllers = []
+  activeConnectionStatuses = new Map()
+}
+
+function aggregateSocketStatus(): SocketConnectionStatus {
+  const statuses = Array.from(activeConnectionStatuses.values())
+  if (statuses.some((status) => status === 'error')) return 'error'
+  if (statuses.length > 0 && statuses.every((status) => status === 'connected')) {
+    return 'connected'
+  }
+  if (statuses.some((status) => status === 'connecting')) return 'connecting'
+  if (statuses.some((status) => status === 'connected')) return 'connected'
+  return 'disconnected'
 }
 
 function isPrivateChatForIdentity(
@@ -111,14 +145,15 @@ export const useSocket = create<SocketState>()((set, get) => ({
   connect: (identityInput) => {
     const identity = identityFromInput(identityInput)
     const gmid = identity.globalMetaId.trim()
+    const socketMetaIds = socketMetaIdsForIdentity(identity)
+    const connectionKey = socketConnectionKey(identity)
     if (!gmid) return
 
     if (isWsMockEnabled()) {
-      activeController?.disconnect()
-      activeController = null
+      disconnectActiveControllers()
       set({
         status: 'connected',
-        connectedGlobalMetaId: gmid,
+        connectedGlobalMetaId: connectionKey,
         connectedIdentity: identity,
         lastError: null,
       })
@@ -126,26 +161,33 @@ export const useSocket = create<SocketState>()((set, get) => ({
       return
     }
 
-    if (get().connectedGlobalMetaId === gmid && get().status === 'connected') {
+    if (get().connectedGlobalMetaId === connectionKey && get().status === 'connected') {
       return
     }
 
-    activeController?.disconnect()
-    activeController = connectSocket({
-      globalMetaId: gmid,
-      onEnvelope: (envelope) => {
-        void get().handleEnvelope(envelope, identity)
-      },
-      onStatus: (status) => set({ status }),
-      onError: (message) => set({ lastError: message }),
-    })
+    disconnectActiveControllers()
+    activeConnectionStatuses = new Map(
+      socketMetaIds.map((metaId) => [metaId, 'connecting' as SocketConnectionStatus]),
+    )
+    activeControllers = socketMetaIds.map((metaId) =>
+      connectSocket({
+        globalMetaId: metaId,
+        onEnvelope: (envelope) => {
+          void get().handleEnvelope(envelope, identity)
+        },
+        onStatus: (status) => {
+          activeConnectionStatuses.set(metaId, status)
+          set({ status: aggregateSocketStatus() })
+        },
+        onError: (message) => set({ lastError: message }),
+      }),
+    )
 
-    set({ connectedGlobalMetaId: gmid, connectedIdentity: identity, lastError: null })
+    set({ connectedGlobalMetaId: connectionKey, connectedIdentity: identity, lastError: null })
   },
 
   disconnect: () => {
-    activeController?.disconnect()
-    activeController = null
+    disconnectActiveControllers()
     set({
       status: 'disconnected',
       connectedGlobalMetaId: null,

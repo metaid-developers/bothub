@@ -120,7 +120,11 @@ describe('useSocket delivery persistence', () => {
         to: SELF,
         protocol: '/protocols/simplemsg',
         encrypt: 'ecdh',
-        fromUserInfo: { chatPubkey: 'provider-chat-key' },
+        fromUserInfo: {
+          chatPubkey: 'provider-chat-key',
+          name: 'Provider Bot',
+          avatarUrl: 'https://cdn.example/provider.png',
+        },
         content:
           '[DELIVERY:socket-live] {"result":"Ready","assets":["metafile://live.png"]}',
         contentType: 'text/plain',

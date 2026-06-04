@@ -67,6 +67,20 @@ function selfAliasesForWallet(identity: WalletIdentity): string[] {
   )
 }
 
+function privateChatMetaIdsForWallet(identity: WalletIdentity): string[] {
+  return Array.from(
+    new Set(
+      [
+        identity.globalMetaId,
+        resolvePrivateChatMetaId(identity),
+        identity.mvcAddress,
+      ]
+        .map((value) => value.trim())
+        .filter(Boolean),
+    ),
+  )
+}
+
 function isSelfAlias(value: string, aliases: ReadonlySet<string>): boolean {
   return aliases.has(value.trim())
 }
@@ -313,6 +327,7 @@ async function privateChatToDeliveryMessage(input: {
     cache: input.peerChatPublicKeyCache ?? new Map(),
     pushDebug: input.pushDebug,
   })
+  const canonicalPeerGlobalMetaId = peerProfile.globalMetaId?.trim() || peerGlobalMetaId
   const peerChatPubKey = peerProfile.chatPubkey
   const rawContent = input.item.content
   const { plaintext, error } = await decryptIncoming({
@@ -329,13 +344,17 @@ async function privateChatToDeliveryMessage(input: {
 
   const fromGlobalMetaId = isSelfAlias(input.item.fromGlobalMetaId, selfAliasSet)
     ? self
-    : input.item.fromGlobalMetaId.trim()
+    : input.item.fromGlobalMetaId.trim() === peerGlobalMetaId
+      ? canonicalPeerGlobalMetaId
+      : input.item.fromGlobalMetaId.trim()
   const toGlobalMetaId = isSelfAlias(input.item.toGlobalMetaId, selfAliasSet)
     ? self
-    : input.item.toGlobalMetaId.trim()
+    : input.item.toGlobalMetaId.trim() === peerGlobalMetaId
+      ? canonicalPeerGlobalMetaId
+      : input.item.toGlobalMetaId.trim()
   const replyOrderCorrelationId = await resolveReplyOrderCorrelationId({
     walletGlobalMetaId: self,
-    peerGlobalMetaId,
+    peerGlobalMetaId: canonicalPeerGlobalMetaId,
     replyPin: input.item.replyPin,
   })
   const content = plaintext || rawContent
@@ -343,13 +362,13 @@ async function privateChatToDeliveryMessage(input: {
     replyOrderCorrelationId ||
     (await resolveKnownOrderCorrelationId({
       walletGlobalMetaId: self,
-      peerGlobalMetaId,
+      peerGlobalMetaId: canonicalPeerGlobalMetaId,
       content,
     }))
 
   return {
     id: messageIdFromPrivateChat(input.item),
-    peerGlobalMetaId,
+    peerGlobalMetaId: canonicalPeerGlobalMetaId,
     peerChatPubkey: peerChatPubKey,
     peerName: peerProfile.name,
     peerAvatarUrl: peerProfile.avatarUrl,
@@ -401,82 +420,113 @@ export async function syncKnownPrivateChatHistory(
     failedPeers: [],
   }
   const walletGlobalMetaId = identity.globalMetaId.trim()
-  const metaId = resolvePrivateChatMetaId(identity).trim()
-  if (!walletGlobalMetaId || !metaId) return summary
+  const metaIds = privateChatMetaIdsForWallet(identity)
+  if (!walletGlobalMetaId || metaIds.length === 0) return summary
 
   const aliases = new Set(selfAliasesForWallet(identity))
-  const homes = await listPrivateChatHomes(metaId)
   const peerChatPublicKeyCache: PeerProfileCache = new Map()
+  const syncedPeerSet = new Set<string>()
+  const failedPeerErrors = new Map<string, unknown>()
+  const requestedPairs = new Set<string>()
 
-  for (const home of homes) {
-    const peerGlobalMetaId = home.globalMetaId.trim() || home.metaId.trim()
-    if (!peerGlobalMetaId || aliases.has(peerGlobalMetaId)) continue
+  const recordFailedPeer = (peerGlobalMetaId: string, error: unknown) => {
+    const peer = peerGlobalMetaId.trim()
+    if (!peer || syncedPeerSet.has(peer)) return
+    if (!failedPeerErrors.has(peer)) failedPeerErrors.set(peer, error)
+  }
 
+  for (const metaId of metaIds) {
+    let homes: Awaited<ReturnType<typeof listPrivateChatHomes>>
     try {
-      let cursor = ''
-      let fullyPersisted = true
-      let persistenceError: unknown
-      let newestTimestamp: number | undefined
+      homes = await listPrivateChatHomes(metaId)
+    } catch (error) {
+      recordFailedPeer(metaId, error)
+      continue
+    }
 
-      // Fetch up to 3 pages (150 messages) per peer.
-      for (let pageIndex = 0; pageIndex < 3; pageIndex++) {
-        const page = await listPrivateChatHistory({
-          metaId,
-          otherMetaId: peerGlobalMetaId,
-          cursor,
-          size: 50,
-        })
+    for (const home of homes) {
+      const peerGlobalMetaId = home.globalMetaId.trim() || home.metaId.trim()
+      if (!peerGlobalMetaId || aliases.has(peerGlobalMetaId)) continue
+      const pairKey = `${metaId}:${peerGlobalMetaId}`
+      if (requestedPairs.has(pairKey)) continue
+      requestedPairs.add(pairKey)
 
-        for (const item of page.list) {
-          const result = await mergePrivateChatItem({
-            item,
-            selfGlobalMetaId: walletGlobalMetaId,
-            walletIdentity: identity,
-            peerChatPublicKeyCache,
+      try {
+        let cursor = ''
+        let fullyPersisted = true
+        let persistenceError: unknown
+        let newestTimestamp: number | undefined
+
+        // Fetch up to 3 pages (150 messages) per peer.
+        for (let pageIndex = 0; pageIndex < 3; pageIndex++) {
+          const page = await listPrivateChatHistory({
+            metaId,
+            otherMetaId: peerGlobalMetaId,
+            cursor,
+            size: 50,
           })
-          if (!result.persisted) {
-            fullyPersisted = false
-            persistenceError = result.persistenceError
+
+          for (const item of page.list) {
+            const result = await mergePrivateChatItem({
+              item,
+              selfGlobalMetaId: walletGlobalMetaId,
+              walletIdentity: identity,
+              peerChatPublicKeyCache,
+            })
+            if (!result.persisted) {
+              fullyPersisted = false
+              persistenceError = result.persistenceError
+            }
           }
+
+          if (page.list.length > 0) {
+            const pageNewest = page.list.reduce<number | undefined>(
+              (max, item) =>
+                max === undefined || item.timestamp > max ? item.timestamp : max,
+              undefined,
+            )
+            if (
+              pageNewest !== undefined &&
+              (newestTimestamp === undefined || pageNewest > newestTimestamp)
+            ) {
+              newestTimestamp = pageNewest
+            }
+          }
+
+          if (!page.nextCursor) break
+          cursor = page.nextCursor
         }
 
-        if (page.list.length > 0) {
-          const pageNewest = page.list.reduce<number | undefined>(
-            (max, item) =>
-              max === undefined || item.timestamp > max ? item.timestamp : max,
-            undefined,
+        if (!fullyPersisted) {
+          recordFailedPeer(
+            peerGlobalMetaId,
+            persistenceError ?? new Error('private chat history was not persisted'),
           )
-          if (pageNewest !== undefined && (newestTimestamp === undefined || pageNewest > newestTimestamp)) {
-            newestTimestamp = pageNewest
-          }
+          continue
         }
 
-        if (!page.nextCursor) break
-        cursor = page.nextCursor
-      }
-
-      if (!fullyPersisted) {
-        summary.failedPeers.push({
+        await putSyncState({
+          id: `${walletGlobalMetaId}:${peerGlobalMetaId}`,
+          walletGlobalMetaId,
           peerGlobalMetaId,
-          error: persistenceError ?? new Error('private chat history was not persisted'),
+          cursor,
+          lastTimestamp: newestTimestamp,
+          updatedAt: Date.now(),
         })
+        if (!syncedPeerSet.has(peerGlobalMetaId)) {
+          syncedPeerSet.add(peerGlobalMetaId)
+          failedPeerErrors.delete(peerGlobalMetaId)
+          summary.syncedPeers.push(peerGlobalMetaId)
+        }
+      } catch (error) {
+        recordFailedPeer(peerGlobalMetaId, error)
         continue
       }
-
-      await putSyncState({
-        id: `${walletGlobalMetaId}:${peerGlobalMetaId}`,
-        walletGlobalMetaId,
-        peerGlobalMetaId,
-        cursor,
-        lastTimestamp: newestTimestamp,
-        updatedAt: Date.now(),
-      })
-      summary.syncedPeers.push(peerGlobalMetaId)
-    } catch (error) {
-      summary.failedPeers.push({ peerGlobalMetaId, error })
-      continue
     }
   }
 
+  summary.failedPeers = Array.from(failedPeerErrors.entries()).map(
+    ([peerGlobalMetaId, error]) => ({ peerGlobalMetaId, error }),
+  )
   return summary
 }
