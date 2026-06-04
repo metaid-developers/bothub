@@ -92,6 +92,20 @@ function deliveryAssetScopeLabel(input: {
     : undefined
 }
 
+function storedConversationIdForSelection(input: {
+  conversation: DeliveryConversation | null
+  selectedOrderThread: ReturnType<typeof selectOrderThread>
+}): string | null {
+  const selectedSessionId = input.selectedOrderThread?.order.sessionId.trim()
+  if (selectedSessionId) return selectedSessionId
+
+  return (
+    input.conversation?.orderThreads
+      .map((thread) => thread.order.sessionId.trim())
+      .find(Boolean) ?? null
+  )
+}
+
 function resolveConversationProviderProfile(
   conversation: DeliveryConversation | null,
   providerProfiles: Record<string, UserProfile>,
@@ -241,6 +255,10 @@ export function DeliveryPage() {
     resolvedRouteSelection.tabId,
   )
   const selectedOrderThread = selectOrderThread(selectedConversation, selectedTab)
+  const selectedStoredConversationId = storedConversationIdForSelection({
+    conversation: selectedConversation,
+    selectedOrderThread,
+  })
 
   const selectedMessages = useMemo(
     () => messagesForConversation(selectedConversation, selectedTab),
@@ -613,7 +631,11 @@ export function DeliveryPage() {
         </aside>
 
         <div className="flex min-h-0 min-w-0 flex-col overflow-hidden md:col-start-2 md:row-start-1">
-          <DeliveryConversationHeader conversation={selectedConversationWithProfile} />
+          <DeliveryConversationHeader
+            conversation={selectedConversationWithProfile}
+            selfGlobalMetaId={selfGlobalMetaId}
+            storedConversationId={selectedStoredConversationId}
+          />
           <DeliveryOrderTabs
             conversation={selectedConversationWithProfile}
             selectedTabId={selectedTab.id}

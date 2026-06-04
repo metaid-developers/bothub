@@ -164,6 +164,12 @@ export const enUS = {
     walletNotConnectedHint: 'Connect Metalet to view and manage delivery records.',
     wsError: 'Connection unavailable',
     wsReconnect: 'Reconnect',
+    conversationId: {
+      label: 'Conversation ID',
+      copy: 'Copy conversation ID',
+      copied: 'Copied',
+      copyFailed: 'Copy failed',
+    },
     workspace: {
       label: 'Delivery workspace',
       conversations: 'Provider conversations',

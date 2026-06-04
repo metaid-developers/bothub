@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { DeliveryPage } from '@/routes/Delivery'
 import { fetchUserProfileByGlobalMetaId } from '@/api/userProfile'
 import { retryDecryptPeerMessages } from '@/delivery/decryptRetry'
-import type { BuyerOrder, DeliveryAssetRecord } from '@/delivery/domain'
+import type { BuyerOrder, DeliveryAssetRecord, DeliverySessionRecord } from '@/delivery/domain'
 import type { DeliveryMessage } from '@/delivery/messageStore'
 import type { WalletIdentity } from '@/wallet/types'
 
@@ -138,6 +138,26 @@ function deliveryAsset(overrides: Partial<DeliveryAssetRecord> = {}): DeliveryAs
     downloadUrl: 'https://file.example/cached',
     fallbackUrl: 'https://file.example/cached-fallback',
     createdAt: 1,
+    ...overrides,
+  }
+}
+
+function deliverySession(overrides: Partial<DeliverySessionRecord> = {}): DeliverySessionRecord {
+  return {
+    id: `${connectedWallet.globalMetaId}:idqprovider:order-alpha`,
+    walletGlobalMetaId: connectedWallet.globalMetaId,
+    providerGlobalMetaId: 'idqprovider',
+    providerChatPubkey: 'provider-key',
+    providerName: 'Provider One',
+    providerAvatarUrl: 'https://cdn.example/provider-one.png',
+    orderCorrelationId: 'order-alpha',
+    serviceId: 'svc-delivery',
+    serviceLabel: 'Delivery Skill',
+    status: 'active',
+    lastMessageId: 'pin-idqprovider',
+    lastActivityAt: 1,
+    assetCount: 0,
+    unreadCount: 0,
     ...overrides,
   }
 }
@@ -1083,6 +1103,63 @@ describe('DeliveryPage layout', () => {
     fireEvent.click(await screen.findByRole('tab', { name: /Render Skill/ }))
 
     expect(screen.getByText('当前请求 - Render Skill')).toBeInTheDocument()
+  })
+
+  it('shows and copies the stored local session id as the conversation id', async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined)
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: { writeText },
+    })
+    const conversationId = `${connectedWallet.globalMetaId}:idqprovider:order-alpha`
+    vi.stubGlobal('indexedDB', {})
+    mocks.walletState.identity = connectedWallet
+    mocks.walletState.status = 'connected'
+    mocks.loadDeliveryWorkspaceRecords.mockResolvedValue({
+      orders: [],
+      sessions: [deliverySession({ id: conversationId })],
+      assetsBySession: {},
+    })
+
+    renderDeliveryPage('/delivery?session=idqprovider:order-alpha')
+
+    expect(await screen.findByText(conversationId)).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: '复制对话 ID' }))
+
+    await waitFor(() => expect(writeText).toHaveBeenCalledWith(conversationId))
+    expect(screen.getByText('已复制')).toBeInTheDocument()
+  })
+
+  it('falls back to peer and buyer Global Meta ID prefixes when no local session id exists', async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined)
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: { writeText },
+    })
+    const peerGlobalMetaId = 'idqpeerabcdefgh'
+    const buyerGlobalMetaId = 'idqbuyerabcdefgh'
+    const fallbackConversationId = 'idqpeera-idqbuyer'
+    mocks.walletState.identity = {
+      ...connectedWallet,
+      globalMetaId: buyerGlobalMetaId,
+    }
+    mocks.walletState.status = 'connected'
+    mocks.messageState.byPeer = {
+      [peerGlobalMetaId]: [
+        deliveryMessage({
+          peerGlobalMetaId,
+          peerName: 'Fallback Provider',
+        }),
+      ],
+    }
+
+    renderDeliveryPage(`/delivery?session=${peerGlobalMetaId}`)
+
+    expect(screen.getByText(fallbackConversationId)).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: '复制对话 ID' }))
+
+    await waitFor(() => expect(writeText).toHaveBeenCalledWith(fallbackConversationId))
+    expect(screen.getByText('已复制')).toBeInTheDocument()
   })
 
   it('shows order protocol messages in All and the matching order tab', () => {

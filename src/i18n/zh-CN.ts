@@ -161,6 +161,12 @@ export const zhCN = {
     walletNotConnectedHint: '连接 Metalet 钱包后即可查看和管理交付记录。',
     wsError: '连接暂时不可用',
     wsReconnect: '重新连接',
+    conversationId: {
+      label: '对话 ID',
+      copy: '复制对话 ID',
+      copied: '已复制',
+      copyFailed: '复制失败',
+    },
     workspace: {
       label: '我的交付工作区',
       conversations: '服务方会话',
