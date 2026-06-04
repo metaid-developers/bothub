@@ -158,7 +158,7 @@ describe('useSocket delivery persistence', () => {
     ])
   })
 
-  it('keeps the UI message and logs cache errors when live persistence fails', async () => {
+  it('does not add live messages to UI memory when IndexedDB persistence fails', async () => {
     const originalPut = IDBObjectStore.prototype.put
     vi.spyOn(IDBObjectStore.prototype, 'put').mockImplementation(function (
       this: IDBObjectStore,
@@ -172,9 +172,9 @@ describe('useSocket delivery persistence', () => {
 
     await useSocket.getState().handleEnvelope(envelope(), SELF)
 
-    expect(useMessageStore.getState().messagesForSession('idqpeer:socket-order', SELF)).toEqual([
-      expect.objectContaining({ id: 'pin-socket-delivery' }),
-    ])
+    expect(useMessageStore.getState().messagesForSession('idqpeer:socket-order', SELF)).toEqual(
+      [],
+    )
     expect(useSocket.getState().debugLog).toEqual([
       expect.stringContaining('[cache] delivery message was not saved'),
     ])

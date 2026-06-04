@@ -67,6 +67,64 @@ function selfAliasesForWallet(identity: WalletIdentity): string[] {
   )
 }
 
+function addMessageKey(keys: Set<string>, value: string | null | undefined): void {
+  const key = value?.trim()
+  if (key) keys.add(key)
+}
+
+function privateChatItemKeys(item: PrivateChatItem): string[] {
+  const keys = new Set<string>()
+  addMessageKey(keys, messageIdFromPrivateChat(item))
+  addMessageKey(keys, item.pinId)
+  return Array.from(keys)
+}
+
+function deliveryMessageKeys(message: DeliveryMessage): string[] {
+  const keys = new Set<string>()
+  addMessageKey(keys, message.id)
+  addMessageKey(keys, message.pinId)
+  return Array.from(keys)
+}
+
+async function loadKnownPeerMessageKeys(input: {
+  walletGlobalMetaId: string
+  peerGlobalMetaId: string
+}): Promise<Set<string>> {
+  const wallet = input.walletGlobalMetaId.trim()
+  const peer = input.peerGlobalMetaId.trim()
+  const keys = new Set<string>()
+  if (!wallet || !peer) return keys
+
+  const sessions = await getSessionsForWallet(wallet)
+  const peerSessions = sessions.filter(
+    (session) => session.providerGlobalMetaId.trim() === peer,
+  )
+  const messageGroups = await Promise.all(
+    peerSessions.map((session) => getMessagesForSession(session.id)),
+  )
+  for (const message of messageGroups.flat()) {
+    addMessageKey(keys, message.id)
+    addMessageKey(keys, message.pinId)
+  }
+  return keys
+}
+
+function hasKnownPrivateChatItem(
+  item: PrivateChatItem,
+  knownMessageKeys: ReadonlySet<string>,
+): boolean {
+  return privateChatItemKeys(item).some((key) => knownMessageKeys.has(key))
+}
+
+function rememberDeliveryMessageKeys(
+  knownMessageKeys: Set<string>,
+  message: DeliveryMessage,
+): void {
+  for (const key of deliveryMessageKeys(message)) {
+    knownMessageKeys.add(key)
+  }
+}
+
 function privateChatMetaIdsForWallet(identity: WalletIdentity): string[] {
   return Array.from(
     new Set(
@@ -400,12 +458,12 @@ export async function mergePrivateChatItem(input: {
   peerChatPublicKeyCache?: PeerProfileCache
 }): Promise<MergePrivateChatResult> {
   const message = await privateChatToDeliveryMessage(input)
-  useMessageStore.getState().append(message)
   try {
     await persistDeliveryMessage({
       walletGlobalMetaId: input.selfGlobalMetaId,
       message,
     })
+    useMessageStore.getState().append(message)
     return { message, persisted: true }
   } catch (error) {
     return { message, persisted: false, persistenceError: error }
@@ -447,6 +505,7 @@ export async function syncKnownPrivateChatHistory(
     for (const home of homes) {
       const peerGlobalMetaId = home.globalMetaId.trim() || home.metaId.trim()
       if (!peerGlobalMetaId || aliases.has(peerGlobalMetaId)) continue
+      if (syncedPeerSet.has(peerGlobalMetaId)) continue
       const pairKey = `${metaId}:${peerGlobalMetaId}`
       if (requestedPairs.has(pairKey)) continue
       requestedPairs.add(pairKey)
@@ -458,6 +517,11 @@ export async function syncKnownPrivateChatHistory(
         let persistenceError: unknown
         let newestTimestamp: number | undefined
         const requestedPageKeys = new Set<string>()
+        const boundaryMessageKeys = await loadKnownPeerMessageKeys({
+          walletGlobalMetaId,
+          peerGlobalMetaId,
+        })
+        const seenMessageKeys = new Set(boundaryMessageKeys)
 
         // Fetch up to 3 pages (150 messages) per peer.
         for (let pageIndex = 0; pageIndex < 3; pageIndex++) {
@@ -476,7 +540,13 @@ export async function syncKnownPrivateChatHistory(
             size: 50,
           })
 
+          let reachedKnownBoundary = false
           for (const item of page.list) {
+            if (hasKnownPrivateChatItem(item, boundaryMessageKeys)) {
+              reachedKnownBoundary = true
+              break
+            }
+            if (hasKnownPrivateChatItem(item, seenMessageKeys)) continue
             const result = await mergePrivateChatItem({
               item,
               selfGlobalMetaId: walletGlobalMetaId,
@@ -486,6 +556,8 @@ export async function syncKnownPrivateChatHistory(
             if (!result.persisted) {
               fullyPersisted = false
               persistenceError = result.persistenceError
+            } else {
+              rememberDeliveryMessageKeys(seenMessageKeys, result.message)
             }
           }
 
@@ -502,6 +574,8 @@ export async function syncKnownPrivateChatHistory(
               newestTimestamp = pageNewest
             }
           }
+
+          if (reachedKnownBoundary) break
 
           const nextCursor = page.nextCursor?.trim()
           if (nextCursor) {

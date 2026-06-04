@@ -198,7 +198,7 @@ describe('deliverySync', () => {
         id: `${SELF}:${PEER}`,
         walletGlobalMetaId: SELF,
         peerGlobalMetaId: PEER,
-        cursor: 'cursor-2',
+        cursor: '',
         lastTimestamp: 1_700_000_000_000,
       }),
     )
@@ -649,13 +649,82 @@ describe('deliverySync', () => {
 
     await syncKnownPrivateChatHistory(wallet)
 
-    expect(mockedHistory).toHaveBeenCalledWith({
-      metaId: MVC_SELF,
+    expect(mockedHistory).toHaveBeenNthCalledWith(1, {
+      metaId: SELF,
       otherMetaId: PEER,
       cursor: '',
       size: 50,
     })
     expect(useMessageStore.getState().messagesForSession(`${PEER}:order-sync`, SELF)).toEqual([
+      expect.objectContaining({ id: 'pin-newer' }),
+    ])
+  })
+
+  it('stops history pagination after reaching a locally persisted message', async () => {
+    await persistDeliveryMessage({
+      walletGlobalMetaId: SELF,
+      message: {
+        id: 'pin-existing',
+        peerGlobalMetaId: PEER,
+        peerChatPubkey: 'provider-chat-key',
+        fromGlobalMetaId: PEER,
+        toGlobalMetaId: SELF,
+        content: '[ORDER_STATUS:order-sync] Already synced',
+        rawContent: '[ORDER_STATUS:order-sync] Already synced',
+        encryption: 'plain',
+        contentType: 'text/plain',
+        orderCorrelationId: 'order-sync',
+        timestamp: 1_700_000_000_000,
+        pinId: 'pin-existing',
+        txId: 'tx-existing',
+      },
+    })
+    await hydrateDeliveryForWallet(wallet)
+
+    mockedHomes.mockImplementation(async (metaId) =>
+      metaId === SELF ? [{ metaId: PEER, globalMetaId: PEER }] : [],
+    )
+    mockedHistory.mockImplementation(async ({ cursor }) => {
+      if (cursor === 'older-cursor') {
+        return {
+          list: [
+            privateChatItem({
+              pinId: 'pin-older',
+              txId: 'tx-older',
+              timestamp: 1_600_000_000_000,
+              content: '[ORDER_STATUS:order-sync] Older message should not be fetched',
+            }),
+          ],
+        }
+      }
+      return {
+        list: [
+          privateChatItem({
+            pinId: 'pin-newer',
+            txId: 'tx-newer',
+            timestamp: 1_800_000_000_000,
+            content: '[ORDER_STATUS:order-sync] Newer offline message',
+          }),
+          privateChatItem({
+            pinId: 'pin-existing',
+            txId: 'tx-existing',
+            timestamp: 1_700_000_000_000,
+            content: '[ORDER_STATUS:order-sync] Already synced',
+          }),
+        ],
+        nextCursor: 'older-cursor',
+      }
+    })
+
+    await syncKnownPrivateChatHistory(wallet)
+
+    expect(mockedHistory).toHaveBeenCalledTimes(1)
+    expect(await getMessagesForSession(`${SELF}:${PEER}:order-sync`)).toEqual([
+      expect.objectContaining({ id: 'pin-existing' }),
+      expect.objectContaining({ id: 'pin-newer' }),
+    ])
+    expect(useMessageStore.getState().messagesForSession(`${PEER}:order-sync`, SELF)).toEqual([
+      expect.objectContaining({ id: 'pin-existing' }),
       expect.objectContaining({ id: 'pin-newer' }),
     ])
   })
@@ -861,7 +930,7 @@ describe('deliverySync', () => {
     ])
   })
 
-  it('does not advance sync state when history merge cannot persist', async () => {
+  it('does not add history messages to UI memory or advance sync state when persistence fails', async () => {
     mockedHomes.mockResolvedValue([{ metaId: PEER, globalMetaId: PEER }])
     mockedHistory.mockResolvedValue({
       list: [
@@ -884,9 +953,10 @@ describe('deliverySync', () => {
 
     await syncKnownPrivateChatHistory(wallet)
 
-    expect(useMessageStore.getState().messagesForSession(`${PEER}:order-sync`, SELF)).toEqual([
-      expect.objectContaining({ id: 'pin-unpersisted' }),
-    ])
+    expect(useMessageStore.getState().messagesForSession(`${PEER}:order-sync`, SELF)).toEqual(
+      [],
+    )
+    expect(await getMessagesForSession(`${SELF}:${PEER}:order-sync`)).toEqual([])
     expect(await getSyncState(`${SELF}:${PEER}`)).toBeUndefined()
   })
 
