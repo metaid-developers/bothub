@@ -73,6 +73,10 @@ export const zhCN = {
     truncated: '已缩略',
     nativeCoin: '原生币',
     serviceList: '服务列表',
+    showMoreBots: '显示更多',
+    allOnlineBots: '全部在线服务方',
+    botListEmpty: '当前没有在线 Bot。',
+    botListError: '加载在线 Bot 失败。',
     request: {
       title: '下单请求',
       promptLabel: '填写你的需求',

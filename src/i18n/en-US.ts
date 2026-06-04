@@ -71,6 +71,10 @@ export const enUS = {
     truncated: 'Shortened',
     nativeCoin: 'Native coin',
     serviceList: 'Service list',
+    showMoreBots: 'Show more',
+    allOnlineBots: 'All online providers',
+    botListEmpty: 'No online bots right now.',
+    botListError: 'Failed to load online bots.',
     request: {
       title: 'Pay & Request',
       promptLabel: 'Describe your request',
