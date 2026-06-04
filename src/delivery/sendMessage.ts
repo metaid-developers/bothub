@@ -9,6 +9,7 @@ import { WalletResponseTimeoutError, withWalletResponseTimeout } from '@/order/w
 import type { WalletIdentity } from '@/wallet/types'
 
 const SIMPLEMSG_PATH = '/protocols/simplemsg'
+const DEFAULT_AUTO_PAYMENT_AMOUNT = 10_000
 
 export class DeliveryFollowUpError extends Error {
   constructor(
@@ -67,29 +68,46 @@ function createLocalFollowUpId(): string {
 function shouldRequestAutoPaymentApproval(status: unknown): boolean {
   if (!status || typeof status !== 'object') return false
   const record = status as Record<string, unknown>
-  return record.isEnabled === true && record.isApproved === false
+  return record.isEnabled !== false && record.isApproved !== true
 }
 
-async function ensureAutoPaymentApproval(
+function resolveAutoPaymentAmount(status: unknown): number {
+  if (!status || typeof status !== 'object') return DEFAULT_AUTO_PAYMENT_AMOUNT
+  const amount = Number((status as Record<string, unknown>).autoPaymentAmount)
+  return Number.isFinite(amount) && amount > 0 ? amount : DEFAULT_AUTO_PAYMENT_AMOUNT
+}
+
+async function resolveAutoPaymentCreatePinOptions(
   metalet: SendDeliveryFollowUpInput['metalet'],
-): Promise<void> {
-  if (typeof metalet.autoPaymentStatus !== 'function' || typeof metalet.autoPayment !== 'function') {
-    return
-  }
+): Promise<Record<string, unknown>> {
+  if (typeof metalet.autoPaymentStatus !== 'function') return {}
 
   try {
     const status = await withWalletResponseTimeout(
       metalet.autoPaymentStatus(),
       'Auto payment status timed out waiting for wallet response',
     )
-    if (!shouldRequestAutoPaymentApproval(status)) return
+    if (!status || typeof status !== 'object') return {}
 
-    await withWalletResponseTimeout(
-      metalet.autoPayment(),
-      'Auto payment approval timed out waiting for wallet response',
-    )
+    const record = status as Record<string, unknown>
+    if (record.isEnabled === false) return {}
+
+    if (shouldRequestAutoPaymentApproval(status)) {
+      if (typeof metalet.autoPayment !== 'function') return {}
+      await withWalletResponseTimeout(
+        metalet.autoPayment(),
+        'Auto payment approval timed out waiting for wallet response',
+      )
+    }
+
+    return {
+      smallPay: true,
+      useSmallPay: true,
+      autoPaymentAmount: resolveAutoPaymentAmount(status),
+    }
   } catch {
     // IDChat falls back when auto-payment is unavailable; keep follow-up sending usable.
+    return {}
   }
 }
 
@@ -121,7 +139,7 @@ export async function sendDeliveryFollowUp(
   const encryptedContent = ecdhEncryptWithSharedSecret(content, sharedSecret)
   let pinResult: unknown
   try {
-    await ensureAutoPaymentApproval(input.metalet)
+    const autoPaymentCreatePinOptions = await resolveAutoPaymentCreatePinOptions(input.metalet)
     pinResult = await withWalletResponseTimeout(
       input.metalet.createPin({
         chain: 'mvc',
@@ -141,6 +159,7 @@ export async function sendDeliveryFollowUp(
             },
           },
         ],
+        ...autoPaymentCreatePinOptions,
       }),
       'Follow-up broadcast timed out waiting for wallet response',
     )

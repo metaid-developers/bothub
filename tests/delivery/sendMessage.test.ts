@@ -202,6 +202,46 @@ describe('sendDeliveryFollowUp', () => {
     expect(autoPayment.mock.invocationCallOrder[0]).toBeLessThan(
       createPin.mock.invocationCallOrder[0],
     )
+    expect(createPin).toHaveBeenCalledWith(
+      expect.objectContaining({
+        smallPay: true,
+        useSmallPay: true,
+        autoPaymentAmount: 10000,
+      }),
+    )
+  })
+
+  it('uses Metalet smallPay createPin flags when auto payment is already approved', async () => {
+    const autoPaymentStatus = vi.fn().mockResolvedValue({
+      isEnabled: true,
+      isApproved: true,
+      autoPaymentAmount: 15000,
+    })
+    const autoPayment = vi.fn().mockResolvedValue({ message: 'Auto payment approved' })
+    const createPin = vi.fn().mockResolvedValue({ pinId: 'pin-follow-up-smallpay' })
+
+    await sendDeliveryFollowUp({
+      wallet,
+      providerGlobalMetaId: 'idqprovider',
+      providerChatPubkey: '04' + 'ab'.repeat(64),
+      content: 'Can you add one more note?',
+      metalet: {
+        ecdh: vi.fn().mockResolvedValue({ sharedSecret: 'cc'.repeat(32) }),
+        autoPaymentStatus,
+        autoPayment,
+        createPin,
+      },
+    })
+
+    expect(autoPaymentStatus).toHaveBeenCalledOnce()
+    expect(autoPayment).not.toHaveBeenCalled()
+    expect(createPin).toHaveBeenCalledWith(
+      expect.objectContaining({
+        smallPay: true,
+        useSmallPay: true,
+        autoPaymentAmount: 15000,
+      }),
+    )
   })
 
   it('falls back to the first txid when createPin omits pinId', async () => {
