@@ -49,6 +49,7 @@ vi.mock('@/delivery/messageStore', () => ({
 
 vi.mock('@/api/userProfile', () => ({
   fetchUserProfileByGlobalMetaId: vi.fn(),
+  normalizeAvatarUrl: (value?: string) => value?.trim() || undefined,
 }))
 
 vi.mock('@/delivery/decryptRetry', () => ({
@@ -226,6 +227,42 @@ describe('DeliveryPage layout', () => {
     expect(screen.getByLabelText('成果库')).toHaveClass('hub-scrollbar')
     expect(tabs).toHaveClass('shrink-0')
     expect(composer).toHaveClass('shrink-0')
+  })
+
+  it('opens a selected conversation scrolled to the latest message', async () => {
+    Object.defineProperty(HTMLElement.prototype, 'scrollHeight', {
+      configurable: true,
+      get: () => 1200,
+    })
+    mocks.walletState.identity = connectedWallet
+    mocks.walletState.status = 'connected'
+    mocks.messageState.byPeer = {
+      idqprovider: [
+        deliveryMessage({
+          id: 'pin-oldest',
+          peerGlobalMetaId: 'idqprovider',
+          peerChatPubkey: 'provider-key',
+          peerName: 'Provider One',
+          content: 'Oldest message',
+          rawContent: 'Oldest message',
+          timestamp: 1,
+        }),
+        deliveryMessage({
+          id: 'pin-latest',
+          peerGlobalMetaId: 'idqprovider',
+          peerChatPubkey: 'provider-key',
+          peerName: 'Provider One',
+          content: 'Latest message',
+          rawContent: 'Latest message',
+          timestamp: 2,
+        }),
+      ],
+    }
+
+    const { container } = renderDeliveryPage('/delivery?session=idqprovider')
+    const threadScroll = container.querySelector('[data-delivery-thread-scroll]') as HTMLElement
+
+    await waitFor(() => expect(threadScroll.scrollTop).toBe(1200))
   })
 
   it('keeps the composer wallet-gated when a disconnected wallet has a cached identity', () => {

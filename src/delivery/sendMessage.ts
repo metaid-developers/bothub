@@ -30,7 +30,10 @@ export interface SendDeliveryFollowUpInput {
   providerChatPubkey: string
   content: string
   replyPin?: string
-  metalet: Pick<PayAndRequestMetalet, 'ecdh' | 'createPin'>
+  metalet: Pick<PayAndRequestMetalet, 'ecdh' | 'createPin'> & {
+    autoPaymentStatus?: () => Promise<unknown>
+    autoPayment?: () => Promise<unknown>
+  }
 }
 
 export interface SendDeliveryFollowUpResult {
@@ -61,6 +64,35 @@ function createLocalFollowUpId(): string {
   return `local-follow-up:${Date.now()}:${random}`
 }
 
+function shouldRequestAutoPaymentApproval(status: unknown): boolean {
+  if (!status || typeof status !== 'object') return false
+  const record = status as Record<string, unknown>
+  return record.isEnabled === true && record.isApproved === false
+}
+
+async function ensureAutoPaymentApproval(
+  metalet: SendDeliveryFollowUpInput['metalet'],
+): Promise<void> {
+  if (typeof metalet.autoPaymentStatus !== 'function' || typeof metalet.autoPayment !== 'function') {
+    return
+  }
+
+  try {
+    const status = await withWalletResponseTimeout(
+      metalet.autoPaymentStatus(),
+      'Auto payment status timed out waiting for wallet response',
+    )
+    if (!shouldRequestAutoPaymentApproval(status)) return
+
+    await withWalletResponseTimeout(
+      metalet.autoPayment(),
+      'Auto payment approval timed out waiting for wallet response',
+    )
+  } catch {
+    // IDChat falls back when auto-payment is unavailable; keep follow-up sending usable.
+  }
+}
+
 export async function sendDeliveryFollowUp(
   input: SendDeliveryFollowUpInput,
 ): Promise<SendDeliveryFollowUpResult> {
@@ -89,6 +121,7 @@ export async function sendDeliveryFollowUp(
   const encryptedContent = ecdhEncryptWithSharedSecret(content, sharedSecret)
   let pinResult: unknown
   try {
+    await ensureAutoPaymentApproval(input.metalet)
     pinResult = await withWalletResponseTimeout(
       input.metalet.createPin({
         chain: 'mvc',

@@ -187,4 +187,21 @@ describe('DeliveryComposer', () => {
     expect(screen.getByRole('textbox', { name: '补充需求或询问进度' })).toHaveValue('')
     expect(onSent).toHaveBeenCalledOnce()
   })
+
+  it('inserts a selected emoji into the draft before sending', async () => {
+    render(<DeliveryComposer wallet={wallet} session={session} />)
+
+    fireEvent.click(screen.getByRole('button', { name: '选择 emoji' }))
+    fireEvent.click(screen.getByRole('menuitem', { name: '插入 emoji 😂' }))
+
+    expect(screen.getByRole('textbox', { name: '补充需求或询问进度' })).toHaveValue('😂')
+
+    fireEvent.click(screen.getByRole('button', { name: '发送' }))
+
+    await waitFor(() =>
+      expect(mocks.sendDeliveryFollowUp).toHaveBeenCalledWith(
+        expect.objectContaining({ content: '😂' }),
+      ),
+    )
+  })
 })

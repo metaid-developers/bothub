@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { fetchUserProfileByGlobalMetaId, type UserProfile } from '@/api/userProfile'
 import { WsErrorBanner } from '@/components/common/WsErrorBanner'
@@ -17,6 +17,7 @@ import { resolveProviderChatPubkey } from '@/delivery/sessionGrouping'
 import { useDeliverySyncStatusStore } from '@/delivery/syncStatusStore'
 import { t } from '@/i18n'
 import { useWallet } from '@/wallet/useWallet'
+import { resolveWalletAvatarUrl } from '@/wallet/avatar'
 import {
   type WorkspaceOrder,
 } from '@/delivery/workspace'
@@ -151,13 +152,14 @@ export function DeliveryPage() {
   const walletConnected = walletStatus === 'connected' && identity != null
   const selfGlobalMetaId = identity?.globalMetaId ?? ''
   const selfDisplayName = identity?.name?.trim() || undefined
-  const selfAvatarUrl = identity?.avatarUrl?.trim() || undefined
+  const selfAvatarUrl = resolveWalletAvatarUrl(identity)
   const [orders, setOrders] = useState<BuyerOrder[]>([])
   const [providerProfiles, setProviderProfiles] = useState<Record<string, UserProfile>>({})
   const [providerProfileLoading, setProviderProfileLoading] = useState<Record<string, boolean>>({})
   const providerProfileRequestsRef = useRef<Set<string>>(new Set())
   const providerProfileAttemptedRef = useRef<Set<string>>(new Set())
   const providerProfileRetryRef = useRef<Set<string>>(new Set())
+  const threadScrollRef = useRef<HTMLDivElement | null>(null)
 
   const byPeer = useMessageStore((s) => s.byPeer)
   const storedAssetsBySession = useMessageStore((s) => s.assetsBySession)
@@ -269,6 +271,24 @@ export function DeliveryPage() {
       }),
     [selectedMessages, providerProfiles, selectedProviderProfile],
   )
+
+  const latestSelectedMessageKey = useMemo(() => {
+    const latestMessage = selectedMessages[selectedMessages.length - 1]
+    return latestMessage
+      ? `${latestMessage.id}:${latestMessage.pinId ?? ''}:${latestMessage.timestamp}`
+      : ''
+  }, [selectedMessages])
+
+  useLayoutEffect(() => {
+    const scrollElement = threadScrollRef.current
+    if (!scrollElement) return
+    scrollElement.scrollTop = scrollElement.scrollHeight
+  }, [
+    selectedConversation?.id,
+    selectedTab.id,
+    selectedMessages.length,
+    latestSelectedMessageKey,
+  ])
 
   const selectedHasDecryptGap = useMemo(
     () =>
@@ -599,7 +619,11 @@ export function DeliveryPage() {
             selectedTabId={selectedTab.id}
             onSelectTab={selectTab}
           />
-          <div data-delivery-thread-scroll className="hub-scrollbar min-h-0 flex-1 overflow-y-auto">
+          <div
+            ref={threadScrollRef}
+            data-delivery-thread-scroll
+            className="hub-scrollbar min-h-0 flex-1 overflow-y-auto"
+          >
             {selectedTab.kind === 'order' ? (
               <>
                 <DeliveryWorkspaceHeader order={selectedOrderWithProfile} />

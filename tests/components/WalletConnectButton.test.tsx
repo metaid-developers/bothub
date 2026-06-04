@@ -2,6 +2,7 @@ import { fireEvent, render, screen } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { WalletConnectButton } from '@/components/WalletConnectButton'
 import { useWallet } from '@/wallet/useWallet'
+import type { WalletIdentity } from '@/wallet/types'
 
 vi.mock('@/wallet/metalet', () => ({
   MetaletNotInstalledError: class MetaletNotInstalledError extends Error {
@@ -70,6 +71,52 @@ describe('WalletConnectButton', () => {
       'src',
       `https://manapi.metaid.io/content/${avatarPin}`,
     )
+  })
+
+  it('prefers a resolved chain avatar when avatarUrl is only a content placeholder', () => {
+    const avatarPin = `${'b'.repeat(64)}i0`
+    useWallet.setState({
+      identity: {
+        globalMetaId: 'idq1abcdefghijklmnopqrstuv',
+        mvcAddress: '1mvc',
+        btcAddress: 'bc1',
+        dogeAddress: 'Ddoge',
+        name: 'Chain Avatar',
+        avatarUrl: 'https://manapi.metaid.io/content/',
+        avatarPinId: avatarPin,
+      } as WalletIdentity,
+      status: 'connected',
+    })
+
+    render(<WalletConnectButton />)
+
+    expect(screen.getByRole('img', { name: 'Chain Avatar avatar' })).toHaveAttribute(
+      'src',
+      `https://manapi.metaid.io/content/${avatarPin}`,
+    )
+  })
+
+  it('copies the full globalMetaId from the connected account summary', () => {
+    const writeText = vi.fn().mockResolvedValue(undefined)
+    Object.assign(navigator, {
+      clipboard: { writeText },
+    })
+    useWallet.setState({
+      identity: {
+        globalMetaId: 'idq1abcdefghijklmnopqrstuv',
+        mvcAddress: '1mvc',
+        btcAddress: 'bc1',
+        dogeAddress: 'Ddoge',
+        name: 'Ada Lovelace',
+      },
+      status: 'connected',
+    })
+
+    render(<WalletConnectButton />)
+
+    fireEvent.click(screen.getByRole('button', { name: '复制 Global Meta ID' }))
+
+    expect(writeText).toHaveBeenCalledWith('idq1abcdefghijklmnopqrstuv')
   })
 
   it('falls back to an initial when no avatar URL is available', () => {

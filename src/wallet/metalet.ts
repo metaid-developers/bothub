@@ -302,6 +302,22 @@ export async function createPin(params: Record<string, unknown>): Promise<unknow
   return getWallet().createPin(params)
 }
 
+export async function autoPaymentStatus(): Promise<unknown> {
+  const wallet = getWallet()
+  if (typeof wallet.autoPaymentStatus !== 'function') {
+    throw new Error('Metalet auto payment status API is unavailable')
+  }
+  return wallet.autoPaymentStatus()
+}
+
+export async function autoPayment(): Promise<unknown> {
+  const wallet = getWallet()
+  if (typeof wallet.autoPayment !== 'function') {
+    throw new Error('Metalet auto payment API is unavailable')
+  }
+  return wallet.autoPayment()
+}
+
 export async function ecdh(params: {
   externalPubKey: string
   path?: string

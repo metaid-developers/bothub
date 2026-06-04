@@ -1,16 +1,17 @@
 import { useEffect, useState } from 'react'
+import { DocumentDuplicateIcon } from '@heroicons/react/24/outline'
 import { t } from '@/i18n'
 import { useWallet } from '@/wallet/useWallet'
 import { truncateGlobalMetaId } from '@/wallet/format'
 import { MetaletNotInstalledError } from '@/wallet/metalet'
 import { avatarColor, avatarInitials } from '@/lib/avatar'
-import { normalizeAvatarUrl } from '@/api/userProfile'
+import { resolveWalletAvatarUrl } from '@/wallet/avatar'
 
 export function WalletConnectButton() {
   const { identity, status, errorMessage, connect, disconnect } = useWallet()
   const [avatarFailed, setAvatarFailed] = useState(false)
   const avatarResetKey = identity
-    ? `${identity.globalMetaId}:${identity.avatarUrl ?? ''}:${identity.avatar ?? ''}`
+    ? `${identity.globalMetaId}:${identity.avatarUrl ?? ''}:${identity.avatar ?? ''}:${identity.avatarId ?? ''}:${identity.avatarPinId ?? ''}`
     : ''
 
   useEffect(() => {
@@ -32,7 +33,12 @@ export function WalletConnectButton() {
     const shortGlobalMetaId = truncateGlobalMetaId(identity.globalMetaId)
     const initials = avatarInitials(displayName)
     const bgColor = avatarColor(displayName)
-    const avatarSrc = identity.avatarUrl?.trim() || normalizeAvatarUrl(identity.avatar)
+    const avatarSrc = resolveWalletAvatarUrl(identity)
+
+    const handleCopyGlobalMetaId = () => {
+      if (!navigator.clipboard?.writeText) return
+      void navigator.clipboard.writeText(identity.globalMetaId).catch(() => undefined)
+    }
 
     return (
       <div className="flex items-center gap-3">
@@ -57,8 +63,22 @@ export function WalletConnectButton() {
             <span className="max-w-[140px] truncate text-sm font-medium text-white">
               {displayName}
             </span>
-            <span className="font-mono text-xs text-hub-muted" title={identity.globalMetaId}>
-              {shortGlobalMetaId}
+            <span className="flex min-w-0 items-center gap-1">
+              <span
+                className="min-w-0 truncate font-mono text-xs text-hub-muted"
+                title={identity.globalMetaId}
+              >
+                {shortGlobalMetaId}
+              </span>
+              <button
+                type="button"
+                onClick={handleCopyGlobalMetaId}
+                aria-label={t('wallet.copyGlobalMetaId')}
+                title={t('wallet.copyGlobalMetaId')}
+                className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-hub-muted transition-colors hover:bg-white/10 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-hub-accent"
+              >
+                <DocumentDuplicateIcon className="h-3.5 w-3.5" aria-hidden="true" />
+              </button>
             </span>
           </span>
         </div>

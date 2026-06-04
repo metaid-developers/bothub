@@ -6,7 +6,10 @@ export interface WalletIdentity {
   metaid?: string
   name?: string
   avatar?: string
+  avatarImage?: string
   avatarUrl?: string
+  avatarId?: string
+  avatarPinId?: string
   chatPubkey?: string
   chatPublicKey?: string
   profileUpdatedAt?: string | number
@@ -47,6 +50,8 @@ export interface MetaletWalletApi {
   getBalance: (params?: { path?: string }) => Promise<unknown>
   transfer: (params: { tasks: TransferTask[] }) => Promise<unknown>
   createPin: (params: Record<string, unknown>) => Promise<unknown>
+  autoPaymentStatus?: () => Promise<unknown>
+  autoPayment?: () => Promise<unknown>
   ecdh?: (params: { externalPubKey: string; path?: string }) => Promise<EcdhResult>
   eciesEncrypt: (params: { message: string }) => Promise<{ encrypted: string }>
   eciesDecrypt: (params: { encrypted: string }) => Promise<{ message: string }>
