@@ -47,6 +47,7 @@ export interface SkillServiceListItem extends SkillServiceCore {
   providerName: string | null
   providerAvatar: string | null
   providerChatPubkey: string | null
+  providerLLM: string | null
   ratingAvg: number
   ratingCount: number
 }

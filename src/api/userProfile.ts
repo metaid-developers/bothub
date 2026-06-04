@@ -13,6 +13,7 @@ export interface UserProfile {
   avatarId?: string
   avatarPinId?: string
   chatPubkey?: string
+  bio?: unknown
 }
 
 class UserProfileApiError extends Error {
@@ -89,6 +90,13 @@ export function normalizeAvatarUrl(
   if (isMetaSocketRelativeAvatarPath(avatar)) {
     return `${getNormalizedMetaSocketBaseUrl()}${avatar}`
   }
+  if (avatar.startsWith('/')) {
+    return `https://file.metaid.io${avatar}`
+  }
+  const pinIdHexOnly = avatar.match(/^[a-fA-F0-9]{64}$/)
+  if (pinIdHexOnly?.[0]) {
+    return avatarThumbnailUrl(pinIdHexOnly[0])
+  }
   return avatar
 }
 
@@ -105,6 +113,8 @@ function normalizeUserProfile(raw: unknown): UserProfile {
     avatarId ?? avatarPinId,
   )
 
+  const bio = record['bio'] ?? record['Bio']
+
   return {
     metaid: readString(record, ['metaid', 'metaId']),
     globalMetaId: readString(record, ['globalMetaId', 'globalmetaid']),
@@ -115,6 +125,7 @@ function normalizeUserProfile(raw: unknown): UserProfile {
     avatarUrl,
     avatarId,
     avatarPinId,
+    bio,
     chatPubkey: readString(record, [
       'chatpubkey',
       'chatPubkey',

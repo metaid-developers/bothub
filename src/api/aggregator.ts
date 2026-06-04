@@ -13,6 +13,7 @@ import {
   normalizeAvatarUrl,
   type UserProfile,
 } from '@/api/userProfile'
+import { extractLlmFromBio } from '@/lib/llmBio'
 import mockDetailEnvelope from '@/mocks/aggregator/detail.json'
 import mockListEnvelope from '@/mocks/aggregator/list.json'
 
@@ -97,6 +98,7 @@ function hydrateListItem(
       normalizeAvatarUrl(cleanString(item.providerAvatar)) ??
       item.providerAvatar,
     providerChatPubkey: cleanString(profile?.chatPubkey) ?? item.providerChatPubkey,
+    providerLLM: cleanString(extractLlmFromBio(profile?.bio)) ?? null,
   }
 }
 
