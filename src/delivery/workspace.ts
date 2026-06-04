@@ -7,6 +7,7 @@ import {
   parseOrderMessage,
 } from '@/delivery/orderParser'
 import { parseDeliveryProtocol } from '@/delivery/protocol'
+import { buildShortSessionId, normalizeShortSessionId } from '@/delivery/sessionId'
 import { deliveryAssetsForSession, deriveSessionStatus } from '@/delivery/sessionDisplay'
 import {
   buildGroupedSessionList,
@@ -18,6 +19,7 @@ import { t } from '@/i18n'
 export interface WorkspaceOrder {
   id: string
   sessionId: string
+  shortSessionId?: string
   sessionKey: string
   providerGlobalMetaId: string
   providerChatPubkey?: string
@@ -602,6 +604,13 @@ export function buildDeliveryWorkspace(input: {
     const merged = {
       id: workspaceId,
       sessionId,
+      shortSessionId:
+        normalizeShortSessionId(session.shortSessionId) ||
+        buildShortSessionId({
+          peerGlobalMetaId: session.providerGlobalMetaId,
+          selfGlobalMetaId: walletGlobalMetaId,
+        }) ||
+        existing?.shortSessionId,
       sessionKey,
       providerGlobalMetaId: session.providerGlobalMetaId.trim(),
       providerChatPubkey:
@@ -692,6 +701,10 @@ export function buildDeliveryWorkspace(input: {
     orderMap.set(orderId, {
       id: orderId,
       sessionId: orderId,
+      shortSessionId: buildShortSessionId({
+        peerGlobalMetaId: order.providerGlobalMetaId,
+        selfGlobalMetaId: walletGlobalMetaId,
+      }) || undefined,
       sessionKey,
       providerGlobalMetaId: order.providerGlobalMetaId.trim(),
       providerChatPubkey: order.providerChatPubkey?.trim() || undefined,
@@ -741,6 +754,10 @@ export function buildDeliveryWorkspace(input: {
     orderMap.set(sessionId, {
       id: sessionId,
       sessionId,
+      shortSessionId: buildShortSessionId({
+        peerGlobalMetaId: session.peerGlobalMetaId,
+        selfGlobalMetaId: walletGlobalMetaId,
+      }) || undefined,
       sessionKey: session.sessionKey,
       providerGlobalMetaId: session.peerGlobalMetaId.trim(),
       providerChatPubkey: session.providerChatPubkey?.trim() || undefined,

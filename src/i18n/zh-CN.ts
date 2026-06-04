@@ -168,8 +168,8 @@ export const zhCN = {
     wsError: '连接暂时不可用',
     wsReconnect: '重新连接',
     conversationId: {
-      label: '对话 ID',
-      copy: '复制对话 ID',
+      label: 'SessionID',
+      copy: '复制 SessionID',
       copied: '已复制',
       copyFailed: '复制失败',
     },

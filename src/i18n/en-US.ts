@@ -171,8 +171,8 @@ export const enUS = {
     wsError: 'Connection unavailable',
     wsReconnect: 'Reconnect',
     conversationId: {
-      label: 'Conversation ID',
-      copy: 'Copy conversation ID',
+      label: 'SessionID',
+      copy: 'Copy SessionID',
       copied: 'Copied',
       copyFailed: 'Copy failed',
     },

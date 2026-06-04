@@ -6,26 +6,26 @@ import { t } from '@/i18n'
 type CopyState = 'idle' | 'copied' | 'error'
 
 interface DeliveryConversationIdBadgeProps {
-  conversationId: string
+  sessionId: string
   className?: string
 }
 
 export function DeliveryConversationIdBadge({
-  conversationId,
+  sessionId,
   className,
 }: DeliveryConversationIdBadgeProps) {
   const [copyState, setCopyState] = useState<CopyState>('idle')
 
   useEffect(() => {
     setCopyState('idle')
-  }, [conversationId])
+  }, [sessionId])
 
-  async function copyConversationId() {
+  async function copySessionId() {
     try {
       if (typeof navigator === 'undefined' || !navigator.clipboard?.writeText) {
         throw new Error('Clipboard unavailable')
       }
-      await navigator.clipboard.writeText(conversationId)
+      await navigator.clipboard.writeText(sessionId)
       setCopyState('copied')
     } catch {
       setCopyState('error')
@@ -38,13 +38,13 @@ export function DeliveryConversationIdBadge({
         <span className="shrink-0 text-hub-muted">{t('delivery.conversationId.label')}</span>
         <span
           className="min-w-0 truncate font-mono text-[10px] text-white/80"
-          title={conversationId}
+          title={sessionId}
         >
-          {conversationId}
+          {sessionId}
         </span>
         <button
           type="button"
-          onClick={() => void copyConversationId()}
+          onClick={() => void copySessionId()}
           aria-label={t('delivery.conversationId.copy')}
           title={t('delivery.conversationId.copy')}
           className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-hub-muted transition-colors hover:bg-white/10 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-hub-accent"

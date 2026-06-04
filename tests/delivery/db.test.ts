@@ -182,6 +182,27 @@ describe('delivery IndexedDB facade', () => {
     expect(sessions.map((item) => item.id)).toEqual(['newer', 'older'])
   })
 
+  it('adds a short SessionID to session rows without changing the primary id', async () => {
+    const walletGlobalMetaId = 'idqbuyerabcdefgh'
+    const providerGlobalMetaId = 'idqproviderabcdefgh'
+    const id = `${walletGlobalMetaId}:${providerGlobalMetaId}:order-a`
+
+    await putSession(
+      session({
+        id,
+        walletGlobalMetaId,
+        providerGlobalMetaId,
+      }),
+    )
+
+    expect(await getSessionsForWallet(walletGlobalMetaId)).toEqual([
+      expect.objectContaining({
+        id,
+        shortSessionId: 'idqprovi-idqbuyer',
+      }),
+    ])
+  })
+
   it('de-dupes messages by id', async () => {
     await putMessage(message({ content: 'first', timestamp: now }))
     await putMessage(message({ content: 'second', timestamp: now + 1 }))

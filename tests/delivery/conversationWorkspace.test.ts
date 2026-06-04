@@ -324,6 +324,55 @@ describe('delivery conversation workspace', () => {
     expect(workspace.conversations[0]?.messages.map((row) => row.id)).toContain('alias-chat')
   })
 
+  it('merges provider address conversations when the fetched profile maps them to a globalMetaId', () => {
+    const providerAddress = '1GrqX7K9jdnUor8hAoAfDx99uFH2tT75Za'
+    const providerCanonical = 'idq14hmv23j5fnlx4ccnmvlyldjd38xjsechzwg9xz'
+    const workspace = buildDeliveryConversations({
+      walletGlobalMetaId: SELF,
+      orders: [],
+      sessions: [
+        session({
+          id: `${SELF}:${providerCanonical}:order-pin-1`,
+          providerGlobalMetaId: providerCanonical,
+          providerChatPubkey: undefined,
+          providerName: 'AI_Sunny',
+          orderCorrelationId: 'order-pin-1',
+          lastActivityAt: 30,
+        }),
+      ],
+      byPeer: {
+        [providerAddress]: [
+          message({
+            id: 'address-side-encrypted',
+            peerGlobalMetaId: providerAddress,
+            peerChatPubkey: undefined,
+            peerName: undefined,
+            content: 'U2FsdGVkX1encrypted-delivery',
+            rawContent: 'U2FsdGVkX1encrypted-delivery',
+            encryption: 'ecdh',
+            timestamp: 40,
+            decryptError: 'missing peer chat key',
+          }),
+        ],
+      },
+      assetsBySession: {},
+      providerProfiles: {
+        [providerAddress]: {
+          globalMetaId: providerCanonical,
+          address: providerAddress,
+        },
+      },
+    })
+
+    expect(workspace.conversations).toHaveLength(1)
+    expect(workspace.conversations[0]).toMatchObject({
+      id: providerCanonical,
+      providerGlobalMetaId: providerCanonical,
+      providerName: 'AI_Sunny',
+      messageCount: 1,
+    })
+  })
+
   it('does not merge provider aliases when profile fields conflict', () => {
     const providerAddress = '1ProviderAddress'
     const providerCanonical = 'idqproviderCanonical'

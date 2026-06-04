@@ -1105,32 +1105,39 @@ describe('DeliveryPage layout', () => {
     expect(screen.getByText('当前请求 - Render Skill')).toBeInTheDocument()
   })
 
-  it('shows and copies the stored local session id as the conversation id', async () => {
+  it('shows and copies the stored local session short SessionID', async () => {
     const writeText = vi.fn().mockResolvedValue(undefined)
     Object.defineProperty(navigator, 'clipboard', {
       configurable: true,
       value: { writeText },
     })
-    const conversationId = `${connectedWallet.globalMetaId}:idqprovider:order-alpha`
+    const sessionId = `${connectedWallet.globalMetaId}:idqproviderabcdefgh:order-alpha`
     vi.stubGlobal('indexedDB', {})
     mocks.walletState.identity = connectedWallet
     mocks.walletState.status = 'connected'
     mocks.loadDeliveryWorkspaceRecords.mockResolvedValue({
       orders: [],
-      sessions: [deliverySession({ id: conversationId })],
+      sessions: [
+        deliverySession({
+          id: sessionId,
+          providerGlobalMetaId: 'idqproviderabcdefgh',
+          shortSessionId: 'idqprovi-idqbuyer',
+        }),
+      ],
       assetsBySession: {},
     })
 
-    renderDeliveryPage('/delivery?session=idqprovider:order-alpha')
+    renderDeliveryPage('/delivery?session=idqproviderabcdefgh:order-alpha')
 
-    expect(await screen.findByText(conversationId)).toBeInTheDocument()
-    fireEvent.click(screen.getByRole('button', { name: '复制对话 ID' }))
+    expect(await screen.findByText('SessionID')).toBeInTheDocument()
+    expect(await screen.findByText('idqprovi-idqbuyer')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: '复制 SessionID' }))
 
-    await waitFor(() => expect(writeText).toHaveBeenCalledWith(conversationId))
+    await waitFor(() => expect(writeText).toHaveBeenCalledWith('idqprovi-idqbuyer'))
     expect(screen.getByText('已复制')).toBeInTheDocument()
   })
 
-  it('falls back to peer and buyer Global Meta ID prefixes when no local session id exists', async () => {
+  it('falls back to peer and buyer Global Meta ID prefixes when no local SessionID exists', async () => {
     const writeText = vi.fn().mockResolvedValue(undefined)
     Object.defineProperty(navigator, 'clipboard', {
       configurable: true,
@@ -1156,7 +1163,7 @@ describe('DeliveryPage layout', () => {
     renderDeliveryPage(`/delivery?session=${peerGlobalMetaId}`)
 
     expect(screen.getByText(fallbackConversationId)).toBeInTheDocument()
-    fireEvent.click(screen.getByRole('button', { name: '复制对话 ID' }))
+    fireEvent.click(screen.getByRole('button', { name: '复制 SessionID' }))
 
     await waitFor(() => expect(writeText).toHaveBeenCalledWith(fallbackConversationId))
     expect(screen.getByText('已复制')).toBeInTheDocument()

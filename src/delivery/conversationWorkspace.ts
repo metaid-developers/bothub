@@ -1,3 +1,4 @@
+import type { UserProfile } from '@/api/userProfile'
 import type { ParsedDeliveryAsset } from '@/delivery/assetParser'
 import type {
   BuyerOrder,
@@ -25,6 +26,7 @@ import {
   type WorkspaceOrder,
   type WorkspaceOrderStatus,
 } from '@/delivery/workspace'
+import { isGlobalMetaId } from '@/delivery/sessionId'
 
 export type DeliveryConversationTab =
   | { kind: 'all'; id: 'all' }
@@ -81,6 +83,7 @@ export interface DeliveryConversationBuildInput {
   sessions: DeliverySessionRecord[]
   byPeer: Record<string, DeliveryMessage[]>
   assetsBySession: Record<string, DeliveryAssetRecord[]>
+  providerProfiles?: Record<string, Pick<UserProfile, 'globalMetaId' | 'address' | 'metaid'>>
 }
 
 const ACTIVE_ORDER_WINDOW_MS = 24 * 60 * 60 * 1000
@@ -235,6 +238,43 @@ function createGroup(source: PeerSource): PeerGroup {
   }
 }
 
+function buildProfileAliasMap(
+  providerProfiles: DeliveryConversationBuildInput['providerProfiles'] | undefined,
+): Map<string, string> {
+  const aliases = new Map<string, string>()
+  for (const [key, profile] of Object.entries(providerProfiles ?? {})) {
+    const canonical = normalize(profile.globalMetaId)
+    if (!isGlobalMetaId(canonical)) continue
+
+    for (const alias of uniqueStrings([key, profile.address, profile.metaid, canonical])) {
+      aliases.set(alias, canonical)
+    }
+  }
+  return aliases
+}
+
+function canonicalPeerForProfileAlias(
+  peerId: string,
+  profileAliases: Map<string, string>,
+): string {
+  return profileAliases.get(normalize(peerId)) ?? normalize(peerId)
+}
+
+function addSourceToAliasGroup(
+  group: PeerGroup,
+  source: PeerSource,
+  canonicalPeerId: string,
+): void {
+  addSourceToGroup(group, source)
+  if (canonicalPeerId) group.peerIds.add(canonicalPeerId)
+}
+
+function createAliasGroup(source: PeerSource, canonicalPeerId: string): PeerGroup {
+  const group = createGroup(source)
+  if (canonicalPeerId) group.peerIds.add(canonicalPeerId)
+  return group
+}
+
 function latestMessageProfile(messages: DeliveryMessage[]): PeerSource | null {
   const sorted = [...messages].sort((a, b) => {
     if (a.timestamp !== b.timestamp) return b.timestamp - a.timestamp
@@ -257,8 +297,10 @@ function latestMessageProfile(messages: DeliveryMessage[]): PeerSource | null {
 function buildPeerGroups(input: {
   orderWorkspace: DeliveryWorkspace
   byPeer: Record<string, DeliveryMessage[]>
+  providerProfiles?: DeliveryConversationBuildInput['providerProfiles']
 }): Map<string, string> {
   const sources = new Map<string, PeerSource>()
+  const profileAliases = buildProfileAliasMap(input.providerProfiles)
 
   for (const order of input.orderWorkspace.orders) {
     const peerId = normalize(order.providerGlobalMetaId)
@@ -290,12 +332,19 @@ function buildPeerGroups(input: {
   }
 
   const groups: PeerGroup[] = []
+  const groupsByProfileAlias = new Map<string, PeerGroup>()
   for (const source of sources.values()) {
-    const target = groups.find((group) => canMergeSource(group, source))
+    const profileCanonical = canonicalPeerForProfileAlias(source.peerId, profileAliases)
+    const target =
+      groupsByProfileAlias.get(profileCanonical) ??
+      groups.find((group) => canMergeSource(group, source))
     if (target) {
-      addSourceToGroup(target, source)
+      addSourceToAliasGroup(target, source, profileCanonical)
+      groupsByProfileAlias.set(profileCanonical, target)
     } else {
-      groups.push(createGroup(source))
+      const group = createAliasGroup(source, profileCanonical)
+      groups.push(group)
+      groupsByProfileAlias.set(profileCanonical, group)
     }
   }
 
@@ -303,7 +352,7 @@ function buildPeerGroups(input: {
   for (const group of groups) {
     const peers = Array.from(group.peerIds)
     const canonical =
-      peers.find((peer) => peer.startsWith('idq')) ||
+      peers.find((peer) => isGlobalMetaId(peer)) ||
       (group.hasOrderProvider
         ? peers.find((peer) =>
             input.orderWorkspace.orders.some((order) => order.providerGlobalMetaId === peer),
@@ -315,6 +364,12 @@ function buildPeerGroups(input: {
     for (const peer of peers) {
       peerToConversation.set(peer, canonical)
     }
+  }
+
+  for (const [alias, canonical] of profileAliases) {
+    const conversation = peerToConversation.get(canonical) ?? canonical
+    peerToConversation.set(alias, conversation)
+    peerToConversation.set(canonical, conversation)
   }
 
   return peerToConversation
@@ -539,7 +594,11 @@ export function buildDeliveryConversations(
   input: DeliveryConversationBuildInput,
 ): DeliveryConversationWorkspace {
   const orderWorkspace = buildDeliveryWorkspace(input)
-  const peerToConversation = buildPeerGroups({ orderWorkspace, byPeer: input.byPeer })
+  const peerToConversation = buildPeerGroups({
+    orderWorkspace,
+    byPeer: input.byPeer,
+    providerProfiles: input.providerProfiles,
+  })
   const aliasesByProvider = buildAliasesByProvider(input)
   const orderContextsById = buildOrderContexts({
     orderWorkspace,

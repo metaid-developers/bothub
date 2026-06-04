@@ -52,6 +52,7 @@ export type DeliverySessionStatus =
 
 export interface DeliverySessionRecord {
   id: string
+  shortSessionId?: string
   walletGlobalMetaId: string
   providerGlobalMetaId: string
   providerChatPubkey?: string

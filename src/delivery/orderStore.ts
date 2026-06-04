@@ -8,6 +8,7 @@ import {
   type DeliveryMessageRecord,
   type DeliverySessionRecord,
 } from '@/delivery/domain'
+import { withShortSessionId } from '@/delivery/sessionId'
 import type { ExecutePayAndRequestResult } from '@/order/flow'
 import type { PreparedPayAndRequest } from '@/order/payAndRequestStages'
 import type { WalletIdentity } from '@/wallet/types'
@@ -65,7 +66,7 @@ async function persistRowsAtomically(
 
   try {
     transaction.objectStore('orders').put(order)
-    transaction.objectStore('sessions').put(session)
+    transaction.objectStore('sessions').put(withShortSessionId(session))
     transaction.objectStore('messages').put(message)
     await done
   } catch (error) {
@@ -136,7 +137,7 @@ export async function persistPendingOrder(
     updatedAt: now,
   }
 
-  const session: DeliverySessionRecord = {
+  const session: DeliverySessionRecord = withShortSessionId({
     id: sessionId,
     walletGlobalMetaId,
     providerGlobalMetaId,
@@ -151,7 +152,7 @@ export async function persistPendingOrder(
     lastActivityAt: now,
     assetCount: 0,
     unreadCount: 0,
-  }
+  })
 
   const message: DeliveryMessageRecord = {
     id: messageId,
@@ -240,7 +241,7 @@ export async function persistFailedToSendOrder(
     updatedAt: now,
   }
 
-  const session: DeliverySessionRecord = {
+  const session: DeliverySessionRecord = withShortSessionId({
     id: sessionId,
     walletGlobalMetaId,
     providerGlobalMetaId,
@@ -255,7 +256,7 @@ export async function persistFailedToSendOrder(
     lastActivityAt: now,
     assetCount: 0,
     unreadCount: 0,
-  }
+  })
 
   const message: DeliveryMessageRecord = {
     id: messageId,

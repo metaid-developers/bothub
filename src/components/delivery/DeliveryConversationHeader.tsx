@@ -1,6 +1,6 @@
 import { DeliveryConversationIdBadge } from '@/components/delivery/DeliveryConversationIdBadge'
 import { PeerAvatar } from '@/components/delivery/PeerAvatar'
-import { resolveDeliveryConversationId } from '@/delivery/conversationId'
+import { resolveDeliverySessionId } from '@/delivery/sessionId'
 import type { DeliveryConversation } from '@/delivery/conversationWorkspace'
 import { t } from '@/i18n'
 
@@ -8,6 +8,7 @@ interface DeliveryConversationHeaderProps {
   conversation: DeliveryConversation | null
   selfGlobalMetaId?: string | null
   storedConversationId?: string | null
+  storedShortConversationId?: string | null
 }
 
 function displayName(conversation: DeliveryConversation): string {
@@ -26,6 +27,7 @@ export function DeliveryConversationHeader({
   conversation,
   selfGlobalMetaId,
   storedConversationId,
+  storedShortConversationId,
 }: DeliveryConversationHeaderProps) {
   if (!conversation) {
     return (
@@ -45,7 +47,8 @@ export function DeliveryConversationHeader({
   }
 
   const name = displayName(conversation)
-  const conversationId = resolveDeliveryConversationId({
+  const sessionId = resolveDeliverySessionId({
+    storedShortId: storedShortConversationId,
     storedId: storedConversationId,
     peerGlobalMetaId: conversation.providerGlobalMetaId || conversation.id,
     selfGlobalMetaId,
@@ -92,9 +95,9 @@ export function DeliveryConversationHeader({
             </div>
           </div>
         </div>
-        {conversationId && (
+        {sessionId && (
           <DeliveryConversationIdBadge
-            conversationId={conversationId}
+            sessionId={sessionId}
             className="w-full sm:max-w-[48%] sm:shrink-0"
           />
         )}

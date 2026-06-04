@@ -5,9 +5,10 @@ import type {
   DeliverySessionRecord,
   DeliverySyncState,
 } from '@/delivery/domain'
+import { withShortSessionId } from '@/delivery/sessionId'
 
 export const DELIVERY_DB_NAME = 'bothub-buyer-v1'
-export const DELIVERY_DB_VERSION = 1
+export const DELIVERY_DB_VERSION = 2
 
 type StoreName = 'orders' | 'sessions' | 'messages' | 'assets' | 'syncState'
 
@@ -40,6 +41,24 @@ function createStore(
   return db.createObjectStore(name, { keyPath: 'id' })
 }
 
+function backfillSessionShortIds(store: IDBObjectStore): void {
+  const request = store.openCursor()
+  request.onsuccess = () => {
+    const cursor = request.result
+    if (!cursor) return
+
+    const session = cursor.value as DeliverySessionRecord
+    const next = withShortSessionId(session)
+    if (next.shortSessionId !== session.shortSessionId) {
+      const update = cursor.update(next)
+      update.onsuccess = () => cursor.continue()
+      update.onerror = () => cursor.continue()
+      return
+    }
+    cursor.continue()
+  }
+}
+
 function createStores(db: IDBDatabase, transaction: IDBTransaction): void {
   const orders = createStore(db, transaction, 'orders')
   createIndexIfMissing(orders, 'walletGlobalMetaId', 'walletGlobalMetaId')
@@ -54,6 +73,7 @@ function createStores(db: IDBDatabase, transaction: IDBTransaction): void {
   createIndexIfMissing(sessions, 'orderCorrelationId', 'orderCorrelationId')
   createIndexIfMissing(sessions, 'lastActivityAt', 'lastActivityAt')
   createIndexIfMissing(sessions, 'status', 'status')
+  backfillSessionShortIds(sessions)
 
   const messages = createStore(db, transaction, 'messages')
   createIndexIfMissing(messages, 'walletGlobalMetaId', 'walletGlobalMetaId')
@@ -195,7 +215,7 @@ export async function getOrdersForWallet(
 }
 
 export async function putSession(session: DeliverySessionRecord): Promise<void> {
-  await putRecord('sessions', session)
+  await putRecord('sessions', withShortSessionId(session))
 }
 
 export async function getSessionsForWallet(
@@ -256,11 +276,12 @@ export async function persistOutgoingFollowUp(input: {
       lastMessageId: input.message.id,
       lastActivityAt: input.session.lastActivityAt,
     }
+    const session = withShortSessionId(mergedSession)
 
-    sessionStore.put(mergedSession)
+    sessionStore.put(session)
     messageStore.put(input.message)
     await done
-    return { session: mergedSession, message: input.message }
+    return { session, message: input.message }
   } catch (error) {
     abortTransaction(transaction)
     await done.catch(() => undefined)
@@ -317,7 +338,9 @@ export async function persistDeliveryMessageRows(input: {
       assetsById.set(asset.id, asset)
     }
     const assets = sortByNumberAsc(Array.from(assetsById.values()), 'createdAt')
-    const session = input.buildSession({ existingSession, messages, assets })
+    const session = withShortSessionId(
+      input.buildSession({ existingSession, messages, assets }),
+    )
 
     messageStore.put(input.message)
     for (const asset of input.assets) {

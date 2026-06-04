@@ -95,15 +95,23 @@ function deliveryAssetScopeLabel(input: {
 function storedConversationIdForSelection(input: {
   conversation: DeliveryConversation | null
   selectedOrderThread: ReturnType<typeof selectOrderThread>
-}): string | null {
+}): { id: string | null; shortId: string | null } {
   const selectedSessionId = input.selectedOrderThread?.order.sessionId.trim()
-  if (selectedSessionId) return selectedSessionId
+  const selectedShortSessionId = input.selectedOrderThread?.order.shortSessionId?.trim()
+  if (selectedSessionId || selectedShortSessionId) {
+    return {
+      id: selectedSessionId || null,
+      shortId: selectedShortSessionId || null,
+    }
+  }
 
-  return (
-    input.conversation?.orderThreads
-      .map((thread) => thread.order.sessionId.trim())
-      .find(Boolean) ?? null
+  const firstThread = input.conversation?.orderThreads.find(
+    (thread) => thread.order.sessionId.trim() || thread.order.shortSessionId?.trim(),
   )
+  return {
+    id: firstThread?.order.sessionId.trim() || null,
+    shortId: firstThread?.order.shortSessionId?.trim() || null,
+  }
 }
 
 function resolveConversationProviderProfile(
@@ -226,8 +234,16 @@ export function DeliveryPage() {
         sessions: workspaceRecords.sessions,
         byPeer,
         assetsBySession: mergedAssetsBySession,
+        providerProfiles,
       }),
-    [selfGlobalMetaId, orders, workspaceRecords.sessions, byPeer, mergedAssetsBySession],
+    [
+      selfGlobalMetaId,
+      orders,
+      workspaceRecords.sessions,
+      byPeer,
+      mergedAssetsBySession,
+      providerProfiles,
+    ],
   )
 
   const conversationFromUrl = searchParams.get(CONVERSATION_PARAM)?.trim() || null
@@ -255,7 +271,7 @@ export function DeliveryPage() {
     resolvedRouteSelection.tabId,
   )
   const selectedOrderThread = selectOrderThread(selectedConversation, selectedTab)
-  const selectedStoredConversationId = storedConversationIdForSelection({
+  const selectedStoredSessionId = storedConversationIdForSelection({
     conversation: selectedConversation,
     selectedOrderThread,
   })
@@ -409,10 +425,13 @@ export function DeliveryPage() {
 
       try {
         const profile = await fetchUserProfileByGlobalMetaId(peer)
-        setProviderProfiles((current) => ({
-          ...current,
-          [peer]: profile,
-        }))
+        const profileKeys = uniqueProviderIds([peer, profile.globalMetaId, profile.address])
+        setProviderProfiles((current) =>
+          profileKeys.reduce<Record<string, UserProfile>>(
+            (next, key) => ({ ...next, [key]: profile }),
+            current,
+          ),
+        )
 
         if (options?.retryDecrypt) {
           retryDecryptWithProviderProfile(peer, profile)
@@ -634,7 +653,8 @@ export function DeliveryPage() {
           <DeliveryConversationHeader
             conversation={selectedConversationWithProfile}
             selfGlobalMetaId={selfGlobalMetaId}
-            storedConversationId={selectedStoredConversationId}
+            storedConversationId={selectedStoredSessionId.id}
+            storedShortConversationId={selectedStoredSessionId.shortId}
           />
           <DeliveryOrderTabs
             conversation={selectedConversationWithProfile}
