@@ -48,20 +48,20 @@ function identityFromInput(input: SocketIdentityInput): WalletIdentity {
   }
 }
 
-function socketMetaIdsForIdentity(identity: WalletIdentity): string[] {
+function compactIdentityValues(values: Array<string | null | undefined>): string[] {
   return Array.from(
-    new Set(
-      [
-        identity.globalMetaId,
-        identity.metaid,
-        identity.mvcAddress,
-        identity.btcAddress,
-        identity.dogeAddress,
-      ]
-        .map((value) => value.trim())
-        .filter(Boolean),
-    ),
+    new Set(values.map((value) => value?.trim() ?? '').filter(Boolean)),
   )
+}
+
+function socketMetaIdsForIdentity(identity: WalletIdentity): string[] {
+  return compactIdentityValues([
+    identity.globalMetaId,
+    identity.metaid,
+    identity.mvcAddress,
+    identity.btcAddress,
+    identity.dogeAddress,
+  ])
 }
 
 function socketConnectionKey(identity: WalletIdentity): string {

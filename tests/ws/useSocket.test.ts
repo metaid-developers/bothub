@@ -185,7 +185,7 @@ describe('useSocket delivery persistence', () => {
       expect.objectContaining({
         id: 'pin-address-routed-live',
         fromGlobalMetaId: PEER,
-        toGlobalMetaId: '1SelfMvcAddress',
+        toGlobalMetaId: SELF,
         timestamp: 1_777_322_934_000,
       }),
     ])

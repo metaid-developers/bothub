@@ -198,7 +198,7 @@ describe('deliverySync', () => {
         id: `${SELF}:${PEER}`,
         walletGlobalMetaId: SELF,
         peerGlobalMetaId: PEER,
-        cursor: '',
+        cursor: 'cursor-2',
         lastTimestamp: 1_700_000_000_000,
       }),
     )

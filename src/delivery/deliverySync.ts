@@ -56,21 +56,26 @@ type PeerProfileCache = Map<string, Promise<PeerProfile>>
 const PRIVATE_CHAT_HISTORY_PAGE_SIZE = 50
 const MAX_PRIVATE_CHAT_HISTORY_PAGES = 20
 
-function selfAliasesForWallet(identity: WalletIdentity): string[] {
+function compactIdentityValues(values: Array<string | null | undefined>): string[] {
   return Array.from(
-    new Set(
-      [
-        identity.globalMetaId,
-        identity.metaid,
-        identity.mvcAddress,
-        identity.btcAddress,
-        identity.dogeAddress,
-        resolvePrivateChatMetaId(identity),
-      ]
-        .map((value) => value.trim())
-        .filter(Boolean),
-    ),
+    new Set(values.map((value) => value?.trim() ?? '').filter(Boolean)),
   )
+}
+
+function timestampAsMilliseconds(value: number): number {
+  if (!Number.isFinite(value) || value <= 0) return value
+  return value < 10_000_000_000 ? value * 1000 : value
+}
+
+function selfAliasesForWallet(identity: WalletIdentity): string[] {
+  return compactIdentityValues([
+    identity.globalMetaId,
+    identity.metaid,
+    identity.mvcAddress,
+    identity.btcAddress,
+    identity.dogeAddress,
+    resolvePrivateChatMetaId(identity),
+  ])
 }
 
 function addMessageKey(keys: Set<string>, value: string | null | undefined): void {
@@ -132,20 +137,14 @@ function rememberDeliveryMessageKeys(
 }
 
 function privateChatMetaIdsForWallet(identity: WalletIdentity): string[] {
-  return Array.from(
-    new Set(
-      [
-        identity.globalMetaId,
-        identity.metaid,
-        resolvePrivateChatMetaId(identity),
-        identity.mvcAddress,
-        identity.btcAddress,
-        identity.dogeAddress,
-      ]
-        .map((value) => value.trim())
-        .filter(Boolean),
-    ),
-  )
+  return compactIdentityValues([
+    identity.globalMetaId,
+    identity.metaid,
+    resolvePrivateChatMetaId(identity),
+    identity.mvcAddress,
+    identity.btcAddress,
+    identity.dogeAddress,
+  ])
 }
 
 function isSelfAlias(value: string, aliases: ReadonlySet<string>): boolean {
@@ -474,7 +473,7 @@ async function privateChatToDeliveryMessage(input: {
     encryption: input.item.encryption ?? '',
     contentType: input.item.contentType ?? 'text/plain',
     orderCorrelationId,
-    timestamp: input.item.timestamp,
+    timestamp: timestampAsMilliseconds(input.item.timestamp),
     pinId: input.item.pinId,
     txId: input.item.txId,
     decryptError: error,
