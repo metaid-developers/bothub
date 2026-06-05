@@ -47,6 +47,8 @@ export const zhCN = {
     servicesError: '暂时无法加载服务',
     detailError: '暂时无法加载服务详情',
     payRequest: '下单请求',
+    requestAction: '请求',
+    freePrice: '免费',
     pricing: '价格',
     price: '价格',
     settlement: '结算方式',
@@ -79,6 +81,8 @@ export const zhCN = {
     botListError: '加载在线 Bot 失败。',
     copyGmid: '复制 GlobalMetaID',
     gmidCopied: '已复制',
+    privateChat: '私聊',
+    privateChatWith: '私聊 {name}',
     request: {
       title: '下单请求',
       promptLabel: '填写你的需求',

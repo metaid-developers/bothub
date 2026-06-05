@@ -53,12 +53,18 @@ export interface PrivateChatHistorySyncSummary {
 
 type PeerProfileCache = Map<string, Promise<PeerProfile>>
 
+const PRIVATE_CHAT_HISTORY_PAGE_SIZE = 50
+const MAX_PRIVATE_CHAT_HISTORY_PAGES = 20
+
 function selfAliasesForWallet(identity: WalletIdentity): string[] {
   return Array.from(
     new Set(
       [
         identity.globalMetaId,
+        identity.metaid,
         identity.mvcAddress,
+        identity.btcAddress,
+        identity.dogeAddress,
         resolvePrivateChatMetaId(identity),
       ]
         .map((value) => value.trim())
@@ -130,8 +136,11 @@ function privateChatMetaIdsForWallet(identity: WalletIdentity): string[] {
     new Set(
       [
         identity.globalMetaId,
+        identity.metaid,
         resolvePrivateChatMetaId(identity),
         identity.mvcAddress,
+        identity.btcAddress,
+        identity.dogeAddress,
       ]
         .map((value) => value.trim())
         .filter(Boolean),
@@ -362,6 +371,34 @@ async function resolveKnownOrderCorrelationId(input: {
   return textMatch ? known.get(textMatch) ?? textMatch : undefined
 }
 
+async function loadKnownPrivateChatPeerIds(walletGlobalMetaId: string): Promise<string[]> {
+  const wallet = walletGlobalMetaId.trim()
+  if (!wallet) return []
+
+  const peers = new Set<string>()
+  const addPeer = (value: string | null | undefined) => {
+    const peer = value?.trim()
+    if (peer && peer !== wallet) peers.add(peer)
+  }
+
+  try {
+    const [sessions, orders] = await Promise.all([
+      getSessionsForWallet(wallet),
+      getOrdersForWallet(wallet),
+    ])
+    for (const session of sessions) addPeer(session.providerGlobalMetaId)
+    for (const order of orders) addPeer(order.providerGlobalMetaId)
+  } catch {
+    // History sync can still use homes and in-memory peers when local records fail.
+  }
+
+  for (const peer of Object.keys(useMessageStore.getState().byPeer)) {
+    addPeer(peer)
+  }
+
+  return Array.from(peers)
+}
+
 async function privateChatToDeliveryMessage(input: {
   item: PrivateChatItem
   selfGlobalMetaId: string
@@ -486,6 +523,7 @@ export async function syncKnownPrivateChatHistory(
   const syncedPeerSet = new Set<string>()
   const failedPeerErrors = new Map<string, unknown>()
   const requestedPairs = new Set<string>()
+  const knownPeerIds = await loadKnownPrivateChatPeerIds(walletGlobalMetaId)
 
   const recordFailedPeer = (peerGlobalMetaId: string, error: unknown) => {
     const peer = peerGlobalMetaId.trim()
@@ -502,8 +540,18 @@ export async function syncKnownPrivateChatHistory(
       continue
     }
 
-    for (const home of homes) {
-      const peerGlobalMetaId = home.globalMetaId.trim() || home.metaId.trim()
+    const peerIds = Array.from(
+      new Set(
+        [
+          ...homes.map((home) => home.globalMetaId.trim() || home.metaId.trim()),
+          ...knownPeerIds,
+        ]
+          .map((peer) => peer.trim())
+          .filter(Boolean),
+      ),
+    )
+
+    for (const peerGlobalMetaId of peerIds) {
       if (!peerGlobalMetaId || aliases.has(peerGlobalMetaId)) continue
       if (syncedPeerSet.has(peerGlobalMetaId)) continue
       const pairKey = `${metaId}:${peerGlobalMetaId}`
@@ -516,15 +564,15 @@ export async function syncKnownPrivateChatHistory(
         let fullyPersisted = true
         let persistenceError: unknown
         let newestTimestamp: number | undefined
+        let sawHistoryItem = false
         const requestedPageKeys = new Set<string>()
-        const boundaryMessageKeys = await loadKnownPeerMessageKeys({
+        const knownMessageKeys = await loadKnownPeerMessageKeys({
           walletGlobalMetaId,
           peerGlobalMetaId,
         })
-        const seenMessageKeys = new Set(boundaryMessageKeys)
+        const seenMessageKeys = new Set(knownMessageKeys)
 
-        // Fetch up to 3 pages (150 messages) per peer.
-        for (let pageIndex = 0; pageIndex < 3; pageIndex++) {
+        for (let pageIndex = 0; pageIndex < MAX_PRIVATE_CHAT_HISTORY_PAGES; pageIndex++) {
           const pageKey = cursor
             ? `cursor:${cursor}`
             : timestamp !== undefined
@@ -537,15 +585,11 @@ export async function syncKnownPrivateChatHistory(
             metaId,
             otherMetaId: peerGlobalMetaId,
             ...(timestamp !== undefined ? { timestamp } : { cursor }),
-            size: 50,
+            size: PRIVATE_CHAT_HISTORY_PAGE_SIZE,
           })
+          if (page.list.length > 0) sawHistoryItem = true
 
-          let reachedKnownBoundary = false
           for (const item of page.list) {
-            if (hasKnownPrivateChatItem(item, boundaryMessageKeys)) {
-              reachedKnownBoundary = true
-              break
-            }
             if (hasKnownPrivateChatItem(item, seenMessageKeys)) continue
             const result = await mergePrivateChatItem({
               item,
@@ -575,8 +619,6 @@ export async function syncKnownPrivateChatHistory(
             }
           }
 
-          if (reachedKnownBoundary) break
-
           const nextCursor = page.nextCursor?.trim()
           if (nextCursor) {
             cursor = nextCursor
@@ -604,15 +646,15 @@ export async function syncKnownPrivateChatHistory(
           continue
         }
 
-        await putSyncState({
-          id: `${walletGlobalMetaId}:${peerGlobalMetaId}`,
-          walletGlobalMetaId,
-          peerGlobalMetaId,
-          cursor,
-          lastTimestamp: newestTimestamp,
-          updatedAt: Date.now(),
-        })
-        if (!syncedPeerSet.has(peerGlobalMetaId)) {
+        if (sawHistoryItem) {
+          await putSyncState({
+            id: `${walletGlobalMetaId}:${peerGlobalMetaId}`,
+            walletGlobalMetaId,
+            peerGlobalMetaId,
+            cursor,
+            lastTimestamp: newestTimestamp,
+            updatedAt: Date.now(),
+          })
           syncedPeerSet.add(peerGlobalMetaId)
           failedPeerErrors.delete(peerGlobalMetaId)
           summary.syncedPeers.push(peerGlobalMetaId)

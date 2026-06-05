@@ -660,7 +660,7 @@ describe('deliverySync', () => {
     ])
   })
 
-  it('stops history pagination after reaching a locally persisted message', async () => {
+  it('continues history pagination after reaching a locally persisted message', async () => {
     await persistDeliveryMessage({
       walletGlobalMetaId: SELF,
       message: {
@@ -718,14 +718,78 @@ describe('deliverySync', () => {
 
     await syncKnownPrivateChatHistory(wallet)
 
-    expect(mockedHistory).toHaveBeenCalledTimes(1)
+    expect(mockedHistory).toHaveBeenCalledTimes(2)
     expect(await getMessagesForSession(`${SELF}:${PEER}:order-sync`)).toEqual([
+      expect.objectContaining({ id: 'pin-older' }),
       expect.objectContaining({ id: 'pin-existing' }),
       expect.objectContaining({ id: 'pin-newer' }),
     ])
     expect(useMessageStore.getState().messagesForSession(`${PEER}:order-sync`, SELF)).toEqual([
+      expect.objectContaining({ id: 'pin-older' }),
       expect.objectContaining({ id: 'pin-existing' }),
       expect.objectContaining({ id: 'pin-newer' }),
+    ])
+  })
+
+  it('continues private chat history beyond the old three-page cap', async () => {
+    mockedHomes.mockResolvedValue([{ metaId: PEER, globalMetaId: PEER }])
+    mockedHistory.mockImplementation(async ({ cursor }) => {
+      const page = cursor ? Number(cursor.replace('cursor-', '')) : 1
+      return {
+        list: [
+          privateChatItem({
+            pinId: `pin-page-${page}`,
+            timestamp: 1_700_000_000_000 - page,
+            content: `[ORDER_STATUS:order-sync] Page ${page}`,
+          }),
+        ],
+        nextCursor: page < 4 ? `cursor-${page + 1}` : '',
+      }
+    })
+
+    await syncKnownPrivateChatHistory(wallet)
+
+    expect(mockedHistory).toHaveBeenCalledTimes(4)
+    expect(useMessageStore.getState().messagesForSession(`${PEER}:order-sync`, SELF)).toEqual([
+      expect.objectContaining({ id: 'pin-page-4' }),
+      expect.objectContaining({ id: 'pin-page-3' }),
+      expect.objectContaining({ id: 'pin-page-2' }),
+      expect.objectContaining({ id: 'pin-page-1' }),
+    ])
+  })
+
+  it('syncs locally known peer sessions even when private chat homes omit them', async () => {
+    await putSession({
+      id: `${SELF}:${PEER}:uncorrelated`,
+      walletGlobalMetaId: SELF,
+      providerGlobalMetaId: PEER,
+      providerChatPubkey: 'provider-chat-key',
+      status: 'active',
+      lastMessageId: 'local-only',
+      lastActivityAt: 1_700_000_000_000,
+      assetCount: 0,
+      unreadCount: 0,
+    })
+    mockedHomes.mockResolvedValue([])
+    mockedHistory.mockResolvedValue({
+      list: [
+        privateChatItem({
+          pinId: 'pin-known-peer-history',
+          content: '[ORDER_STATUS:known-peer] Loaded without homes',
+        }),
+      ],
+    })
+
+    await syncKnownPrivateChatHistory(wallet)
+
+    expect(mockedHistory).toHaveBeenCalledWith({
+      metaId: SELF,
+      otherMetaId: PEER,
+      cursor: '',
+      size: 50,
+    })
+    expect(useMessageStore.getState().messagesForSession(`${PEER}:known-peer`, SELF)).toEqual([
+      expect.objectContaining({ id: 'pin-known-peer-history' }),
     ])
   })
 
@@ -980,6 +1044,31 @@ describe('deliverySync', () => {
       peerChatPubKey: 'provider-chat-key',
       messageId: 'pin-stable-decrypt-id',
     })
+  })
+
+  it('stores meta-socket seconds timestamps as milliseconds for chat ordering', async () => {
+    await mergePrivateChatItem({
+      item: privateChatItem({
+        pinId: 'pin-seconds-timestamp',
+        timestamp: 1_777_322_934,
+        content: 'Seconds timestamp from meta-socket',
+      }),
+      selfGlobalMetaId: SELF,
+      walletIdentity: wallet,
+    })
+
+    expect(useMessageStore.getState().messagesForSession(PEER, SELF)).toEqual([
+      expect.objectContaining({
+        id: 'pin-seconds-timestamp',
+        timestamp: 1_777_322_934_000,
+      }),
+    ])
+    expect(await getMessagesForSession(`${SELF}:${PEER}:uncorrelated`)).toEqual([
+      expect.objectContaining({
+        id: 'pin-seconds-timestamp',
+        timestamp: 1_777_322_934_000,
+      }),
+    ])
   })
 
   it('fetches the peer profile chat key when private chat userInfo omits it before decrypting', async () => {

@@ -45,6 +45,8 @@ export const enUS = {
     servicesError: 'Services could not be loaded',
     detailError: 'Service details could not be loaded',
     payRequest: 'Pay & Request',
+    requestAction: 'Request',
+    freePrice: 'Free',
     pricing: 'Pricing',
     price: 'Price',
     settlement: 'Settlement',
@@ -77,6 +79,8 @@ export const enUS = {
     botListError: 'Failed to load online bots.',
     copyGmid: 'Copy GlobalMetaID',
     gmidCopied: 'Copied',
+    privateChat: 'Private chat',
+    privateChatWith: 'Private chat {name}',
     request: {
       title: 'Pay & Request',
       promptLabel: 'Describe your request',

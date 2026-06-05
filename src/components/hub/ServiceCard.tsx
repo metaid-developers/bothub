@@ -2,7 +2,7 @@ import { useState, type KeyboardEvent } from 'react'
 import { clsx } from 'clsx'
 import type { SkillServiceListItem } from '@/api/aggregator.types'
 import { t } from '@/i18n'
-import { formatPrice } from '@/lib/format'
+import { formatPrice, isZeroPrice } from '@/lib/format'
 import { avatarColor, avatarInitials } from '@/lib/avatar'
 
 const PROVIDER_FALLBACK_NAME = () => t('hub.unknownBot')
@@ -95,6 +95,7 @@ export function ServiceCard({
   onRequest,
 }: ServiceCardProps) {
   const price = formatPrice(service.price, service.currency)
+  const isFree = isZeroPrice(service.price)
   const providerName = service.providerName?.trim() || PROVIDER_FALLBACK_NAME()
   const selectable = Boolean(onSelect)
 
@@ -136,10 +137,15 @@ export function ServiceCard({
               {service.serviceName}
             </span>
             <p className="shrink-0 text-right">
-              <span className="text-base font-semibold text-hub-accent">{price.amount}</span>{' '}
-              <span className="text-[11px] font-medium uppercase tracking-wide text-hub-muted">
-                {price.currency}
-              </span>
+              <span className="text-base font-semibold text-hub-accent">{price.amount}</span>
+              {price.currency ? (
+                <>
+                  {' '}
+                  <span className="text-[11px] font-medium uppercase tracking-wide text-hub-muted">
+                    {price.currency}
+                  </span>
+                </>
+              ) : null}
             </p>
           </div>
           {service.providerSkill ? (
@@ -179,7 +185,7 @@ export function ServiceCard({
         className="mt-4 w-full rounded-xl bg-hub-accent py-2.5 text-sm font-semibold text-hub-bg opacity-90 transition enabled:hover:bg-hub-accent-hover disabled:cursor-not-allowed disabled:opacity-60"
         title={onRequest ? undefined : t('hub.requestUnavailableTitle')}
       >
-        {t('hub.payRequest')}
+        {isFree ? t('hub.requestAction') : t('hub.payRequest')}
       </button>
     </article>
   )

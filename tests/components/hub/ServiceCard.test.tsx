@@ -52,4 +52,21 @@ describe('ServiceCard', () => {
     expect(onRequest).toHaveBeenCalledWith(fortuneService)
     expect(onSelect).not.toHaveBeenCalled()
   })
+
+  it('renders free services with a request-only action and no zero price', () => {
+    render(
+      <ServiceCard
+        service={{
+          ...fortuneService,
+          price: '0',
+          currency: 'BTC',
+        }}
+      />,
+    )
+
+    expect(screen.getByText('免费')).toBeInTheDocument()
+    expect(screen.queryByText('0')).not.toBeInTheDocument()
+    expect(screen.queryByText('BTC')).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '请求' })).toBeDisabled()
+  })
 })

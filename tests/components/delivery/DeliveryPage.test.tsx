@@ -364,6 +364,30 @@ describe('DeliveryPage layout', () => {
     expect(screen.queryByLabelText('idq133…uv2n 头像')).not.toBeInTheDocument()
   })
 
+  it('opens a new empty provider conversation from a session URL and hydrates its profile', async () => {
+    const peerGlobalMetaId = 'idqfreshprovider'
+    vi.mocked(fetchUserProfileByGlobalMetaId).mockResolvedValue({
+      globalMetaId: peerGlobalMetaId,
+      name: 'Fresh Bot',
+      avatarUrl: 'https://cdn.example/fresh.png',
+      chatPubkey: 'fresh-chat-key',
+    })
+    mocks.walletState.identity = connectedWallet
+    mocks.walletState.status = 'connected'
+
+    renderDeliveryPage(`/delivery?session=${peerGlobalMetaId}`)
+
+    await waitFor(() =>
+      expect(fetchUserProfileByGlobalMetaId).toHaveBeenCalledWith(peerGlobalMetaId),
+    )
+    expect(await screen.findByRole('button', { name: 'Fresh Bot' })).toHaveAttribute(
+      'aria-current',
+      'true',
+    )
+    expect(screen.getByRole('textbox', { name: '补充需求或询问进度' })).toBeEnabled()
+    expect(screen.getByText('这个服务方的沟通和交付记录会显示在这里。')).toBeInTheDocument()
+  })
+
   it('hydrates the selected peer profile and retries decrypting failed ciphertext', async () => {
     const peerGlobalMetaId = 'idqprovider'
     vi.mocked(fetchUserProfileByGlobalMetaId).mockResolvedValue({

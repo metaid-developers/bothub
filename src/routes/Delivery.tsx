@@ -13,7 +13,7 @@ import { getOrdersForWallet } from '@/delivery/db'
 import { retryDecryptPeerMessages } from '@/delivery/decryptRetry'
 import type { BuyerOrder } from '@/delivery/domain'
 import { useMessageStore } from '@/delivery/messageStore'
-import { resolveProviderChatPubkey } from '@/delivery/sessionGrouping'
+import { parseSessionKey, resolveProviderChatPubkey } from '@/delivery/sessionGrouping'
 import { useDeliverySyncStatusStore } from '@/delivery/syncStatusStore'
 import { t } from '@/i18n'
 import { useWallet } from '@/wallet/useWallet'
@@ -188,6 +188,9 @@ export function DeliveryPage() {
   const hydrateFromDb = useMessageStore((s) => s.hydrateFromDb)
   const syncStatus = useDeliverySyncStatusStore((s) => s.status)
   const syncFailedPeerCount = useDeliverySyncStatusStore((s) => s.failedPeerCount)
+  const conversationFromUrl = searchParams.get(CONVERSATION_PARAM)?.trim() || null
+  const orderFromUrl = searchParams.get(ORDER_PARAM)?.trim() || null
+  const sessionFromUrl = searchParams.get(SESSION_PARAM)?.trim() || null
 
   const [workspaceRecords, setWorkspaceRecords] = useState<DeliveryWorkspaceRecords>({
     orders: [],
@@ -226,6 +229,14 @@ export function DeliveryPage() {
     return merged
   }, [storedAssetsBySession, workspaceRecords.assetsBySession])
 
+  const requestedConversations = useMemo(() => {
+    if (!sessionFromUrl) return []
+    const parsed = parseSessionKey(sessionFromUrl)
+    const peer = parsed.peerGlobalMetaId.trim()
+    if (!peer || parsed.orderCorrelationId) return []
+    return [{ providerGlobalMetaId: peer, latestActivityAt: Date.now() }]
+  }, [sessionFromUrl])
+
   const workspace = useMemo(
     () =>
       buildDeliveryConversations({
@@ -235,6 +246,7 @@ export function DeliveryPage() {
         byPeer,
         assetsBySession: mergedAssetsBySession,
         providerProfiles,
+        requestedConversations,
       }),
     [
       selfGlobalMetaId,
@@ -243,12 +255,9 @@ export function DeliveryPage() {
       byPeer,
       mergedAssetsBySession,
       providerProfiles,
+      requestedConversations,
     ],
   )
-
-  const conversationFromUrl = searchParams.get(CONVERSATION_PARAM)?.trim() || null
-  const orderFromUrl = searchParams.get(ORDER_PARAM)?.trim() || null
-  const sessionFromUrl = searchParams.get(SESSION_PARAM)?.trim() || null
 
   const resolvedRouteSelection = useMemo(
     () =>

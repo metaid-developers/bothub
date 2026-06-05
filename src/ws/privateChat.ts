@@ -21,9 +21,11 @@ export interface PrivateChatUserInfo {
 export interface PrivateChatItem {
   fromGlobalMetaId: string
   from?: string
+  fromAddress?: string
   fromUserInfo?: PrivateChatUserInfo
   toGlobalMetaId: string
   to?: string
+  toAddress?: string
   toUserInfo?: PrivateChatUserInfo
   txId?: string
   pinId?: string
@@ -53,10 +55,14 @@ function nonEmptyString(value: unknown): string | null {
 }
 
 function numberFromTimestamp(value: unknown): number | null {
-  if (typeof value === 'number' && Number.isFinite(value)) return value
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return value < 10_000_000_000 ? value * 1000 : value
+  }
   if (typeof value === 'string') {
     const parsed = Number(value)
-    if (Number.isFinite(parsed)) return parsed
+    if (Number.isFinite(parsed)) {
+      return parsed < 10_000_000_000 ? parsed * 1000 : parsed
+    }
   }
   return null
 }
@@ -135,13 +141,22 @@ export function normalizePrivateChatItem(value: unknown): PrivateChatItem | null
     nonEmptyString(row.from) ??
     nonEmptyString(row.createGlobalMetaId) ??
     nonEmptyString(row.globalMetaId) ??
-    fromUserInfo?.globalMetaId
+    nonEmptyString(row.fromAddress) ??
+    nonEmptyString(row.address) ??
+    fromUserInfo?.globalMetaId ??
+    fromUserInfo?.metaid ??
+    fromUserInfo?.address
   const toGlobalMetaId =
     nonEmptyString(row.toGlobalMetaId) ??
     nonEmptyString(row.to) ??
     nonEmptyString(row.receiveGlobalMetaId) ??
     nonEmptyString(row.targetGlobalMetaId) ??
-    toUserInfo?.globalMetaId
+    nonEmptyString(row.toAddress) ??
+    nonEmptyString(row.receiveAddress) ??
+    nonEmptyString(row.targetAddress) ??
+    toUserInfo?.globalMetaId ??
+    toUserInfo?.metaid ??
+    toUserInfo?.address
   const content = typeof row.content === 'string' ? row.content : null
   const timestamp = numberFromTimestamp(row.timestamp)
   if (!fromGlobalMetaId || !toGlobalMetaId || content === null || timestamp === null) {
@@ -159,9 +174,11 @@ export function normalizePrivateChatItem(value: unknown): PrivateChatItem | null
   return {
     fromGlobalMetaId,
     from: nonEmptyString(row.from) ?? undefined,
+    fromAddress: nonEmptyString(row.fromAddress) ?? undefined,
     fromUserInfo,
     toGlobalMetaId,
     to: nonEmptyString(row.to) ?? undefined,
+    toAddress: nonEmptyString(row.toAddress) ?? undefined,
     toUserInfo,
     txId: nonEmptyString(row.txId) ?? undefined,
     pinId: nonEmptyString(row.pinId) ?? undefined,

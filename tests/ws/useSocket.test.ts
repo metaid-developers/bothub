@@ -158,6 +158,39 @@ describe('useSocket delivery persistence', () => {
     ])
   })
 
+  it('accepts live private chat routed through wallet address aliases', async () => {
+    await useSocket.getState().handleEnvelope(
+      {
+        M: WS_SERVER_NOTIFY_PRIVATE_CHAT,
+        C: 0,
+        D: {
+          fromAddress: PEER,
+          toAddress: '1SelfMvcAddress',
+          protocol: '/protocols/simplemsg',
+          content: 'Address-routed live reply',
+          contentType: 'text/plain',
+          timestamp: 1_777_322_934,
+          pinId: 'pin-address-routed-live',
+        },
+      },
+      {
+        globalMetaId: SELF,
+        mvcAddress: '1SelfMvcAddress',
+        btcAddress: '',
+        dogeAddress: '',
+      },
+    )
+
+    expect(useMessageStore.getState().messagesForSession(PEER, SELF)).toEqual([
+      expect.objectContaining({
+        id: 'pin-address-routed-live',
+        fromGlobalMetaId: PEER,
+        toGlobalMetaId: '1SelfMvcAddress',
+        timestamp: 1_777_322_934_000,
+      }),
+    ])
+  })
+
   it('does not add live messages to UI memory when IndexedDB persistence fails', async () => {
     const originalPut = IDBObjectStore.prototype.put
     vi.spyOn(IDBObjectStore.prototype, 'put').mockImplementation(function (

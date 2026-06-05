@@ -84,6 +84,13 @@ export interface DeliveryConversationBuildInput {
   byPeer: Record<string, DeliveryMessage[]>
   assetsBySession: Record<string, DeliveryAssetRecord[]>
   providerProfiles?: Record<string, Pick<UserProfile, 'globalMetaId' | 'address' | 'metaid'>>
+  requestedConversations?: Array<{
+    providerGlobalMetaId: string
+    providerChatPubkey?: string
+    providerName?: string
+    providerAvatarUrl?: string
+    latestActivityAt?: number
+  }>
 }
 
 const ACTIVE_ORDER_WINDOW_MS = 24 * 60 * 60 * 1000
@@ -655,10 +662,17 @@ export function buildDeliveryConversations(
     }
   }
 
+  const requestedConversations = new Map(
+    (input.requestedConversations ?? [])
+      .map((conversation) => [normalize(conversation.providerGlobalMetaId), conversation] as const)
+      .filter(([providerGlobalMetaId]) => Boolean(providerGlobalMetaId)),
+  )
+
   const conversationIds = new Set<string>([
     ...Array.from(rawMessagesByConversation.keys()),
     ...Array.from(orderContextsByConversation.keys()),
     ...Array.from(storedRecordsByConversation.keys()),
+    ...Array.from(requestedConversations.keys()),
   ])
 
   const conversations: DeliveryConversation[] = []
@@ -745,13 +759,24 @@ export function buildDeliveryConversations(
     ])
     const firstThread = threads[0]
     const firstMessage = [...messages].reverse().find((row) => row.peerGlobalMetaId.trim())
+    const requestedConversation = requestedConversations.get(conversationId)
     const providerGlobalMetaId = conversationId
     const providerChatPubkey =
-      nonEmpty(firstThread?.order.providerChatPubkey) || nonEmpty(firstMessage?.peerChatPubkey)
-    const providerName = nonEmpty(firstThread?.order.providerName) || nonEmpty(firstMessage?.peerName)
+      nonEmpty(firstThread?.order.providerChatPubkey) ||
+      nonEmpty(firstMessage?.peerChatPubkey) ||
+      nonEmpty(requestedConversation?.providerChatPubkey)
+    const providerName =
+      nonEmpty(firstThread?.order.providerName) ||
+      nonEmpty(firstMessage?.peerName) ||
+      nonEmpty(requestedConversation?.providerName)
     const providerAvatarUrl =
-      nonEmpty(firstThread?.order.providerAvatarUrl) || nonEmpty(firstMessage?.peerAvatarUrl)
-    const latestActivityAt = latestActivityForConversation({ messages, orderThreads: threads })
+      nonEmpty(firstThread?.order.providerAvatarUrl) ||
+      nonEmpty(firstMessage?.peerAvatarUrl) ||
+      nonEmpty(requestedConversation?.providerAvatarUrl)
+    const latestActivityAt =
+      latestActivityForConversation({ messages, orderThreads: threads }) ||
+      requestedConversation?.latestActivityAt ||
+      0
 
     conversations.push({
       id: conversationId,

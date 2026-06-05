@@ -9,7 +9,7 @@ import { ServiceDetailSkeleton } from '@/components/common/LoadingSkeleton'
 import { ProviderProfile } from '@/components/hub/ProviderProfile'
 import { RequestModal } from '@/components/hub/RequestModal'
 import { t } from '@/i18n'
-import { formatPrice } from '@/lib/format'
+import { formatPrice, isZeroPrice } from '@/lib/format'
 import { avatarColor, avatarInitials } from '@/lib/avatar'
 import { useWallet } from '@/wallet/useWallet'
 
@@ -87,10 +87,15 @@ function PricingBlock({ service }: { service: SkillServiceCore }) {
         <div className="flex items-baseline justify-between gap-2">
           <dt className="text-hub-muted">{t('hub.price')}</dt>
           <dd className="text-right font-semibold text-hub-accent">
-            {price.amount}{' '}
-            <span className="text-[11px] font-medium uppercase tracking-wide text-hub-muted">
-              {price.currency}
-            </span>
+            {price.amount}
+            {price.currency ? (
+              <>
+                {' '}
+                <span className="text-[11px] font-medium uppercase tracking-wide text-hub-muted">
+                  {price.currency}
+                </span>
+              </>
+            ) : null}
           </dd>
         </div>
         <div className="flex justify-between gap-2">
@@ -207,7 +212,7 @@ export function ServiceDetailPanel({ serviceId, onClose, rating }: ServiceDetail
                   onClick={() => setRequestOpen(true)}
                   className="w-full rounded-xl bg-hub-accent py-2.5 text-sm font-semibold text-hub-bg transition hover:bg-hub-accent-hover"
                 >
-                  {t('hub.payRequest')}
+                  {isZeroPrice(data.service.price) ? t('hub.requestAction') : t('hub.payRequest')}
                 </button>
 
                 {requestOpen ? (

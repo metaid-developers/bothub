@@ -51,7 +51,13 @@ function identityFromInput(input: SocketIdentityInput): WalletIdentity {
 function socketMetaIdsForIdentity(identity: WalletIdentity): string[] {
   return Array.from(
     new Set(
-      [identity.globalMetaId, identity.mvcAddress]
+      [
+        identity.globalMetaId,
+        identity.metaid,
+        identity.mvcAddress,
+        identity.btcAddress,
+        identity.dogeAddress,
+      ]
         .map((value) => value.trim())
         .filter(Boolean),
     ),
@@ -87,9 +93,8 @@ function isPrivateChatForIdentity(
 ): boolean {
   const item = normalizePrivateChatItem(envelope.D)
   if (!item) return false
-  return (
-    isPrivateChatForRecipient(item, identity.globalMetaId) ||
-    (!!identity.mvcAddress && isPrivateChatForRecipient(item, identity.mvcAddress))
+  return socketMetaIdsForIdentity(identity).some((metaId) =>
+    isPrivateChatForRecipient(item, metaId),
   )
 }
 

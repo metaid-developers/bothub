@@ -120,6 +120,32 @@ describe('privateChat', () => {
     }))
   })
 
+  it('normalizes address-only private chat payloads and seconds timestamps', () => {
+    const normalized = normalizePrivateChatItem({
+      fromAddress: '1ProviderAddress',
+      toAddress: '1SelfMvcAddress',
+      userInfo: {
+        address: '1ProviderAddress',
+        globalMetaId: 'idqprovider',
+        chatPublicKey: 'provider-chat-key',
+      },
+      content: 'address-routed message',
+      timestamp: 1_777_322_934,
+      pinId: 'pin-address-only',
+    })
+
+    expect(normalized).toEqual(expect.objectContaining({
+      fromGlobalMetaId: '1ProviderAddress',
+      toGlobalMetaId: '1SelfMvcAddress',
+      timestamp: 1_777_322_934_000,
+      fromUserInfo: expect.objectContaining({
+        address: '1ProviderAddress',
+        globalMetaId: 'idqprovider',
+        chatPublicKey: 'provider-chat-key',
+      }),
+    }))
+  })
+
   it('derives from/to globalMetaId from preserved userInfo when top-level fields are missing', () => {
     const normalized = normalizePrivateChatItem({
       content: 'cipher',

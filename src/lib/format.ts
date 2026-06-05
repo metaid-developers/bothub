@@ -1,8 +1,21 @@
+import { t } from '@/i18n'
+
+export function isZeroPrice(price: string): boolean {
+  const raw = typeof price === 'string' ? price.trim() : String(price ?? '').trim()
+  if (!raw) return false
+  const numeric = Number(raw)
+  return Number.isFinite(numeric) && numeric === 0
+}
+
 /** Human-readable price + currency for skill-service list cards */
 export function formatPrice(
   price: string,
   currency: string,
 ): { amount: string; currency: string } {
+  if (isZeroPrice(price)) {
+    return { amount: t('hub.freePrice'), currency: '' }
+  }
+
   const amount = typeof price === 'string' ? price.trim() || '0' : String(price ?? '0')
   const normalized =
     typeof currency === 'string' ? currency.trim().toUpperCase() : String(currency ?? '')

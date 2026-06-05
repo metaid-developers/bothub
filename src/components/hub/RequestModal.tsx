@@ -253,8 +253,13 @@ export function RequestModal({ open, onClose, service, provider, wallet }: Reque
                 <div className="flex justify-between gap-2">
                   <dt className="text-hub-muted">{t('hub.price')}</dt>
                   <dd className="font-semibold text-hub-accent">
-                    {price.amount}{' '}
-                    <span className="text-xs uppercase text-hub-muted">{price.currency}</span>
+                    {price.amount}
+                    {price.currency ? (
+                      <>
+                        {' '}
+                        <span className="text-xs uppercase text-hub-muted">{price.currency}</span>
+                      </>
+                    ) : null}
                   </dd>
                 </div>
                 <div className="flex justify-between gap-2">
@@ -293,7 +298,7 @@ export function RequestModal({ open, onClose, service, provider, wallet }: Reque
                 active={step === 'checking_wallet'}
                 done={step === 'paying' || step === 'encrypting' || step === 'broadcasting'}
               />
-              {service.price !== '0' ? (
+              {!isFreeServicePrice(service.price) ? (
                 <ProgressRow
                   label={t('hub.request.payment')}
                   active={step === 'paying'}
