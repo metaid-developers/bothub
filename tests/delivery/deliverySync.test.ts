@@ -994,6 +994,72 @@ describe('deliverySync', () => {
     ])
   })
 
+  it('canonicalizes historical self address aliases before choosing the peer session', async () => {
+    const historicalSelfAddress = '12ghVWG1yAgNjzXj4mr3qK9DgyornMUikZ'
+    mockedHomes.mockResolvedValue([{ metaId: PEER_ADDRESS, globalMetaId: PEER_ADDRESS }])
+    mockedHistory.mockResolvedValue({
+      list: [
+        privateChatItem({
+          fromGlobalMetaId: PEER_ADDRESS,
+          toGlobalMetaId: SELF,
+          fromUserInfo: undefined,
+          pinId: 'pin-provider-to-self',
+          content: 'Provider reply',
+          timestamp: 1_700_000_000_000,
+        }),
+        privateChatItem({
+          fromGlobalMetaId: historicalSelfAddress,
+          toGlobalMetaId: PEER,
+          fromUserInfo: undefined,
+          pinId: 'pin-historical-self-to-provider',
+          content: 'User follow-up',
+          timestamp: 1_700_000_001_000,
+        }),
+      ],
+    })
+    mockedFetchUserProfileByGlobalMetaId.mockImplementation(async (globalMetaId) => {
+      if (globalMetaId === PEER_ADDRESS || globalMetaId === PEER) {
+        return {
+          globalMetaId: PEER,
+          address: PEER_ADDRESS,
+          name: 'Provider Bot',
+          chatPubkey: 'provider-chat-key',
+        }
+      }
+      if (globalMetaId === historicalSelfAddress) {
+        return {
+          globalMetaId: SELF,
+          address: historicalSelfAddress,
+          name: 'Self',
+          chatPubkey: 'self-chat-key',
+        }
+      }
+      return {}
+    })
+
+    await syncKnownPrivateChatHistory(wallet)
+
+    expect(useMessageStore.getState().messagesForSession(PEER, SELF)).toEqual([
+      expect.objectContaining({
+        id: 'pin-provider-to-self',
+        peerGlobalMetaId: PEER,
+        fromGlobalMetaId: PEER,
+        toGlobalMetaId: SELF,
+      }),
+      expect.objectContaining({
+        id: 'pin-historical-self-to-provider',
+        peerGlobalMetaId: PEER,
+        fromGlobalMetaId: SELF,
+        toGlobalMetaId: PEER,
+      }),
+    ])
+    expect(useMessageStore.getState().messagesForSession(SELF, SELF)).toEqual([])
+    expect(await getMessagesForSession(`${SELF}:${PEER}:uncorrelated`)).toEqual([
+      expect.objectContaining({ id: 'pin-provider-to-self' }),
+      expect.objectContaining({ id: 'pin-historical-self-to-provider' }),
+    ])
+  })
+
   it('does not add history messages to UI memory or advance sync state when persistence fails', async () => {
     mockedHomes.mockResolvedValue([{ metaId: PEER, globalMetaId: PEER }])
     mockedHistory.mockResolvedValue({

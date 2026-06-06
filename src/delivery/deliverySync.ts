@@ -229,6 +229,23 @@ async function resolvePeerProfile(input: {
       ),
     },
   )
+  return resolveProfileForPeerId({
+    fromMessage,
+    selfGlobalMetaId: input.selfGlobalMetaId,
+    peerGlobalMetaId: input.peerGlobalMetaId,
+    cache: input.cache,
+    pushDebug: input.pushDebug,
+  })
+}
+
+async function resolveProfileForPeerId(input: {
+  fromMessage: PeerProfile
+  selfGlobalMetaId: string
+  peerGlobalMetaId: string
+  cache: PeerProfileCache
+  pushDebug?: (line: string) => void
+}): Promise<PeerProfile> {
+  const fromMessage = input.fromMessage
   if (!peerProfileNeedsHydration(fromMessage)) {
     return fromMessage
   }
@@ -275,6 +292,52 @@ async function resolvePeerProfile(input: {
     input.cache.set(peerGlobalMetaId, cached)
   }
   return mergePeerProfiles(fromMessage, await cached)
+}
+
+function userInfoForPrivateChatSide(
+  item: PrivateChatItem,
+  side: 'from' | 'to',
+): PrivateChatUserInfo | undefined {
+  return side === 'from' ? item.fromUserInfo : item.toUserInfo
+}
+
+async function resolveParticipantProfile(input: {
+  item: PrivateChatItem
+  side: 'from' | 'to'
+  rawGlobalMetaId: string
+  selfGlobalMetaId: string
+  selfAliases: readonly string[]
+  cache: PeerProfileCache
+  pushDebug?: (line: string) => void
+}): Promise<PeerProfile> {
+  const raw = input.rawGlobalMetaId.trim()
+  if (!raw) return {}
+  if (isSelfAlias(raw, new Set(input.selfAliases))) {
+    return { globalMetaId: input.selfGlobalMetaId }
+  }
+  return resolveProfileForPeerId({
+    fromMessage: peerProfileFromPrivateChatUserInfo(
+      userInfoForPrivateChatSide(input.item, input.side),
+    ),
+    selfGlobalMetaId: input.selfGlobalMetaId,
+    peerGlobalMetaId: raw,
+    cache: input.cache,
+    pushDebug: input.pushDebug,
+  })
+}
+
+function canonicalParticipantGlobalMetaId(input: {
+  rawGlobalMetaId: string
+  profile: PeerProfile
+  selfGlobalMetaId: string
+  selfAliasSet: ReadonlySet<string>
+}): string {
+  const raw = input.rawGlobalMetaId.trim()
+  const profileGlobalMetaId = input.profile.globalMetaId?.trim()
+  if (isSelfAlias(raw, input.selfAliasSet) || profileGlobalMetaId === input.selfGlobalMetaId) {
+    return input.selfGlobalMetaId
+  }
+  return profileGlobalMetaId || raw
 }
 
 async function resolveReplyOrderCorrelationId(input: {
@@ -408,17 +471,64 @@ async function privateChatToDeliveryMessage(input: {
   const self = input.selfGlobalMetaId.trim()
   const selfAliases = selfAliasesForWallet(input.walletIdentity)
   const selfAliasSet = new Set(selfAliases)
-  const peerGlobalMetaId = peerGlobalMetaIdFromPrivateChat(
+  const rawFromGlobalMetaId = input.item.fromGlobalMetaId.trim()
+  const rawToGlobalMetaId = input.item.toGlobalMetaId.trim()
+  const profileCache = input.peerChatPublicKeyCache ?? new Map()
+  const [fromProfile, toProfile] = await Promise.all([
+    resolveParticipantProfile({
+      item: input.item,
+      side: 'from',
+      rawGlobalMetaId: rawFromGlobalMetaId,
+      selfGlobalMetaId: self,
+      selfAliases,
+      cache: profileCache,
+      pushDebug: input.pushDebug,
+    }),
+    resolveParticipantProfile({
+      item: input.item,
+      side: 'to',
+      rawGlobalMetaId: rawToGlobalMetaId,
+      selfGlobalMetaId: self,
+      selfAliases,
+      cache: profileCache,
+      pushDebug: input.pushDebug,
+    }),
+  ])
+  const canonicalFromGlobalMetaId = canonicalParticipantGlobalMetaId({
+    rawGlobalMetaId: rawFromGlobalMetaId,
+    profile: fromProfile,
+    selfGlobalMetaId: self,
+    selfAliasSet,
+  })
+  const canonicalToGlobalMetaId = canonicalParticipantGlobalMetaId({
+    rawGlobalMetaId: rawToGlobalMetaId,
+    profile: toProfile,
+    selfGlobalMetaId: self,
+    selfAliasSet,
+  })
+  const fallbackPeerGlobalMetaId = peerGlobalMetaIdFromPrivateChat(
     input.item,
     self,
     selfAliases,
   )
-  const peerProfile = await resolvePeerProfile({
+  const peerGlobalMetaId =
+    canonicalFromGlobalMetaId === self && canonicalToGlobalMetaId !== self
+      ? canonicalToGlobalMetaId
+      : canonicalToGlobalMetaId === self && canonicalFromGlobalMetaId !== self
+        ? canonicalFromGlobalMetaId
+        : fallbackPeerGlobalMetaId
+  const participantPeerProfile =
+    canonicalFromGlobalMetaId === peerGlobalMetaId
+      ? fromProfile
+      : canonicalToGlobalMetaId === peerGlobalMetaId
+        ? toProfile
+        : undefined
+  const peerProfile = participantPeerProfile ?? await resolvePeerProfile({
     item: input.item,
     selfGlobalMetaId: self,
     selfAliases,
     peerGlobalMetaId,
-    cache: input.peerChatPublicKeyCache ?? new Map(),
+    cache: profileCache,
     pushDebug: input.pushDebug,
   })
   const canonicalPeerGlobalMetaId = peerProfile.globalMetaId?.trim() || peerGlobalMetaId
@@ -436,16 +546,14 @@ async function privateChatToDeliveryMessage(input: {
     input.pushDebug?.(`[decrypt] ${peerGlobalMetaId.slice(0, 8)}…: ${error}`)
   }
 
-  const fromGlobalMetaId = isSelfAlias(input.item.fromGlobalMetaId, selfAliasSet)
-    ? self
-    : input.item.fromGlobalMetaId.trim() === peerGlobalMetaId
+  const fromGlobalMetaId =
+    canonicalFromGlobalMetaId === peerGlobalMetaId
       ? canonicalPeerGlobalMetaId
-      : input.item.fromGlobalMetaId.trim()
-  const toGlobalMetaId = isSelfAlias(input.item.toGlobalMetaId, selfAliasSet)
-    ? self
-    : input.item.toGlobalMetaId.trim() === peerGlobalMetaId
+      : canonicalFromGlobalMetaId
+  const toGlobalMetaId =
+    canonicalToGlobalMetaId === peerGlobalMetaId
       ? canonicalPeerGlobalMetaId
-      : input.item.toGlobalMetaId.trim()
+      : canonicalToGlobalMetaId
   const replyOrderCorrelationId = await resolveReplyOrderCorrelationId({
     walletGlobalMetaId: self,
     peerGlobalMetaId: canonicalPeerGlobalMetaId,
