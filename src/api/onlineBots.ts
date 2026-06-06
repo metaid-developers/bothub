@@ -1,4 +1,4 @@
-import { getNormalizedMetaSocketBaseUrl } from '@/api/config'
+import { getNormalizedMetasoP2PBaseUrl } from '@/api/config'
 import {
   fetchUserProfileByGlobalMetaId,
   normalizeAvatarUrl,
@@ -155,7 +155,7 @@ async function enrichOnlineBotsBio(bots: OnlineBot[]): Promise<OnlineBot[]> {
 }
 
 export async function getOnlineBots(page = 1, size = 100): Promise<OnlineBotsResult> {
-  const baseUrl = getNormalizedMetaSocketBaseUrl()
+  const baseUrl = getNormalizedMetasoP2PBaseUrl()
   const url = `${baseUrl}/socket/online/list?page=${page}&size=${size}`
 
   const response = await fetch(url)

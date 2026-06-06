@@ -4,9 +4,9 @@
 
 **Goal:** Close the gap between the completed Delivery Workspace V1 hardening branch and a small local/private buyer-flow beta that ordinary users can try with Metalet.
 
-**Architecture:** Keep BotHub as a pure frontend React app backed by Metalet, meta-socket HTTP/Socket.IO, and IndexedDB. Do not add a BotHub backend. This phase is an integration and release-readiness pass: merge the completed hardening branch, switch private-chat reads to meta-socket's canonical routes with compatibility fallback, remove remaining buyer-visible technical/English product copy, and re-run real wallet acceptance against local meta-socket.
+**Architecture:** Keep BotHub as a pure frontend React app backed by Metalet, metaso-p2p HTTP/Socket.IO, and IndexedDB. Do not add a BotHub backend. This phase is an integration and release-readiness pass: merge the completed hardening branch, switch private-chat reads to metaso-p2p's canonical routes with compatibility fallback, remove remaining buyer-visible technical/English product copy, and re-run real wallet acceptance against local metaso-p2p.
 
-**Tech Stack:** Vite 5, React 18, TypeScript 5 strict, Tailwind CSS, zustand, IndexedDB, socket.io-client, Vitest + Testing Library, Chrome + Metalet, local/staging meta-socket.
+**Tech Stack:** Vite 5, React 18, TypeScript 5 strict, Tailwind CSS, zustand, IndexedDB, socket.io-client, Vitest + Testing Library, Chrome + Metalet, local/staging metaso-p2p.
 
 ---
 
@@ -27,9 +27,9 @@ Observed before writing this plan on 2026-06-01:
   - `pnpm build`: passed, with the existing Vite large chunk warning
   - `pnpm lint`: passed
   - `git diff --check`: passed
-  - `META_SOCKET_BASE_URL=http://127.0.0.1:18091 META_SOCKET_PRIVATE_CHAT_METAID=idq1zfazvxaq69uw6txe3ewce30ewyhy9a7mzykgv0 META_SOCKET_PRIVATE_CHAT_OTHER_METAID=idq14hmv23j5fnlx4ccnmvlyldjd38xjsechzwg9xz pnpm smoke:meta-socket`: passed
-- Local meta-socket `http://127.0.0.1:18091` is currently healthy and returns real BotHub skill-service rows.
-- meta-socket has added canonical private-chat routes:
+  - `METASO_P2P_BASE_URL=http://127.0.0.1:18091 METASO_P2P_PRIVATE_CHAT_METAID=idq1zfazvxaq69uw6txe3ewce30ewyhy9a7mzykgv0 METASO_P2P_PRIVATE_CHAT_OTHER_METAID=idq14hmv23j5fnlx4ccnmvlyldjd38xjsechzwg9xz pnpm smoke:metaso-p2p`: passed
+- Local metaso-p2p `http://127.0.0.1:18091` is currently healthy and returns real BotHub skill-service rows.
+- metaso-p2p has added canonical private-chat routes:
   - `GET /api/private-chat/homes/:metaId`
   - `GET /api/private-chat/messages`
   - `GET /api/private-chat/messages/by-index`
@@ -37,7 +37,7 @@ Observed before writing this plan on 2026-06-01:
 - BotHub implementation branch still reads private chat through the historical compatibility routes in `src/api/privateChat.ts`:
   - `GET /api/group-chat/chat/homes/:metaId`
   - `GET /api/group-chat/private-chat-list`
-- No production/staging meta-socket base URL has been assigned and verified yet.
+- No production/staging metaso-p2p base URL has been assigned and verified yet.
 
 ## 1. Release Definition
 
@@ -49,11 +49,11 @@ This phase is complete only when all of the following are true:
   - `pnpm build`
   - `pnpm lint`
   - `git diff --check`
-  - local `pnpm smoke:meta-socket` against `http://127.0.0.1:18091`
+  - local `pnpm smoke:metaso-p2p` against `http://127.0.0.1:18091`
 - BotHub uses canonical `/api/private-chat/*` routes by default and falls back to legacy `/api/group-chat/*` only for compatibility.
 - Normal buyer UI no longer exposes avoidable English/platform terms such as `Services`, `Search services`, `Pay & Request`, `Unknown Bot`, `Socket.IO`, `chat pubkey`, `CreatePin`, or raw transport vocabulary.
 - Provider/service names and descriptions coming from chain data may remain in their original language.
-- With mocks disabled, the Hub loads real services from local meta-socket.
+- With mocks disabled, the Hub loads real services from local metaso-p2p.
 - Chrome + Metalet acceptance proves at least:
   - wallet connect
   - one real free order buyer send
@@ -65,7 +65,7 @@ This phase is complete only when all of the following are true:
 - Acceptance docs clearly separate:
   - local/private beta readiness
   - strict production readiness
-  - unresolved meta-socket/runtime blockers
+  - unresolved metaso-p2p/runtime blockers
 
 ## 2. Non-Goals
 
@@ -74,7 +74,7 @@ This phase is complete only when all of the following are true:
 - Do not implement provider-side features.
 - Do not add a BotHub backend.
 - Do not invent mock production evidence.
-- Do not point production BotHub at idchat `/chat-api/` as a substitute for meta-socket.
+- Do not point production BotHub at idchat `/chat-api/` as a substitute for metaso-p2p.
 - Do not clean unrelated untracked screenshots/logs unless the user explicitly asks.
 
 ## 3. Source Documents
@@ -85,9 +85,9 @@ Read before starting Task 1:
 - `docs/superpowers/plans/2026-05-31-delivery-workspace-release-hardening.md`
 - `docs/superpowers/acceptance/2026-05-31-delivery-workspace-v1.md` from the implementation branch
 - `docs/qa/delivery-workspace-release-hardening-run-log.md` from the implementation branch
-- `/Users/tusm/Documents/MetaID_Projects/meta-socket/issues/issues-fixed-logs.md`
-- `/Users/tusm/Documents/MetaID_Projects/meta-socket/docs/BOTHUB_META_SOCKET_ENDPOINT.md` if present
-- `docs/architecture/meta-socket-local-api.md`
+- `/Users/tusm/Documents/MetaID_Projects/metaso-p2p/issues/issues-fixed-logs.md`
+- `/Users/tusm/Documents/MetaID_Projects/metaso-p2p/docs/BOTHUB_METASO_P2P_ENDPOINT.md` if present
+- `docs/architecture/metaso-p2p-local-api.md`
 
 Use the current code as the source of truth when implementation differs from older docs.
 
@@ -95,19 +95,19 @@ Use the current code as the source of truth when implementation differs from old
 
 Expected files to touch:
 
-- `src/api/privateChat.ts`  
-  Switch default private-chat reads to canonical `/api/private-chat/*`; keep legacy route fallback for local or older meta-socket compatibility.
+- `src/api/privateChat.ts`
+  Switch default private-chat reads to canonical `/api/private-chat/*`; keep legacy route fallback for local or older metaso-p2p compatibility.
 
-- `tests/api/privateChat.test.ts`  
+- `tests/api/privateChat.test.ts`
   Cover canonical route usage, legacy fallback, `data.list: null`, and non-404/405 error behavior.
 
-- `scripts/smoke-meta-socket.mjs`  
+- `scripts/smoke-metaso-p2p.mjs`
   Smoke canonical private-chat routes first; optionally verify legacy compatibility only as a fallback/reporting detail.
 
-- `src/i18n/zh-CN.ts`  
+- `src/i18n/zh-CN.ts`
   Replace remaining buyer-visible English and technical copy with ordinary Chinese product language.
 
-- `src/components/hub/RequestModal.tsx`  
+- `src/components/hub/RequestModal.tsx`
   Replace remaining checkout modal English and technical failure text with buyer-safe copy. Keep diagnostics in dev-only details.
 
 - `src/components/hub/ServiceCard.tsx`
@@ -115,30 +115,30 @@ Expected files to touch:
 - `src/components/hub/ServicesPanel.tsx`
 - `src/components/hub/FiltersBar.tsx`
 - `src/components/WalletConnectButton.tsx`
-- `src/components/delivery/*`  
+- `src/components/delivery/*`
   Touch only where remaining normal-state copy is hardcoded outside `zh-CN.ts`.
 
 - `tests/components/hub/*.test.tsx`
 - `tests/components/delivery/*.test.tsx`
 - `tests/smoke.test.tsx`
-- `tests/i18n/index.test.ts`  
+- `tests/i18n/index.test.ts`
   Update expectations for buyer-facing Chinese copy.
 
 - `.env.example`
 - `README.md`
-- `docs/architecture/meta-socket-local-api.md`  
+- `docs/architecture/metaso-p2p-local-api.md`
   Update only if runtime/env guidance is stale after canonical route work.
 
-- `docs/qa/release-closeout-private-beta-run-log.md`  
+- `docs/qa/release-closeout-private-beta-run-log.md`
   Create a factual run log for this closeout phase.
 
-- `docs/superpowers/acceptance/2026-06-01-release-closeout-private-beta.md`  
+- `docs/superpowers/acceptance/2026-06-01-release-closeout-private-beta.md`
   Create the final acceptance note for this phase.
 
 Potential external files:
 
-- `/Users/tusm/Documents/MetaID_Projects/meta-socket/issues/YYYY-MM-DD-bothub-<short-gap>.md`  
-  Create only if a blocker belongs to meta-socket and is not already covered.
+- `/Users/tusm/Documents/MetaID_Projects/metaso-p2p/issues/YYYY-MM-DD-bothub-<short-gap>.md`
+  Create only if a blocker belongs to metaso-p2p and is not already covered.
 
 ## 5. Subagent Execution Protocol
 
@@ -197,7 +197,7 @@ pnpm test
 pnpm build
 pnpm lint
 git diff --check
-META_SOCKET_BASE_URL=http://127.0.0.1:18091 META_SOCKET_PRIVATE_CHAT_METAID=idq1zfazvxaq69uw6txe3ewce30ewyhy9a7mzykgv0 META_SOCKET_PRIVATE_CHAT_OTHER_METAID=idq14hmv23j5fnlx4ccnmvlyldjd38xjsechzwg9xz pnpm smoke:meta-socket
+METASO_P2P_BASE_URL=http://127.0.0.1:18091 METASO_P2P_PRIVATE_CHAT_METAID=idq1zfazvxaq69uw6txe3ewce30ewyhy9a7mzykgv0 METASO_P2P_PRIVATE_CHAT_OTHER_METAID=idq14hmv23j5fnlx4ccnmvlyldjd38xjsechzwg9xz pnpm smoke:metaso-p2p
 ```
 
 Expected:
@@ -245,7 +245,7 @@ pnpm test
 pnpm build
 pnpm lint
 git diff --check
-META_SOCKET_BASE_URL=http://127.0.0.1:18091 META_SOCKET_PRIVATE_CHAT_METAID=idq1zfazvxaq69uw6txe3ewce30ewyhy9a7mzykgv0 META_SOCKET_PRIVATE_CHAT_OTHER_METAID=idq14hmv23j5fnlx4ccnmvlyldjd38xjsechzwg9xz pnpm smoke:meta-socket
+METASO_P2P_BASE_URL=http://127.0.0.1:18091 METASO_P2P_PRIVATE_CHAT_METAID=idq1zfazvxaq69uw6txe3ewce30ewyhy9a7mzykgv0 METASO_P2P_PRIVATE_CHAT_OTHER_METAID=idq14hmv23j5fnlx4ccnmvlyldjd38xjsechzwg9xz pnpm smoke:metaso-p2p
 ```
 
 Expected:
@@ -259,19 +259,19 @@ Post a development journal that includes:
 - merged branch name
 - merge commit hash
 - gate results
-- local meta-socket smoke result
+- local metaso-p2p smoke result
 - note that unrelated untracked QA artifacts were not staged
 
-### Task 2: Switch Private Chat Reads To Canonical Meta-Socket Routes
+### Task 2: Switch Private Chat Reads To Canonical Metaso-P2P Routes
 
-**Purpose:** Align Bothub with the new meta-socket private-chat contract before release, while keeping legacy compatibility as a fallback.
+**Purpose:** Align Bothub with the new metaso-p2p private-chat contract before release, while keeping legacy compatibility as a fallback.
 
 **Files:**
 
 - Modify: `src/api/privateChat.ts`
 - Modify: `tests/api/privateChat.test.ts`
-- Modify: `scripts/smoke-meta-socket.mjs`
-- Optional docs: `docs/architecture/meta-socket-local-api.md`
+- Modify: `scripts/smoke-metaso-p2p.mjs`
+- Optional docs: `docs/architecture/metaso-p2p-local-api.md`
 - Optional docs: `docs/qa/release-closeout-private-beta-run-log.md`
 
 - [ ] **Step 1: Write canonical route tests**
@@ -287,7 +287,7 @@ Add tests proving:
 Suggested test cases:
 
 ```ts
-it('loads private chat homes from canonical meta-socket route', async () => {
+it('loads private chat homes from canonical metaso-p2p route', async () => {
   // fetch mock returns code 0 with data.list []
   // expect first fetch URL to contain /api/private-chat/homes/
 })
@@ -324,7 +324,7 @@ async function fetchPrivateChatEnvelope(
   canonicalPath: string,
   legacyPath: string,
 ): Promise<ApiEnvelope<unknown>> {
-  const baseUrl = getNormalizedMetaSocketBaseUrl()
+  const baseUrl = getNormalizedMetasoP2PBaseUrl()
   const canonicalResponse = await fetch(`${baseUrl}${canonicalPath}`)
   if (canonicalResponse.ok || ![404, 405].includes(canonicalResponse.status)) {
     return (await canonicalResponse.json()) as ApiEnvelope<unknown>
@@ -345,7 +345,7 @@ Keep the parser behavior unchanged.
 
 - [ ] **Step 4: Switch smoke script to canonical routes**
 
-In `scripts/smoke-meta-socket.mjs`:
+In `scripts/smoke-metaso-p2p.mjs`:
 
 - use `/api/private-chat/homes/:metaId`
 - use `/api/private-chat/messages?...`
@@ -358,7 +358,7 @@ Run:
 
 ```bash
 pnpm vitest run tests/api/privateChat.test.ts
-META_SOCKET_BASE_URL=http://127.0.0.1:18091 META_SOCKET_PRIVATE_CHAT_METAID=idq1zfazvxaq69uw6txe3ewce30ewyhy9a7mzykgv0 META_SOCKET_PRIVATE_CHAT_OTHER_METAID=idq14hmv23j5fnlx4ccnmvlyldjd38xjsechzwg9xz pnpm smoke:meta-socket
+METASO_P2P_BASE_URL=http://127.0.0.1:18091 METASO_P2P_PRIVATE_CHAT_METAID=idq1zfazvxaq69uw6txe3ewce30ewyhy9a7mzykgv0 METASO_P2P_PRIVATE_CHAT_OTHER_METAID=idq14hmv23j5fnlx4ccnmvlyldjd38xjsechzwg9xz pnpm smoke:metaso-p2p
 ```
 
 Expected:
@@ -386,7 +386,7 @@ Expected:
 Run:
 
 ```bash
-git add src/api/privateChat.ts tests/api/privateChat.test.ts scripts/smoke-meta-socket.mjs docs/architecture/meta-socket-local-api.md docs/qa/release-closeout-private-beta-run-log.md
+git add src/api/privateChat.ts tests/api/privateChat.test.ts scripts/smoke-metaso-p2p.mjs docs/architecture/metaso-p2p-local-api.md docs/qa/release-closeout-private-beta-run-log.md
 git commit -m "fix: use canonical private chat routes"
 ```
 
@@ -536,7 +536,7 @@ Expected:
 Run dev server with mocks disabled:
 
 ```bash
-VITE_META_SOCKET_BASE_URL=/meta-socket VITE_USE_AGGREGATOR_MOCK=false VITE_USE_WS_MOCK=false pnpm dev -- --host 127.0.0.1
+VITE_METASO_P2P_BASE_URL=/metaso-p2p VITE_USE_AGGREGATOR_MOCK=false VITE_USE_WS_MOCK=false pnpm dev -- --host 127.0.0.1
 ```
 
 Open the served URL and check:
@@ -582,7 +582,7 @@ Post Eric buzz with:
 
 - Modify: `.env.example`
 - Modify: `README.md`
-- Modify: `docs/architecture/meta-socket-local-api.md`
+- Modify: `docs/architecture/metaso-p2p-local-api.md`
 - Create: `docs/qa/release-closeout-private-beta-run-log.md` if not already created
 - Optional create: `docs/deployment/bothub-private-beta.md`
 
@@ -592,8 +592,8 @@ Run:
 
 ```bash
 sed -n '1,200p' .env.example
-sed -n '1,220p' docs/architecture/meta-socket-local-api.md
-rg -n "VITE_META_SOCKET_BASE_URL|VITE_USE_AGGREGATOR_MOCK|VITE_USE_WS_MOCK|chat-api|private-chat|group-chat" README.md docs .env.example
+sed -n '1,220p' docs/architecture/metaso-p2p-local-api.md
+rg -n "VITE_METASO_P2P_BASE_URL|VITE_USE_AGGREGATOR_MOCK|VITE_USE_WS_MOCK|chat-api|private-chat|group-chat" README.md docs .env.example
 ```
 
 - [ ] **Step 2: Update runtime guidance**
@@ -603,13 +603,13 @@ Document these rules:
 - local private beta:
 
 ```dotenv
-VITE_META_SOCKET_BASE_URL=/meta-socket
+VITE_METASO_P2P_BASE_URL=/metaso-p2p
 VITE_USE_AGGREGATOR_MOCK=false
 VITE_USE_WS_MOCK=false
 ```
 
 - local Vite proxy target is `http://127.0.0.1:18091`
-- production/staging must provide a meta-socket root base URL, not idchat `/chat-api/`
+- production/staging must provide a metaso-p2p root base URL, not idchat `/chat-api/`
 - canonical private-chat routes are `/api/private-chat/*`
 - legacy `/api/group-chat/*` routes are compatibility fallback only
 - mocks are development-only and not release evidence
@@ -623,7 +623,7 @@ Create or update `docs/qa/release-closeout-private-beta-run-log.md` with section
 
 ## Automated Gates
 
-## Local Meta-Socket Smoke
+## Local Metaso-P2P Smoke
 
 ## Browser UI Copy Smoke
 
@@ -649,7 +649,7 @@ git diff --check
 Run:
 
 ```bash
-git add .env.example README.md docs/architecture/meta-socket-local-api.md docs/qa/release-closeout-private-beta-run-log.md docs/deployment/bothub-private-beta.md
+git add .env.example README.md docs/architecture/metaso-p2p-local-api.md docs/qa/release-closeout-private-beta-run-log.md docs/deployment/bothub-private-beta.md
 git commit -m "docs: clarify private beta runtime contract"
 ```
 
@@ -679,7 +679,7 @@ pnpm test
 pnpm build
 pnpm lint
 git diff --check
-META_SOCKET_BASE_URL=http://127.0.0.1:18091 META_SOCKET_PRIVATE_CHAT_METAID=idq1zfazvxaq69uw6txe3ewce30ewyhy9a7mzykgv0 META_SOCKET_PRIVATE_CHAT_OTHER_METAID=idq14hmv23j5fnlx4ccnmvlyldjd38xjsechzwg9xz pnpm smoke:meta-socket
+METASO_P2P_BASE_URL=http://127.0.0.1:18091 METASO_P2P_PRIVATE_CHAT_METAID=idq1zfazvxaq69uw6txe3ewce30ewyhy9a7mzykgv0 METASO_P2P_PRIVATE_CHAT_OTHER_METAID=idq14hmv23j5fnlx4ccnmvlyldjd38xjsechzwg9xz pnpm smoke:metaso-p2p
 ```
 
 Expected:
@@ -691,7 +691,7 @@ Expected:
 Run:
 
 ```bash
-VITE_META_SOCKET_BASE_URL=/meta-socket VITE_USE_AGGREGATOR_MOCK=false VITE_USE_WS_MOCK=false pnpm dev -- --host 127.0.0.1
+VITE_METASO_P2P_BASE_URL=/metaso-p2p VITE_USE_AGGREGATOR_MOCK=false VITE_USE_WS_MOCK=false pnpm dev -- --host 127.0.0.1
 ```
 
 Record the actual URL Vite serves.
@@ -746,7 +746,7 @@ Post Eric buzz if committed.
 
 ### Task 6: Independent Chrome + Metalet Buyer-Flow Acceptance
 
-**Purpose:** Prove the private beta flow with the real browser extension and real local meta-socket.
+**Purpose:** Prove the private beta flow with the real browser extension and real local metaso-p2p.
 
 **Files:**
 
@@ -760,7 +760,7 @@ Use a separate acceptance session/subagent with Chrome or Computer Use + Metalet
 Required context:
 
 - local app URL from Task 5
-- local meta-socket base URL
+- local metaso-p2p base URL
 - permission to use Metalet test funds already granted by user in this project context
 - do not enter passwords; user handles any prompt that requires manual intervention
 
@@ -780,7 +780,7 @@ Record:
 
 - [ ] **Step 3: Free order buyer send**
 
-Use a real free service from local meta-socket.
+Use a real free service from local metaso-p2p.
 
 Flow:
 
@@ -832,7 +832,7 @@ Prefer AI_Sunny or any online provider known to reply.
 
 Verify:
 
-- provider reply appears in meta-socket private-chat history
+- provider reply appears in metaso-p2p private-chat history
 - Bothub Delivery merges provider reply into the selected order, not a separate `历史交付` row
 - encrypted records use buyer-safe fallback if not decryptable
 - no raw ciphertext appears in normal UI
@@ -877,7 +877,7 @@ Verify:
 Create `docs/superpowers/acceptance/2026-06-01-release-closeout-private-beta.md` with tables:
 
 - Automated gates
-- Local meta-socket
+- Local metaso-p2p
 - Browser UI copy smoke
 - Chrome + Metalet
 - Asset management
@@ -891,7 +891,7 @@ Use these statuses only:
 - `blocked in Bothub`
 - `not run`
 
-Do not mark production release as passed unless a non-local meta-socket base URL is assigned and verified.
+Do not mark production release as passed unless a non-local metaso-p2p base URL is assigned and verified.
 
 - [ ] **Step 9: Run final full gate**
 
@@ -902,7 +902,7 @@ pnpm test
 pnpm build
 pnpm lint
 git diff --check
-META_SOCKET_BASE_URL=http://127.0.0.1:18091 META_SOCKET_PRIVATE_CHAT_METAID=idq1zfazvxaq69uw6txe3ewce30ewyhy9a7mzykgv0 META_SOCKET_PRIVATE_CHAT_OTHER_METAID=idq14hmv23j5fnlx4ccnmvlyldjd38xjsechzwg9xz pnpm smoke:meta-socket
+METASO_P2P_BASE_URL=http://127.0.0.1:18091 METASO_P2P_PRIVATE_CHAT_METAID=idq1zfazvxaq69uw6txe3ewce30ewyhy9a7mzykgv0 METASO_P2P_PRIVATE_CHAT_OTHER_METAID=idq14hmv23j5fnlx4ccnmvlyldjd38xjsechzwg9xz pnpm smoke:metaso-p2p
 ```
 
 - [ ] **Step 10: Commit and buzz**
@@ -954,12 +954,12 @@ Use exactly one:
 
 - `Ready for local/private buyer-flow beta`
 - `Not ready: Bothub blocker remains`
-- `Not ready: meta-socket/runtime blocker remains`
+- `Not ready: metaso-p2p/runtime blocker remains`
 
 Production readiness requires:
 
-- assigned non-local meta-socket base URL
-- `META_SOCKET_BASE_URL=<non-local> pnpm smoke:meta-socket` passes
+- assigned non-local metaso-p2p base URL
+- `METASO_P2P_BASE_URL=<non-local> pnpm smoke:metaso-p2p` passes
 - Chrome + Metalet acceptance passes against that endpoint or its intended deployment proxy
 
 - [ ] **Step 3: Report branch/worktree cleanup recommendation**
@@ -976,7 +976,7 @@ Report:
 - commit list created in this phase
 - Eric buzz status for each commit
 - gate results
-- local meta-socket smoke result
+- local metaso-p2p smoke result
 - free order result
 - paid order result
 - provider reply result
@@ -984,12 +984,12 @@ Report:
 - production/staging blocker status
 - whether private beta can start
 
-## 7. Meta-Socket Issue Rule
+## 7. Metaso-P2P Issue Rule
 
-If a blocker belongs to meta-socket and is not already covered, create:
+If a blocker belongs to metaso-p2p and is not already covered, create:
 
 ```text
-/Users/tusm/Documents/MetaID_Projects/meta-socket/issues/YYYY-MM-DD-bothub-<short-gap>.md
+/Users/tusm/Documents/MetaID_Projects/metaso-p2p/issues/YYYY-MM-DD-bothub-<short-gap>.md
 ```
 
 Template:
@@ -1004,7 +1004,7 @@ One-paragraph product impact.
 ## Environment
 
 - Bothub commit:
-- meta-socket base URL:
+- metaso-p2p base URL:
 - Date/time:
 - Wallet/globalMetaId if relevant:
 
@@ -1035,7 +1035,7 @@ What user flow is blocked or degraded.
 - [ ] ...
 ```
 
-Do not commit changes in the meta-socket repo unless the user explicitly asks the BotHub agent to do so.
+Do not commit changes in the metaso-p2p repo unless the user explicitly asks the BotHub agent to do so.
 
 ## 8. Final Output For Development Session
 
@@ -1055,7 +1055,7 @@ At the end of this plan, the development session should return:
 - pnpm build:
 - pnpm lint:
 - git diff --check:
-- smoke:meta-socket:
+- smoke:metaso-p2p:
 
 ## Real Flows
 
@@ -1068,7 +1068,7 @@ At the end of this plan, the development session should return:
 ## Remaining Blockers
 
 - Bothub:
-- meta-socket/runtime:
+- metaso-p2p/runtime:
 - provider availability:
 
 ## Suggested Next Step

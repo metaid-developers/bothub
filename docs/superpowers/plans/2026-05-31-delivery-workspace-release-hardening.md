@@ -2,11 +2,11 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use `superpowers:subagent-driven-development` to implement this plan task-by-task. The controller opens one fresh development subagent/session per task, reviews the result, and sends that same task agent back for rework until the task passes. Do not open a separate code-review subagent for every task. After all tasks pass, open one independent final acceptance subagent using Chrome/Computer Use + Metalet for the end-to-end run. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Convert the current Delivery Workspace V1 from a seeded-data prototype into a release-hardened buyer delivery workspace with green build gates, buyer-facing copy, real meta-socket readiness checks, and real Chrome + Metalet acceptance evidence.
+**Goal:** Convert the current Delivery Workspace V1 from a seeded-data prototype into a release-hardened buyer delivery workspace with green build gates, buyer-facing copy, real metaso-p2p readiness checks, and real Chrome + Metalet acceptance evidence.
 
-**Architecture:** Keep BotHub as a pure frontend React app backed by Metalet, meta-socket HTTP/Socket.IO, and IndexedDB. Do not add a BotHub backend. Harden the existing order-centered Delivery workspace by fixing release gates, separating buyer UI from technical diagnostics, proving real data paths with mocks disabled, and keeping all unresolved meta-socket dependency gaps documented as issues under the meta-socket repo.
+**Architecture:** Keep BotHub as a pure frontend React app backed by Metalet, metaso-p2p HTTP/Socket.IO, and IndexedDB. Do not add a BotHub backend. Harden the existing order-centered Delivery workspace by fixing release gates, separating buyer UI from technical diagnostics, proving real data paths with mocks disabled, and keeping all unresolved metaso-p2p dependency gaps documented as issues under the metaso-p2p repo.
 
-**Tech Stack:** Vite 5, React 18, TypeScript 5 strict, Tailwind CSS, zustand, IndexedDB, socket.io-client, Vitest + Testing Library, Chrome + Metalet, local/public meta-socket.
+**Tech Stack:** Vite 5, React 18, TypeScript 5 strict, Tailwind CSS, zustand, IndexedDB, socket.io-client, Vitest + Testing Library, Chrome + Metalet, local/public metaso-p2p.
 
 ---
 
@@ -20,7 +20,7 @@ Current repo state observed on 2026-05-31:
 - `pnpm build`: fails because `tests/delivery/workspaceRecovery.test.ts` contains unused imports and an unused local variable.
 - `pnpm lint`: fails for the same unused symbols.
 - `git diff --check`: clean.
-- Local meta-socket `http://127.0.0.1:18091` was not reachable in the controller verification run.
+- Local metaso-p2p `http://127.0.0.1:18091` was not reachable in the controller verification run.
 - Public `https://api.idchat.io/api/bot-hub/skill-service/list...` returned `502 Bad Gateway` in the controller verification run.
 - `docs/superpowers/acceptance/2026-05-31-delivery-workspace-v1.md` is an acceptance note, not an implementation plan. Treat it as evidence plus a gap list, not as truth.
 
@@ -31,7 +31,7 @@ Non-negotiable gates for this hardening phase:
 - After every commit, post an Eric development-journal buzz using the `metabot-post-buzz` skill, as required by `AGENTS.md`.
 - Do not stage or commit unrelated untracked screenshots or `.playwright-mcp/` logs unless the task explicitly creates a new controlled QA artifact.
 - Do not implement refunds, rating submission, provider-side features, or a BotHub backend.
-- If a real blocker belongs to meta-socket, create an issue markdown file under `/Users/tusm/Documents/MetaID_Projects/meta-socket/issues/` with evidence.
+- If a real blocker belongs to metaso-p2p, create an issue markdown file under `/Users/tusm/Documents/MetaID_Projects/metaso-p2p/issues/` with evidence.
 
 ## 1. Definition Of Done
 
@@ -41,17 +41,17 @@ This phase is complete only when all of the following are true:
 - `pnpm build` passes.
 - `pnpm lint` passes.
 - `git diff --check` passes.
-- Delivery normal buyer UI no longer exposes implementation copy such as `simplemsg`, `Socket.IO`, `meta-socket`, `chat key`, `ciphertext`, `session`, or raw English fallback labels.
+- Delivery normal buyer UI no longer exposes implementation copy such as `simplemsg`, `Socket.IO`, `metaso-p2p`, `chat key`, `ciphertext`, `session`, or raw English fallback labels.
 - Technical details are still available for troubleshooting, but only behind an explicit diagnostic/details control.
-- With mocks disabled, BotHub either loads real service data from meta-socket or records a current issue with exact failing URL, response, and impact.
+- With mocks disabled, BotHub either loads real service data from metaso-p2p or records a current issue with exact failing URL, response, and impact.
 - Free order flow is attempted with Chrome + Metalet and documented as passed or blocked with exact blocker evidence.
 - Paid order flow is attempted up to the safe next step with Chrome + Metalet and documented as passed or blocked with exact blocker evidence.
 - Delivery restores locally cached orders/assets after refresh/re-login.
-- Real or verified metafile assets are used for at least one preview/download acceptance path, or a current meta-socket/file-service issue explains why this cannot be done.
+- Real or verified metafile assets are used for at least one preview/download acceptance path, or a current metaso-p2p/file-service issue explains why this cannot be done.
 - Acceptance docs distinguish:
   - automated gates
   - seeded/local cache acceptance
-  - live meta-socket acceptance
+  - live metaso-p2p acceptance
   - Chrome + Metalet acceptance
   - unresolved external blockers
 
@@ -63,9 +63,9 @@ Read before starting Task 1:
 - `docs/superpowers/plans/2026-05-31-delivery-workspace-productization-v1.md`
 - `docs/superpowers/acceptance/2026-05-31-delivery-workspace-v1.md`
 - `docs/superpowers/plans/2026-05-31-delivery-message-profile-parity.md`
-- `docs/architecture/meta-socket-local-api.md`
+- `docs/architecture/metaso-p2p-local-api.md`
 - `docs/qa/core-usability-repair-run-log.md`
-- `/Users/tusm/Documents/MetaID_Projects/meta-socket/issues/2026-05-30-bothub-paid-service-missing-provider-chatpubkey.md`
+- `/Users/tusm/Documents/MetaID_Projects/metaso-p2p/issues/2026-05-30-bothub-paid-service-missing-provider-chatpubkey.md`
 
 Use code references from the current repo, not old plan snippets, when implementation differs.
 
@@ -109,7 +109,7 @@ Expected files to touch during this phase:
 - `src/api/aggregator.ts`
 - `src/api/aggregator.types.ts`
 - `src/api/userProfile.ts`  
-  Touch only if live meta-socket provider/profile data proves normalization gaps remain.
+  Touch only if live metaso-p2p provider/profile data proves normalization gaps remain.
 
 - `src/delivery/workspace.ts`
 - `src/delivery/sessionGrouping.ts`
@@ -139,7 +139,7 @@ Expected files to touch during this phase:
 
 Potential external issue files:
 
-- `/Users/tusm/Documents/MetaID_Projects/meta-socket/issues/YYYY-MM-DD-bothub-<short-gap>.md`
+- `/Users/tusm/Documents/MetaID_Projects/metaso-p2p/issues/YYYY-MM-DD-bothub-<short-gap>.md`
 
 ## 4. Subagent Execution Protocol
 
@@ -249,7 +249,7 @@ Post Eric buzz describing:
 Extend `tests/components/delivery/DeliveryPage.test.tsx` with a test that renders the disconnected Delivery page and asserts normal visible text does not contain banned terms:
 
 ```ts
-expect(screen.queryByText(/simplemsg|Socket\.IO|meta-socket|chat key|ciphertext|session/i)).not.toBeInTheDocument()
+expect(screen.queryByText(/simplemsg|Socket\.IO|metaso-p2p|chat key|ciphertext|session/i)).not.toBeInTheDocument()
 expect(screen.queryByText(/Wallet not connected|Connect wallet to reply|Message provider/i)).not.toBeInTheDocument()
 ```
 
@@ -418,9 +418,9 @@ git commit -m "fix: route checkout to selected delivery order"
 
 Only include files actually changed.
 
-### Task 4: Re-Verify Real meta-socket Service Readiness
+### Task 4: Re-Verify Real metaso-p2p Service Readiness
 
-**Purpose:** Stop relying on stale blocked notes. Re-check current local and public meta-socket behavior with mocks disabled, then fix BotHub normalization only if current live data proves a frontend gap.
+**Purpose:** Stop relying on stale blocked notes. Re-check current local and public metaso-p2p behavior with mocks disabled, then fix BotHub normalization only if current live data proves a frontend gap.
 
 **Files:**
 
@@ -430,41 +430,41 @@ Only include files actually changed.
 - Modify: `tests/api/aggregator.test.ts`
 - Modify: `tests/api/userProfile.test.ts`
 - Create/modify: `docs/qa/delivery-workspace-release-hardening-run-log.md`
-- Potential create: `/Users/tusm/Documents/MetaID_Projects/meta-socket/issues/YYYY-MM-DD-bothub-aggregator-readiness.md`
+- Potential create: `/Users/tusm/Documents/MetaID_Projects/metaso-p2p/issues/YYYY-MM-DD-bothub-aggregator-readiness.md`
 
 - [ ] **Step 1: Record current listener state**
 
 Run:
 
 ```bash
-lsof -nP -iTCP -sTCP:LISTEN | rg "(18091|5176|vite|meta-socket)" || true
+lsof -nP -iTCP -sTCP:LISTEN | rg "(18091|5176|vite|metaso-p2p)" || true
 curl -sS -i http://127.0.0.1:18091/healthz || true
 curl -sS -i 'https://api.idchat.io/api/bot-hub/skill-service/list?size=3&chainName=mvc&sortBy=updated&order=desc&includeInactive=true' || true
 ```
 
 Write the result into `docs/qa/delivery-workspace-release-hardening-run-log.md`.
 
-- [ ] **Step 2: Run meta-socket smoke**
+- [ ] **Step 2: Run metaso-p2p smoke**
 
 Run:
 
 ```bash
-META_SOCKET_BASE_URL=http://127.0.0.1:18091 pnpm smoke:meta-socket
+METASO_P2P_BASE_URL=http://127.0.0.1:18091 pnpm smoke:metaso-p2p
 ```
 
-If local meta-socket is down:
+If local metaso-p2p is down:
 
 - do not mark live acceptance as passed
 - record the exact failure
-- check whether public meta-socket can be used for this task
+- check whether public metaso-p2p can be used for this task
 
 - [ ] **Step 3: Inspect provider chat key data**
 
-Run a small Node probe against whichever meta-socket endpoint is available:
+Run a small Node probe against whichever metaso-p2p endpoint is available:
 
 ```bash
 node <<'NODE'
-const base = process.env.META_SOCKET_BASE_URL || 'http://127.0.0.1:18091'
+const base = process.env.METASO_P2P_BASE_URL || 'http://127.0.0.1:18091'
 async function json(path) {
   const res = await fetch(base + path)
   const text = await res.text()
@@ -506,9 +506,9 @@ If current detail/list/profile data has chat key/name/avatar fields but BotHub m
 - normalize it in `aggregator.ts` or `userProfile.ts`
 - add tests using the observed payload shape
 
-If current meta-socket still lacks required fields or is unavailable:
+If current metaso-p2p still lacks required fields or is unavailable:
 
-- create an issue in `/Users/tusm/Documents/MetaID_Projects/meta-socket/issues/`
+- create an issue in `/Users/tusm/Documents/MetaID_Projects/metaso-p2p/issues/`
 - include failing URL, expected shape, actual shape, BotHub impact, and reproduction
 - do not fake success in BotHub
 
@@ -517,7 +517,7 @@ If current meta-socket still lacks required fields or is unavailable:
 Start or reuse Vite with:
 
 ```bash
-VITE_META_SOCKET_BASE_URL=/meta-socket VITE_USE_AGGREGATOR_MOCK=false VITE_USE_WS_MOCK=false pnpm dev -- --host 127.0.0.1
+VITE_METASO_P2P_BASE_URL=/metaso-p2p VITE_USE_AGGREGATOR_MOCK=false VITE_USE_WS_MOCK=false pnpm dev -- --host 127.0.0.1
 ```
 
 Open the assigned port and verify:
@@ -566,7 +566,7 @@ Post Eric buzz.
 - Modify: `tests/order/flow.test.ts`
 - Modify: `tests/components/hub/RequestModal.test.tsx`
 - Modify: `docs/qa/delivery-workspace-release-hardening-run-log.md`
-- Potential create: `/Users/tusm/Documents/MetaID_Projects/meta-socket/issues/YYYY-MM-DD-bothub-order-flow-gap.md`
+- Potential create: `/Users/tusm/Documents/MetaID_Projects/metaso-p2p/issues/YYYY-MM-DD-bothub-order-flow-gap.md`
 
 - [ ] **Step 1: Add/confirm tests for free flow**
 
@@ -620,7 +620,7 @@ Using Chrome with Metalet:
 If no real service is available:
 
 - record this as an external blocker
-- create/update a meta-socket issue if the API is the blocker
+- create/update a metaso-p2p issue if the API is the blocker
 
 - [ ] **Step 6: Full gates and commit**
 
@@ -657,7 +657,7 @@ Only include files actually changed. Post Eric buzz.
 - Modify: `tests/components/delivery/AssetPreviewDialog.test.tsx`
 - Modify: `tests/components/delivery/DeliveryAssetLibrary.test.tsx`
 - Modify: `docs/qa/delivery-workspace-release-hardening-run-log.md`
-- Potential create: `/Users/tusm/Documents/MetaID_Projects/meta-socket/issues/YYYY-MM-DD-bothub-metafile-preview-gap.md`
+- Potential create: `/Users/tusm/Documents/MetaID_Projects/metaso-p2p/issues/YYYY-MM-DD-bothub-metafile-preview-gap.md`
 
 - [ ] **Step 1: Add asset parser tests for observed real forms**
 
@@ -696,7 +696,7 @@ If browser CORS prevents media playback but direct open/download works:
 Use one of:
 
 - real delivery message with `metafile://`
-- a known real metafile URL from local/public meta-socket history
+- a known real metafile URL from local/public metaso-p2p history
 - a controlled test record inserted into IndexedDB that points to a real accessible metafile URL
 
 Do not mark real asset acceptance as passed with only fake `https://preview.example` URLs.
@@ -817,13 +817,13 @@ git diff --check
 
 Paste command summaries into `docs/qa/delivery-workspace-release-hardening-run-log.md`.
 
-- [ ] **Step 2: Re-run real meta-socket checks**
+- [ ] **Step 2: Re-run real metaso-p2p checks**
 
 Record:
 
-- local meta-socket health result
-- public meta-socket list/detail result
-- `pnpm smoke:meta-socket` result
+- local metaso-p2p health result
+- public metaso-p2p list/detail result
+- `pnpm smoke:metaso-p2p` result
 - whether mocks were enabled or disabled
 
 - [ ] **Step 3: Re-run browser checks**
@@ -847,7 +847,7 @@ Use four tables:
 
 1. Automated gates
 2. Seeded/local cache acceptance
-3. Live meta-socket acceptance
+3. Live metaso-p2p acceptance
 4. Chrome + Metalet acceptance
 
 For every row, status must be one of:
@@ -895,17 +895,17 @@ Only include screenshot doc if created. Post Eric buzz.
 
 - Modify: `docs/qa/delivery-workspace-release-hardening-run-log.md`
 - Modify: `docs/superpowers/acceptance/2026-05-31-delivery-workspace-v1.md` only if final acceptance changes status
-- Potential create: `/Users/tusm/Documents/MetaID_Projects/meta-socket/issues/YYYY-MM-DD-bothub-final-acceptance-gap.md`
+- Potential create: `/Users/tusm/Documents/MetaID_Projects/metaso-p2p/issues/YYYY-MM-DD-bothub-final-acceptance-gap.md`
 
 - [ ] **Step 1: Start known dev server**
 
 Use:
 
 ```bash
-VITE_META_SOCKET_BASE_URL=/meta-socket VITE_USE_AGGREGATOR_MOCK=false VITE_USE_WS_MOCK=false pnpm dev -- --host 127.0.0.1
+VITE_METASO_P2P_BASE_URL=/metaso-p2p VITE_USE_AGGREGATOR_MOCK=false VITE_USE_WS_MOCK=false pnpm dev -- --host 127.0.0.1
 ```
 
-If local meta-socket is unavailable, record it and use the configured public endpoint only if it is healthy.
+If local metaso-p2p is unavailable, record it and use the configured public endpoint only if it is healthy.
 
 - [ ] **Step 2: Connect wallet**
 
@@ -933,7 +933,7 @@ If no real free service is available:
 
 - record blocker
 - include exact service list/detail evidence
-- create/update meta-socket issue if API readiness is the blocker
+- create/update metaso-p2p issue if API readiness is the blocker
 
 - [ ] **Step 4: Paid native order run**
 
@@ -949,7 +949,7 @@ If a real paid native service is available:
 If paid services are unavailable or missing required provider/payment fields:
 
 - record exact blocker
-- create/update meta-socket issue if needed
+- create/update metaso-p2p issue if needed
 
 - [ ] **Step 5: Delivery asset run**
 
@@ -989,12 +989,12 @@ git commit -m "docs: record delivery final acceptance"
 
 Post Eric buzz.
 
-## 6. Meta-socket Issue Template
+## 6. Metaso-p2p Issue Template
 
-When a blocker belongs to meta-socket, create:
+When a blocker belongs to metaso-p2p, create:
 
 ```text
-/Users/tusm/Documents/MetaID_Projects/meta-socket/issues/YYYY-MM-DD-bothub-<short-gap>.md
+/Users/tusm/Documents/MetaID_Projects/metaso-p2p/issues/YYYY-MM-DD-bothub-<short-gap>.md
 ```
 
 Use this template:
@@ -1009,7 +1009,7 @@ One-paragraph product impact.
 ## Environment
 
 - Bothub commit:
-- meta-socket base URL:
+- metaso-p2p base URL:
 - Date/time:
 - Wallet/globalMetaId if relevant:
 
@@ -1040,7 +1040,7 @@ What user flow is blocked or degraded.
 - [ ] ...
 ```
 
-Do not commit changes in the meta-socket repo unless the user explicitly asks the BotHub agent to do so.
+Do not commit changes in the metaso-p2p repo unless the user explicitly asks the BotHub agent to do so.
 
 ## 7. Final Report Format
 
@@ -1049,10 +1049,10 @@ At the end of this phase, the controller should report:
 - commits created
 - Eric buzz status for each commit
 - automated gate results
-- live meta-socket status
+- live metaso-p2p status
 - free order status
 - paid order status
 - asset preview status
-- remaining blockers, grouped by `Bothub` vs `meta-socket` vs `provider availability`
+- remaining blockers, grouped by `Bothub` vs `metaso-p2p` vs `provider availability`
 - whether the app is ready for a small private beta
 

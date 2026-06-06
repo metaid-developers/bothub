@@ -4,7 +4,7 @@
 
 **Goal:** Make the current pure-frontend BotHub usable for the caller/buyer path: Metalet login, Pay & Request, private simplemsg delivery, Delivery history, follow-up input, and user identity display.
 
-**Architecture:** Keep BotHub as a Vite + React + TypeScript SPA with no dedicated BotHub backend. Align wallet, private-chat encryption, and simplemsg publishing with `idframework/demo-chat`; align order payload, status tags, and delivery artifact interpretation with IDBots. meta-socket remains the HTTP and Socket.IO boundary for service discovery, private-chat history, and live delivery updates.
+**Architecture:** Keep BotHub as a Vite + React + TypeScript SPA with no dedicated BotHub backend. Align wallet, private-chat encryption, and simplemsg publishing with `idframework/demo-chat`; align order payload, status tags, and delivery artifact interpretation with IDBots. metaso-p2p remains the HTTP and Socket.IO boundary for service discovery, private-chat history, and live delivery updates.
 
 **Tech Stack:** Vite 5, React 18, TypeScript 5 strict, Tailwind CSS, React Router, TanStack Query, zustand, IndexedDB, socket.io-client, CryptoJS, Vitest + Testing Library, Chrome + Metalet for manual acceptance.
 
@@ -16,7 +16,7 @@ This is not a small UI polish round. The previous M9-M13 / P0-P4 productization 
 
 Current completion read:
 
-- Bot Hub list/detail UI: medium completion. Real meta-socket service browsing is present.
+- Bot Hub list/detail UI: medium completion. Real metaso-p2p service browsing is present.
 - Pay & Request: low-to-medium completion. The detail modal path exists, but list card buttons are hard disabled and the real simplemsg write path is not aligned with demo-chat/IDBots.
 - Delivery: low completion for real use. Layout, cache, and asset components exist, but decryption, session hydration, composer send, and wallet prompts are not reliable.
 - Chrome + Metalet acceptance: not actually proven. The previous acceptance doc says wallet-dependent checks were blocked before approval; many checks were mock/static/no-signature checks.
@@ -65,9 +65,9 @@ IDBots references:
 - `/Users/tusm/Documents/MetaID_Projects/IDBots/IDBots/src/renderer/components/gigSquare/GigSquareOrderModal.tsx`
 - `/Users/tusm/Documents/MetaID_Projects/IDBots/IDBots/src/renderer/components/cowork/A2AMessageItem.tsx`
 
-Local meta-socket reference:
+Local metaso-p2p reference:
 
-- `docs/architecture/meta-socket-local-api.md`
+- `docs/architecture/metaso-p2p-local-api.md`
 
 ## 2. Diagnosis
 
@@ -97,7 +97,7 @@ Bothub currently writes orders and follow-up messages to:
 /private/chat/simplemsg
 ```
 
-This likely prevents provider listeners and meta-socket history from treating the outgoing message as standard IDChat simplemsg.
+This likely prevents provider listeners and metaso-p2p history from treating the outgoing message as standard IDChat simplemsg.
 
 demo-chat also uses:
 
@@ -108,7 +108,7 @@ demo-chat also uses:
 - `body.timestamp = Date.now()` in demo-chat-compatible browser sends. IDBots has some second-level helper payloads, but Bothub should choose the demo-chat browser convention for user-side sends and keep tests explicit.
 - `body.replyPin = '' | pinId`
 
-Bothub should match this unless meta-socket explicitly documents a different browser-BotHub contract.
+Bothub should match this unless metaso-p2p explicitly documents a different browser-BotHub contract.
 
 ### 2.3 Wallet adapter is too thin
 
@@ -155,7 +155,7 @@ Refund and rating fields should remain reserved in domain types and parser logic
 
 - User connects Metalet.
 - Bothub stores wallet identity, including globalMetaId and chain addresses.
-- Bothub fetches the user's profile from meta-socket `/api/info/globalmetaid/:globalMetaId` or compatible fallback.
+- Bothub fetches the user's profile from metaso-p2p `/api/info/globalmetaid/:globalMetaId` or compatible fallback.
 - Header shows avatar and name when available; otherwise a stable fallback avatar/short id.
 - No private-message decrypt prompt appears just because the user logs in.
 
@@ -229,7 +229,7 @@ chatPublicKey?: string
 
 Add `common?: { ecdh?: ... }` to `MetaletWalletApi`.
 
-Create `fetchUserProfileByGlobalMetaId(globalMetaId)` using `getNormalizedMetaSocketBaseUrl()` and `/api/info/globalmetaid/:globalMetaId`. Keep the legacy `code === 1` handling local to this client, because skill-service/private-chat APIs use `code === 0`.
+Create `fetchUserProfileByGlobalMetaId(globalMetaId)` using `getNormalizedMetasoP2PBaseUrl()` and `/api/info/globalmetaid/:globalMetaId`. Keep the legacy `code === 1` handling local to this client, because skill-service/private-chat APIs use `code === 0`.
 
 The normalized profile type must expose:
 
@@ -303,7 +303,7 @@ Cover:
 - Already plain content is not sent to any wallet decrypt API.
 - Same failed message is not re-decrypted in a tight hydration loop.
 - `protocol: '/protocols/simplemsg'` and `encrypt/encryption: 'ecdh'` both route to ECDH.
-- A live meta-socket fixture with only `from` and `to` fields, and no `fromGlobalMetaId`/`toGlobalMetaId`, is accepted after normalization and reaches Delivery.
+- A live metaso-p2p fixture with only `from` and `to` fields, and no `fromGlobalMetaId`/`toGlobalMetaId`, is accepted after normalization and reaches Delivery.
 
 - [ ] **Step 2: Change decrypt policy**
 
@@ -326,7 +326,7 @@ Do not persist shared secrets to IndexedDB.
 
 - [ ] **Step 4: Improve private-chat item normalization**
 
-Normalize fields from meta-socket/demo-chat/IDBots shapes:
+Normalize fields from metaso-p2p/demo-chat/IDBots shapes:
 
 - `protocol` / `path`
 - `encrypt` / `encryption`
@@ -336,7 +336,7 @@ Normalize fields from meta-socket/demo-chat/IDBots shapes:
 - `toUserInfo.chatPublicKey | chatpubkey | chatPubkey`
 - wallet self aliases: globalMetaId and MVC address
 
-Add an explicit `normalizePrivateChatItem(raw)` helper that accepts live meta-socket payloads that only provide `from`/`to`, then returns the internal `fromGlobalMetaId`/`toGlobalMetaId` shape before Delivery filtering. Keep `isPrivateChatItem()` as a type guard or compatibility wrapper over the normalized result. Otherwise valid socket pushes can be dropped before decryption.
+Add an explicit `normalizePrivateChatItem(raw)` helper that accepts live metaso-p2p payloads that only provide `from`/`to`, then returns the internal `fromGlobalMetaId`/`toGlobalMetaId` shape before Delivery filtering. Keep `isPrivateChatItem()` as a type guard or compatibility wrapper over the normalized result. Otherwise valid socket pushes can be dropped before decryption.
 
 - [ ] **Step 5: Verify**
 
@@ -365,7 +365,7 @@ Post an Eric development-journal buzz after the commit.
 
 ### Task 3: Standard Simplemsg Send Path for Orders and Follow-Ups
 
-**Purpose:** Make Bothub send exactly the private message shape provider bots and meta-socket expect.
+**Purpose:** Make Bothub send exactly the private message shape provider bots and metaso-p2p expect.
 
 **Files:**
 
@@ -611,7 +611,7 @@ Cover:
 - Composer enables when provider key exists in order/session/message/profile fallback.
 - Composer stays disabled with a clear actionable reason only when no key can be resolved.
 - Failed decrypt message does not mark the whole session unusable.
-- `fetchUserProfileByGlobalMetaId()` returns `chatPubkey` when meta-socket exposes any known chat key spelling.
+- `fetchUserProfileByGlobalMetaId()` returns `chatPubkey` when metaso-p2p exposes any known chat key spelling.
 
 - [ ] **Step 2: Introduce provider key resolver**
 
@@ -726,7 +726,7 @@ Post an Eric development-journal buzz after the commit.
 
 ### Task 7: Real Chrome + Metalet Acceptance
 
-**Purpose:** Prove the app is actually usable with the installed Metalet extension and local meta-socket.
+**Purpose:** Prove the app is actually usable with the installed Metalet extension and local metaso-p2p.
 
 **Files:**
 
@@ -734,12 +734,12 @@ Post an Eric development-journal buzz after the commit.
 - Create: `docs/qa/core-usability-repair-run-log.md`
 - Optional modify: test fixtures only if manual findings require deterministic regression coverage.
 
-- [ ] **Step 1: Start local app with real meta-socket**
+- [ ] **Step 1: Start local app with real metaso-p2p**
 
 Use:
 
 ```bash
-VITE_META_SOCKET_BASE_URL=/meta-socket VITE_USE_AGGREGATOR_MOCK=false VITE_USE_WS_MOCK=false pnpm dev -- --host 127.0.0.1
+VITE_METASO_P2P_BASE_URL=/metaso-p2p VITE_USE_AGGREGATOR_MOCK=false VITE_USE_WS_MOCK=false pnpm dev -- --host 127.0.0.1
 ```
 
 Use a free port if the default is occupied.
@@ -774,7 +774,7 @@ Release-candidate acceptance requires at least one user-approved free order to c
 
 1. approve the free `createPin`
 2. confirm `/protocols/simplemsg` is written
-3. confirm meta-socket indexes or pushes it
+3. confirm metaso-p2p indexes or pushes it
 4. confirm Delivery shows the pending order after refresh
 
 If the user does not approve the free chain write, record the QA row as `blocked_by_user_approval` and do not claim release criteria are satisfied. A stopped-at-confirmation run proves only preflight, not product usability.
@@ -807,7 +807,7 @@ After any approved write or injected fixture:
 
 - [ ] **Step 8: Socket identity check**
 
-Using the logged-in wallet, verify which identity meta-socket expects for Socket.IO query and private-chat history:
+Using the logged-in wallet, verify which identity metaso-p2p expects for Socket.IO query and private-chat history:
 
 - `globalMetaId`
 - MVC address
@@ -827,7 +827,7 @@ Post an Eric development-journal buzz after the commit.
 
 ## 6. Protocol Decisions and Known Risks
 
-- **Provider readiness:** This repair does not implement the full IDBots PING/PONG provider-readiness handshake. The first release uses meta-socket service discovery plus provider chat pubkey as the orderability signal. If a stronger online proof is available through meta-socket online stats, add it as a small follow-up. For paid orders, the UI should avoid implying guaranteed provider availability unless readiness is verified.
+- **Provider readiness:** This repair does not implement the full IDBots PING/PONG provider-readiness handshake. The first release uses metaso-p2p service discovery plus provider chat pubkey as the orderability signal. If a stronger online proof is available through metaso-p2p online stats, add it as a small follow-up. For paid orders, the UI should avoid implying guaranteed provider availability unless readiness is verified.
 - **MRC20 paid checkout:** Enable only after a real Metalet parameter-shape check. If the current extension requires fields beyond `genesis/paymentAddress/amount`, keep MRC20 paid services disabled with an explicit reason and document the blocker.
 - **Socket identity:** Local HTTP history samples use MVC address as `metaId`; Socket examples show `globalMetaId-or-metaid`. Task 7 must record which identity works for live pushes and the code should centralize that resolver so it can be changed without touching Delivery logic.
 
@@ -839,7 +839,7 @@ Every task must pass its scoped tests before commit. After Task 7:
 pnpm test
 pnpm lint
 pnpm build
-pnpm smoke:meta-socket
+pnpm smoke:metaso-p2p
 ```
 
 Then dispatch a final independent review subagent to inspect:
@@ -860,7 +860,7 @@ The repair is done only when all of these are true:
 - User can connect Metalet and see identity in the header.
 - Delivery login/hydration does not trigger repeated ECIES decrypt prompts.
 - User can click Pay & Request from the marketplace after login.
-- At least one real free service order has been approved, written as `/protocols/simplemsg`, observed through meta-socket or local cache, and restored in Delivery after refresh. If the user declines write approval, release completion must remain blocked.
+- At least one real free service order has been approved, written as `/protocols/simplemsg`, observed through metaso-p2p or local cache, and restored in Delivery after refresh. If the user declines write approval, release completion must remain blocked.
 - Paid service reaches Metalet payment before order broadcast.
 - Orders and follow-ups publish standard `/protocols/simplemsg`.
 - Delivery session list, timeline, composer, and asset panel are usable with real or approved test data.

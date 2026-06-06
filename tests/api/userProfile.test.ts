@@ -14,7 +14,7 @@ describe('user profile API client', () => {
   const expectedAvatarContent = expectedAvatarUrl(avatarPin)
 
   beforeEach(() => {
-    vi.stubEnv('VITE_META_SOCKET_BASE_URL', '/meta-socket/')
+    vi.stubEnv('VITE_METASO_P2P_BASE_URL', '/metaso-p2p/')
     vi.stubEnv('VITE_METAFILE_ACCELERATE_CONTENT_BASE', 'https://files.example/accelerate')
   })
 
@@ -52,7 +52,7 @@ describe('user profile API client', () => {
     const { fetchUserProfileByGlobalMetaId } = await loadUserProfile()
     const profile = await fetchUserProfileByGlobalMetaId('global-1')
 
-    expect(fetch).toHaveBeenCalledWith('/meta-socket/api/info/globalmetaid/global-1')
+    expect(fetch).toHaveBeenCalledWith('/metaso-p2p/api/info/globalmetaid/global-1')
     expect(profile).toMatchObject({
       metaid: 'metaid-1',
       globalMetaId: 'global-1',
@@ -114,11 +114,11 @@ describe('user profile API client', () => {
     expect(profile.avatarUrl).toBe(expectedAvatarUrl)
   })
 
-  it('prefers file-indexer avatar profile data over stale meta-socket avatar pins', async () => {
+  it('prefers file-indexer avatar profile data over stale metaso-p2p avatar pins', async () => {
     const staleAvatarPin = `${'c'.repeat(64)}i0`
     const freshAvatarPin = `${'d'.repeat(64)}i0`
     const fetchMock = vi.fn(async (url: string) => {
-      if (url === '/meta-socket/api/info/globalmetaid/global-stale-avatar') {
+      if (url === '/metaso-p2p/api/info/globalmetaid/global-stale-avatar') {
         return {
           ok: true,
           json: async () => ({
@@ -234,9 +234,9 @@ describe('user profile API client', () => {
     expect(profile.avatarUrl).toBeUndefined()
   })
 
-  it('falls back to the meta-socket address profile when the globalMetaId profile has only an unusable avatar', async () => {
+  it('falls back to the metaso-p2p address profile when the globalMetaId profile has only an unusable avatar', async () => {
     const fetchMock = vi.fn(async (url: string) => {
-      if (url === '/meta-socket/api/info/address/1ProviderAddress') {
+      if (url === '/metaso-p2p/api/info/address/1ProviderAddress') {
         return {
           ok: true,
           json: async () => ({
@@ -268,9 +268,9 @@ describe('user profile API client', () => {
     const profile = await fetchUserProfileByGlobalMetaId('global-address-fallback')
 
     expect(fetchMock).toHaveBeenCalledWith(
-      '/meta-socket/api/info/globalmetaid/global-address-fallback',
+      '/metaso-p2p/api/info/globalmetaid/global-address-fallback',
     )
-    expect(fetchMock).toHaveBeenCalledWith('/meta-socket/api/info/address/1ProviderAddress')
+    expect(fetchMock).toHaveBeenCalledWith('/metaso-p2p/api/info/address/1ProviderAddress')
     expect(profile).toMatchObject({
       name: 'Address Bot',
       avatarUrl: expectedAvatarContent,
@@ -279,7 +279,7 @@ describe('user profile API client', () => {
 
   it('uses an explicit wallet address fallback when the globalMetaId profile is an empty shell', async () => {
     const fetchMock = vi.fn(async (url: string) => {
-      if (url === '/meta-socket/api/info/address/12ghVWG1yAgNjzXj4mr3qK9DgyornMUikZ') {
+      if (url === '/metaso-p2p/api/info/address/12ghVWG1yAgNjzXj4mr3qK9DgyornMUikZ') {
         return {
           ok: true,
           json: async () => ({
@@ -318,10 +318,10 @@ describe('user profile API client', () => {
     )
 
     expect(fetchMock).toHaveBeenCalledWith(
-      '/meta-socket/api/info/globalmetaid/e3ewce30ewyhy9a7mzykgv0',
+      '/metaso-p2p/api/info/globalmetaid/e3ewce30ewyhy9a7mzykgv0',
     )
     expect(fetchMock).toHaveBeenCalledWith(
-      '/meta-socket/api/info/address/12ghVWG1yAgNjzXj4mr3qK9DgyornMUikZ',
+      '/metaso-p2p/api/info/address/12ghVWG1yAgNjzXj4mr3qK9DgyornMUikZ',
     )
     expect(profile).toMatchObject({
       globalMetaId: 'idq1zfazvxaq69uw6txe3ewce30ewyhy9a7mzykgv0',
@@ -334,7 +334,7 @@ describe('user profile API client', () => {
 
   it('keeps the global profile when its avatar normalizes to a displayable URL', async () => {
     const fetchMock = vi.fn(async (url: string) => {
-      if (url === '/meta-socket/api/info/address/1AccelerateAddress') {
+      if (url === '/metaso-p2p/api/info/address/1AccelerateAddress') {
         return {
           ok: true,
           json: async () => ({
@@ -378,7 +378,7 @@ describe('user profile API client', () => {
 
   it('normalizes file.metaid content avatars without address fallback', async () => {
     const fetchMock = vi.fn(async (url: string) => {
-      if (url === '/meta-socket/api/info/address/1FileMetaidAddress') {
+      if (url === '/metaso-p2p/api/info/address/1FileMetaidAddress') {
         return {
           ok: true,
           json: async () => ({
@@ -413,7 +413,7 @@ describe('user profile API client', () => {
 
   it('keeps the globalMetaId profile when address fallback returns a non-json 404 response', async () => {
     const fetchMock = vi.fn(async (url: string) => {
-      if (url === '/meta-socket/api/info/address/1MissingAddress') {
+      if (url === '/metaso-p2p/api/info/address/1MissingAddress') {
         return {
           ok: false,
           status: 404,
@@ -442,6 +442,6 @@ describe('user profile API client', () => {
       name: 'Global Profile',
       chatPubkey: '04global',
     })
-    expect(fetchMock).toHaveBeenCalledWith('/meta-socket/api/info/address/1MissingAddress')
+    expect(fetchMock).toHaveBeenCalledWith('/metaso-p2p/api/info/address/1MissingAddress')
   })
 })

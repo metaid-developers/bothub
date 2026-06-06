@@ -25,7 +25,7 @@ during, and after paid or free service requests.
 - Do not turn order tabs into separate chat rooms.
 - Do not add new provider-side runtime behavior.
 - Do not require a BotHub backend.
-- Do not require meta-socket changes unless current history/socket payloads
+- Do not require metaso-p2p changes unless current history/socket payloads
   cannot expose peer, message, order, or asset data reliably.
 - Do not implement refund or rating execution in this redesign; keep reserved
   UI/action slots and data hooks only.
@@ -205,13 +205,13 @@ Support both current and future links:
 - Existing `?order=` or `?session=` links should resolve to the corresponding
   provider conversation and order tab when possible.
 
-## Meta-Socket Requirements
+## Metaso-P2P Requirements
 
 Current BotHub should implement this from existing private-chat history,
 Socket.IO messages, provider profile lookup, and local order records unless
 live validation proves one of those sources is missing required fields.
 
-Ask meta-socket for changes only if live validation proves one of these is
+Ask metaso-p2p for changes only if live validation proves one of these is
 missing or unreliable:
 
 - stable peer identity for both directions of a private chat,
@@ -221,7 +221,7 @@ missing or unreliable:
 - historical page coverage for a selected wallet,
 - order protocol payloads needed to recover correlation ids.
 
-Any backend gap should be documented in a meta-socket issue with failing URL or
+Any backend gap should be documented in a metaso-p2p issue with failing URL or
 payload, expected shape, actual shape, BotHub impact, and reproduction steps.
 
 ## Testing
@@ -257,7 +257,7 @@ Manual acceptance should include a Chrome + Metalet connected-wallet run with:
 - at least one delivered asset,
 - `All` showing the full mixed timeline,
 - an order tab showing only that order's relevant messages/assets,
-- refresh recovery from IndexedDB and meta-socket history.
+- refresh recovery from IndexedDB and metaso-p2p history.
 
 ## Implementation Notes
 

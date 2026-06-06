@@ -1112,12 +1112,12 @@ describe('deliverySync', () => {
     })
   })
 
-  it('stores meta-socket seconds timestamps as milliseconds for chat ordering', async () => {
+  it('stores metaso-p2p seconds timestamps as milliseconds for chat ordering', async () => {
     await mergePrivateChatItem({
       item: privateChatItem({
         pinId: 'pin-seconds-timestamp',
         timestamp: 1_777_322_934,
-        content: 'Seconds timestamp from meta-socket',
+        content: 'Seconds timestamp from metaso-p2p',
       }),
       selfGlobalMetaId: SELF,
       walletIdentity: wallet,

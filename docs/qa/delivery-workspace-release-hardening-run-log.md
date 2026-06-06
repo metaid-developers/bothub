@@ -4,25 +4,25 @@
 
 2026-06-01 follow-up: Bothub should not rely on `https://api.idchat.io` or
 idchat `/chat-api/` for this release. Earlier idchat probes in this run log were
-diagnostic checks while the local meta-socket runtime was unavailable or
+diagnostic checks while the local metaso-p2p runtime was unavailable or
 catching up; they are not release dependencies.
 
-Bothub's runtime contract is `VITE_META_SOCKET_BASE_URL` pointing at a
-meta-socket deployment that exposes native `/api/bot-hub/*`,
+Bothub's runtime contract is `VITE_METASO_P2P_BASE_URL` pointing at a
+metaso-p2p deployment that exposes native `/api/bot-hub/*`,
 private-chat history routes, and `/socket/socket.io`. The local restored
 `http://127.0.0.1:18091` instance remains valid for local/private beta. A
-non-local production/staging meta-socket base URL is a meta-socket ownership gap,
+non-local production/staging metaso-p2p base URL is a metaso-p2p ownership gap,
 now tracked as a backend issue rather than as an idchat dependency.
 
-Task 4 live meta-socket readiness re-check for `codex/delivery-workspace-release-hardening`.
+Task 4 live metaso-p2p readiness re-check for `codex/delivery-workspace-release-hardening`.
 
 - Date checked: 2026-05-31 22:11 CST / 2026-05-31 14:11 UTC
 - Bothub revision: `ac5a113`
-- meta-socket revision: `dfe28c4`
+- metaso-p2p revision: `dfe28c4`
 - Requested dev command:
 
 ```bash
-VITE_META_SOCKET_BASE_URL=/meta-socket VITE_USE_AGGREGATOR_MOCK=false VITE_USE_WS_MOCK=false pnpm dev -- --host 127.0.0.1
+VITE_METASO_P2P_BASE_URL=/metaso-p2p VITE_USE_AGGREGATOR_MOCK=false VITE_USE_WS_MOCK=false pnpm dev -- --host 127.0.0.1
 ```
 
 Vite reported port `5176` in use and served the checked app at `http://localhost:5177/`.
@@ -31,21 +31,21 @@ Vite reported port `5176` in use and served the checked app at `http://localhost
 
 | Check | Result | Evidence |
 | --- | --- | --- |
-| Listener scan | local meta-socket not listening | `lsof -nP -iTCP -sTCP:LISTEN | rg "(18091|5176|vite|meta-socket)" || true` returned only `node 27845 ... TCP [::1]:5176 (LISTEN)`. |
+| Listener scan | local metaso-p2p not listening | `lsof -nP -iTCP -sTCP:LISTEN | rg "(18091|5176|vite|metaso-p2p)" || true` returned only `node 27845 ... TCP [::1]:5176 (LISTEN)`. |
 | Local health | failed | `curl -sS -i http://127.0.0.1:18091/healthz || true` returned `curl: (7) Failed to connect to 127.0.0.1 port 18091 after 0 ms: Couldn't connect to server`. |
 | Public service list | failed | `curl -sS -i 'https://api.idchat.io/api/bot-hub/skill-service/list?size=3&chainName=mvc&sortBy=updated&order=desc&includeInactive=true' || true` returned `HTTP/1.1 502 Bad Gateway` from `nginx/1.29.1`. |
 
 ## Smoke Check
 
 ```bash
-META_SOCKET_BASE_URL=http://127.0.0.1:18091 pnpm smoke:meta-socket
+METASO_P2P_BASE_URL=http://127.0.0.1:18091 pnpm smoke:metaso-p2p
 ```
 
 Result: failed with exit code `1`.
 
 ```text
-$ node scripts/smoke-meta-socket.mjs
-[smoke:meta-socket] smoke failed: healthz request failed (http://127.0.0.1:18091/healthz): fetch failed
+$ node scripts/smoke-metaso-p2p.mjs
+[smoke:metaso-p2p] smoke failed: healthz request failed (http://127.0.0.1:18091/healthz): fetch failed
 [ELIFECYCLE] Command failed with exit code 1.
 ```
 
@@ -68,7 +68,7 @@ No real service list or detail payload was available, so this run does not prove
 
 Checked `http://localhost:5177/` with:
 
-- `VITE_META_SOCKET_BASE_URL=/meta-socket`
+- `VITE_METASO_P2P_BASE_URL=/metaso-p2p`
 - `VITE_USE_AGGREGATOR_MOCK=false`
 - `VITE_USE_WS_MOCK=false`
 
@@ -99,7 +99,7 @@ Browser console logs only showed existing React Router future-flag warnings; no 
 
 No API source or test files were changed in this Task 4 pass.
 
-Reason: live local and public meta-socket endpoints did not return usable list/detail/profile payloads. Without a current payload shape, changing BotHub normalization would be speculative.
+Reason: live local and public metaso-p2p endpoints did not return usable list/detail/profile payloads. Without a current payload shape, changing BotHub normalization would be speculative.
 
 ## Verification Commands
 
@@ -111,16 +111,16 @@ Run before handing this Task 4 pass back for controller review:
 | `pnpm build` | passed | TypeScript build and Vite production build completed. Vite reported the existing large-chunk warning for the app bundle. |
 | `pnpm lint` | passed | ESLint completed with `--max-warnings 0`. |
 | `git diff --check` | passed | No whitespace errors in the Bothub diff. |
-| `git -C /Users/tusm/Documents/MetaID_Projects/meta-socket diff --check` | passed | No whitespace errors in the meta-socket issue diff. |
+| `git -C /Users/tusm/Documents/MetaID_Projects/metaso-p2p diff --check` | passed | No whitespace errors in the metaso-p2p issue diff. |
 
 ## Task 8 Truthful Acceptance Documentation
 
-Task 8 replaced the previous optimistic acceptance checklist with evidence tables that separate automated/local-cache passes from live meta-socket and Chrome + Metalet blockers.
+Task 8 replaced the previous optimistic acceptance checklist with evidence tables that separate automated/local-cache passes from live metaso-p2p and Chrome + Metalet blockers.
 
 - Date checked: 2026-06-01 08:40 CST / 2026-06-01 00:40 UTC
 - Bothub base revision: `09eefb3`
 - Dev server: `http://localhost:5177/`
-- Dev env: `VITE_META_SOCKET_BASE_URL=/meta-socket`, `VITE_USE_AGGREGATOR_MOCK=false`, `VITE_USE_WS_MOCK=false`
+- Dev env: `VITE_METASO_P2P_BASE_URL=/metaso-p2p`, `VITE_USE_AGGREGATOR_MOCK=false`, `VITE_USE_WS_MOCK=false`
 - Screenshot artifacts were newly generated under `/tmp` for this task and were not committed.
 
 ### Automated Gate Evidence
@@ -132,14 +132,14 @@ Task 8 replaced the previous optimistic acceptance checklist with evidence table
 | `pnpm lint` | passed | ESLint completed with `--max-warnings 0`. |
 | `git diff --check` | passed | No whitespace errors before the Task 8 documentation edit. |
 
-### Real Meta-Socket Checks
+### Real Metaso-P2P Checks
 
 | Check | Result | Evidence |
 | --- | --- | --- |
 | Local health | superseded | This Task 8 check failed at the time with connection refused. The endpoint correction follow-up below later verified local `127.0.0.1:18091/healthz` as healthy. |
 | Public service list | blocked | `curl -m 12 https://api.idchat.io/api/bot-hub/skill-service/list?size=3&chainName=mvc&sortBy=updated&order=desc` returned `HTTP/1.1 502 Bad Gateway` from nginx. The endpoint correction follow-up also verified that `/chat-api/` is healthy for group-chat but does not expose this BotHub route. |
 | Local smoke | superseded | This Task 8 check failed at `/healthz`. The endpoint correction follow-up later reached `/healthz`, then failed at the empty BotHub skill-service list. |
-| Public smoke | blocked | `META_SOCKET_BASE_URL=https://api.idchat.io pnpm smoke:meta-socket` failed at `/healthz` with HTTP 502. The endpoint correction follow-up shows `https://api.idchat.io/chat-api` also cannot satisfy this native meta-socket smoke because `/chat-api/healthz` returns 404. |
+| Public smoke | blocked | `METASO_P2P_BASE_URL=https://api.idchat.io pnpm smoke:metaso-p2p` failed at `/healthz` with HTTP 502. The endpoint correction follow-up shows `https://api.idchat.io/chat-api` also cannot satisfy this native metaso-p2p smoke because `/chat-api/healthz` returns 404. |
 
 ### Browser Checks
 
@@ -160,7 +160,7 @@ Task 8 replaced the previous optimistic acceptance checklist with evidence table
 
 1. Automated gates
 2. Seeded/local cache acceptance
-3. Live meta-socket acceptance
+3. Live metaso-p2p acceptance
 4. Chrome + Metalet acceptance
 
 Blocked rows use `blocked`; future Chrome + Metalet work that was not executed in Task 8 uses `not run`. No blocked item is represented with a checked checkbox.
@@ -178,18 +178,18 @@ Run after the acceptance-note and run-log edits:
 
 ## AI_Sunny Backend Recovery Follow-Up
 
-The meta-socket maintainer resolved the AI_Sunny provider identity gap recorded
-under `/Users/tusm/Documents/MetaID_Projects/meta-socket/issues/`.
+The metaso-p2p maintainer resolved the AI_Sunny provider identity gap recorded
+under `/Users/tusm/Documents/MetaID_Projects/metaso-p2p/issues/`.
 
 - Date checked: 2026-06-01 21:10 CST / 2026-06-01 13:10 UTC
 - Bothub branch: `codex/delivery-workspace-release-hardening`
-- Local meta-socket: `http://127.0.0.1:18091`
+- Local metaso-p2p: `http://127.0.0.1:18091`
 
 ### Backend Evidence
 
 | Check | Result | Evidence |
 | --- | --- | --- |
-| Local health | passed | `curl http://127.0.0.1:18091/healthz` returned `{"code":0,"data":{"service":"meta-socket","status":"ok","version":"dev"}}`. |
+| Local health | passed | `curl http://127.0.0.1:18091/healthz` returned `{"code":0,"data":{"service":"metaso-p2p","status":"ok","version":"dev"}}`. |
 | Local service list | passed | A `size=10` BotHub list returned real skill-service rows, including paid `metabot-ziwei-fortune-v2` with native MVC payment metadata and multiple free services. |
 | AI_Sunny service detail | passed | Detail for `e9a7064693dfdcbea381c8355c3c91c0ba3947abee816287774729c432378e61i0` returned provider `globalMetaId: idq14hmv23j5fnlx4ccnmvlyldjd38xjsechzwg9xz`, address/payment `1GrqX7K9jdnUor8hAoAfDx99uFH2tT75Za`, and chat pubkey `046a2552...9b3b76`. |
 | AI_Sunny private chat alias query | passed | `private-chat-list?metaId=idq1zfazvxaq69uw6txe3ewce30ewyhy9a7mzykgv0&otherMetaId=idq14hmv23j5fnlx4ccnmvlyldjd38xjsechzwg9xz&size=5` returned `total: 57`, including provider reply pins `42c3f0...`, `2f26...`, and `0299...` at block height `175638`. |
@@ -226,7 +226,7 @@ Controlled Playwright UI run:
 Result: the UI showed `AI_Sunny`, `MetaWeb/MetaID 百科全书`, `已交付`, a
 buyer-safe `有交付记录暂时无法显示，已保留原始记录。` warning, and no
 separate `历史交付` row. Normal visible text did not expose `U2FsdGVkX1`,
-`simplemsg`, `Socket.IO`, `meta-socket`, or `chat key`.
+`simplemsg`, `Socket.IO`, `metaso-p2p`, or `chat key`.
 
 Screenshot artifact: `.playwright-mcp/bothub-ai-sunny-alias-delivery.png`
 (generated for local review; not committed).
@@ -249,7 +249,7 @@ Task 7 reconciled historical delivery messages back into product-order rows.
 - Date checked: 2026-05-31 23:02 CST / 2026-05-31 15:02 UTC
 - Bothub base revision: `f6cba32`
 - Task state: controller-reviewed diff before commit
-- Live meta-socket acceptance: not attempted and not marked passed; Task 4's aggregator readiness blocker remains active.
+- Live metaso-p2p acceptance: not attempted and not marked passed; Task 4's aggregator readiness blocker remains active.
 
 ### Red Test Evidence
 
@@ -319,13 +319,13 @@ Task 7 verification completed at 2026-05-31 23:02 CST / 2026-05-31 15:02 UTC.
 
 ## Task 4 Follow-Up
 
-A meta-socket issue was created at:
+A metaso-p2p issue was created at:
 
 ```text
-/Users/tusm/Documents/MetaID_Projects/meta-socket/issues/2026-05-31-bothub-aggregator-readiness.md
+/Users/tusm/Documents/MetaID_Projects/metaso-p2p/issues/2026-05-31-bothub-aggregator-readiness.md
 ```
 
-Task 4 is ready for controller review as a docs/evidence-only pass. It does not mark real meta-socket acceptance as passed.
+Task 4 is ready for controller review as a docs/evidence-only pass. It does not mark real metaso-p2p acceptance as passed.
 
 ## Task 5 Order Flow Hardening
 
@@ -387,17 +387,17 @@ Manual Chrome + Metalet order execution was blocked externally and was not faked
 Reason: Task 4 already proved that no real service list/detail payload was available:
 
 - local `127.0.0.1:18091` was not listening
-- `META_SOCKET_BASE_URL=http://127.0.0.1:18091 pnpm smoke:meta-socket` failed on `/healthz`
+- `METASO_P2P_BASE_URL=http://127.0.0.1:18091 pnpm smoke:metaso-p2p` failed on `/healthz`
 - public `https://api.idchat.io` returned `502 Bad Gateway`
 - mock-disabled Vite showed `Could not load services`
 
-Because there was no real service to select, this Task 5 pass did not click through a Chrome + Metalet free or paid order. The existing meta-socket issue remains the active external blocker:
+Because there was no real service to select, this Task 5 pass did not click through a Chrome + Metalet free or paid order. The existing metaso-p2p issue remains the active external blocker:
 
 ```text
-/Users/tusm/Documents/MetaID_Projects/meta-socket/issues/2026-05-31-bothub-aggregator-readiness.md
+/Users/tusm/Documents/MetaID_Projects/metaso-p2p/issues/2026-05-31-bothub-aggregator-readiness.md
 ```
 
-No new meta-socket issue was created because the order-flow manual blocker is the same aggregator readiness outage already recorded in Task 4.
+No new metaso-p2p issue was created because the order-flow manual blocker is the same aggregator readiness outage already recorded in Task 4.
 
 ### Task 5 Verification Commands
 
@@ -464,7 +464,7 @@ Observed service behavior:
 
 Real asset acceptance is passed for direct open/download availability. The service's `HEAD` behavior is documented but was not treated as a blocker because browser previews and direct opens rely on `GET`.
 
-No new meta-socket issue was created; this was a file-service `HEAD` nuance with working `GET` delivery URLs, not a new meta-socket aggregator blocker.
+No new metaso-p2p issue was created; this was a file-service `HEAD` nuance with working `GET` delivery URLs, not a new metaso-p2p aggregator blocker.
 
 ### Task 6 Verification Commands
 
@@ -484,15 +484,15 @@ Task 9 attempted final acceptance on the current mock-disabled dev server. The p
 - Date checked: 2026-06-01 09:51 CST / 2026-06-01 01:51 UTC
 - Bothub base revision: `96675d3`
 - Dev server: `http://localhost:5177/`
-- Dev env: `VITE_META_SOCKET_BASE_URL=/meta-socket`, `VITE_USE_AGGREGATOR_MOCK=false`, `VITE_USE_WS_MOCK=false`
-- Existing external blocker: `/Users/tusm/Documents/MetaID_Projects/meta-socket/issues/2026-05-31-bothub-aggregator-readiness.md`
+- Dev env: `VITE_METASO_P2P_BASE_URL=/metaso-p2p`, `VITE_USE_AGGREGATOR_MOCK=false`, `VITE_USE_WS_MOCK=false`
+- Existing external blocker: `/Users/tusm/Documents/MetaID_Projects/metaso-p2p/issues/2026-05-31-bothub-aggregator-readiness.md`
 
 ### Task 9 Service And Wallet Evidence
 
 | Check | Result | Evidence |
 | --- | --- | --- |
 | Dev server | passed | `curl -I http://localhost:5177/delivery` returned `HTTP/1.1 200 OK`. |
-| Local meta-socket health | superseded | This Task 9 check failed with connection refused. The endpoint correction follow-up below later verified local `127.0.0.1:18091/healthz` as healthy. |
+| Local metaso-p2p health | superseded | This Task 9 check failed with connection refused. The endpoint correction follow-up below later verified local `127.0.0.1:18091/healthz` as healthy. |
 | Public native health | blocked | `curl -m 12 https://api.idchat.io/healthz` returned `HTTP/1.1 502 Bad Gateway` from nginx. The endpoint correction follow-up verified that `/chat-api/health` is the healthy idchat group-chat health route. |
 | Public service list | blocked | `curl -m 12 https://api.idchat.io/api/bot-hub/skill-service/list?size=3&chainName=mvc&sortBy=updated&order=desc` returned `HTTP/1.1 502 Bad Gateway`. The endpoint correction follow-up also verified that `/chat-api/api/bot-hub/...` and `/chat-api/bot-hub/...` return 404. |
 | Chrome service list | blocked | Chrome at `http://localhost:5177/` showed `Could not load services` and `Unexpected end of JSON input`. Screenshot: `/tmp/bothub-task9-chrome-service-blocked.png`. |
@@ -504,7 +504,7 @@ Task 9 attempted final acceptance on the current mock-disabled dev server. The p
 | --- | --- | --- |
 | Real free order | blocked | No live free service could be selected because no usable service list/detail payload was available. Endpoint correction later narrowed this to an empty local BotHub list plus public BotHub 502/404 paths. Wallet connection was also blocked by missing Metalet injection in Chrome. |
 | Real paid native order | blocked | No paid service could be selected because service list/detail loading is blocked. No payment prompt was attempted because Chrome did not expose Metalet and no amount/receiver could be inspected from a real service detail. |
-| Meta-socket issue handling | passed | No new meta-socket issue was created because Task 9 observed the same aggregator readiness outage already tracked by the existing issue. |
+| Metaso-p2p issue handling | passed | No new metaso-p2p issue was created because Task 9 observed the same aggregator readiness outage already tracked by the existing issue. |
 
 ### Task 9 Controlled Asset Acceptance
 
@@ -532,48 +532,48 @@ Run after the Task 9 documentation edits:
 
 ## Endpoint Correction Follow-Up
 
-The initial Task 9 service evidence treated `https://api.idchat.io` without the idchat prefix as the public health surface. A follow-up check on 2026-06-01 10:11 CST / 2026-06-01 02:11 UTC corrected that assumption: the public idchat chat API is available under `https://api.idchat.io/chat-api/`, while the BotHub skill-service aggregator still needs the native meta-socket `/api/bot-hub/*` routes.
+The initial Task 9 service evidence treated `https://api.idchat.io` without the idchat prefix as the public health surface. A follow-up check on 2026-06-01 10:11 CST / 2026-06-01 02:11 UTC corrected that assumption: the public idchat chat API is available under `https://api.idchat.io/chat-api/`, while the BotHub skill-service aggregator still needs the native metaso-p2p `/api/bot-hub/*` routes.
 
 ### Current Endpoint Evidence
 
 | Check | Result | Evidence |
 | --- | --- | --- |
-| Listener scan | passed | `lsof -nP -iTCP -sTCP:LISTEN \| rg "(18091\|5176\|5177\|vite\|meta-socket)"` showed `meta-sock` listening on `127.0.0.1:18091` and Vite on local dev ports. |
-| Local meta-socket health | passed | `curl -m 8 http://127.0.0.1:18091/healthz` returned HTTP 200 with `service: meta-socket`, `status: ok`, and `version: dev`. |
+| Listener scan | passed | `lsof -nP -iTCP -sTCP:LISTEN \| rg "(18091\|5176\|5177\|vite\|metaso-p2p)"` showed `meta-sock` listening on `127.0.0.1:18091` and Vite on local dev ports. |
+| Local metaso-p2p health | passed | `curl -m 8 http://127.0.0.1:18091/healthz` returned HTTP 200 with `service: metaso-p2p`, `status: ok`, and `version: dev`. |
 | Local BotHub service list | blocked | `curl http://127.0.0.1:18091/api/bot-hub/skill-service/list?size=3&chainName=mvc&sortBy=updated&order=desc` returned `code: 0`, `schemaVersion: botHubSkillService.v1`, and an empty `data.list`. |
-| Local smoke | blocked | `META_SOCKET_BASE_URL=http://127.0.0.1:18091 pnpm smoke:meta-socket` failed with `skill-service list returned an empty list`. |
+| Local smoke | blocked | `METASO_P2P_BASE_URL=http://127.0.0.1:18091 pnpm smoke:metaso-p2p` failed with `skill-service list returned an empty list`. |
 | Public idchat chat API root | passed | `curl https://api.idchat.io/chat-api/` returned HTTP 200 and `{"service":"group-chat",...}`. |
 | Public idchat chat API health/status | passed | `curl https://api.idchat.io/chat-api/health` returned `{"service":"group-chat","status":"ok"}`; `/chat-api/status` returned `{"service":"group-chat","stats":{"indexer":"running","initialized":true}}`. |
 | Public root/native health | blocked | `curl https://api.idchat.io/`, `/health`, and `/status` each returned `HTTP/1.1 502 Bad Gateway`. |
 | Public BotHub service list | blocked | `curl https://api.idchat.io/api/bot-hub/skill-service/list?size=3&chainName=mvc&sortBy=updated&order=desc` returned `HTTP/1.1 502 Bad Gateway`. |
-| BotHub under idchat prefix | blocked | `curl https://api.idchat.io/chat-api/api/bot-hub/skill-service/list?...` and `curl https://api.idchat.io/chat-api/bot-hub/skill-service/list?...` returned 404. This matches meta-socket's router: `/chat-api` aliases group/private chat handlers, not the skill-service aggregator. |
-| Public smoke with idchat prefix | blocked | `META_SOCKET_BASE_URL=https://api.idchat.io/chat-api pnpm smoke:meta-socket` failed at `/chat-api/healthz` with HTTP 404. |
+| BotHub under idchat prefix | blocked | `curl https://api.idchat.io/chat-api/api/bot-hub/skill-service/list?...` and `curl https://api.idchat.io/chat-api/bot-hub/skill-service/list?...` returned 404. This matches metaso-p2p's router: `/chat-api` aliases group/private chat handlers, not the skill-service aggregator. |
+| Public smoke with idchat prefix | blocked | `METASO_P2P_BASE_URL=https://api.idchat.io/chat-api pnpm smoke:metaso-p2p` failed at `/chat-api/healthz` with HTTP 404. |
 
 ### Corrected Status
 
-- Superseded: the earlier "local meta-socket is not listening" conclusion. Local `127.0.0.1:18091` is currently reachable and healthy.
+- Superseded: the earlier "local metaso-p2p is not listening" conclusion. Local `127.0.0.1:18091` is currently reachable and healthy.
 - Superseded: treating all of `https://api.idchat.io` as down. The `/chat-api/` idchat group-chat surface is healthy.
 - Still blocked for BotHub release acceptance: no current local/public BotHub skill-service list/detail payload is available. Local returns an empty list; public native BotHub paths return 502; BotHub paths under `/chat-api/` return 404.
-- No frontend endpoint change was made in this follow-up because BotHub's aggregator client correctly targets native meta-socket `/api/bot-hub/*`. Pointing `VITE_META_SOCKET_BASE_URL` at `https://api.idchat.io/chat-api` would produce `/chat-api/api/bot-hub/*`, which is not a mounted route.
+- No frontend endpoint change was made in this follow-up because BotHub's aggregator client correctly targets native metaso-p2p `/api/bot-hub/*`. Pointing `VITE_METASO_P2P_BASE_URL` at `https://api.idchat.io/chat-api` would produce `/chat-api/api/bot-hub/*`, which is not a mounted route.
 
-## Meta-Socket Maintainer Follow-Up
+## Metaso-P2P Maintainer Follow-Up
 
-Meta-socket maintainers reviewed the current Bothub availability issue and
-recorded the conclusion in meta-socket commit
+Metaso-p2p maintainers reviewed the current Bothub availability issue and
+recorded the conclusion in metaso-p2p commit
 `f29a3e6 docs: record bothub skill-service availability gap`.
 
 ### Maintainer Conclusion
 
 - The issue is valid as a Bothub release-acceptance blocker.
-- No meta-socket code change is recommended solely for the current empty-list
+- No metaso-p2p code change is recommended solely for the current empty-list
   symptom.
 - Local `127.0.0.1:18091` returns the expected `botHubSkillService.v1` JSON
   envelope, but the launchd service is running with
-  `META_SOCKET_BLOCK_INDEX_ENABLED=false` and a temporary empty Pebble data dir,
+  `METASO_P2P_BLOCK_INDEX_ENABLED=false` and a temporary empty Pebble data dir,
   so it will not index real `/protocols/skill-service` pins.
 - Public `https://api.idchat.io/api/bot-hub/*` still returns nginx 502.
 - Public `https://api.idchat.io/chat-api/` remains the group/private chat
-  compatibility surface; Bothub should not set `META_SOCKET_BASE_URL` to
+  compatibility surface; Bothub should not set `METASO_P2P_BASE_URL` to
   `https://api.idchat.io/chat-api` because that produces unmounted
   `/chat-api/api/bot-hub/*` paths.
 
@@ -581,20 +581,20 @@ recorded the conclusion in meta-socket commit
 
 Bothub frontend work remains code-complete for the release-hardening scope, but
 real free/paid order acceptance is still blocked until there is an acceptance or
-production meta-socket instance with MVC block indexing enabled, real RPC
+production metaso-p2p instance with MVC block indexing enabled, real RPC
 credentials, and indexed `/protocols/skill-service` data behind native
 `/api/bot-hub/*` routes.
 
 Relevant backend tracking:
 
 ```text
-/Users/tusm/Documents/MetaID_Projects/meta-socket/issues/2026-06-01-bothub-skill-service-availability-gap.md
-/Users/tusm/Documents/MetaID_Projects/meta-socket/issues/issues-fixed-logs.md
+/Users/tusm/Documents/MetaID_Projects/metaso-p2p/issues/2026-06-01-bothub-skill-service-availability-gap.md
+/Users/tusm/Documents/MetaID_Projects/metaso-p2p/issues/issues-fixed-logs.md
 ```
 
 ## Real Indexer Recovery Follow-Up
 
-Meta-socket maintainers later restored the local `127.0.0.1:18091` service to a
+Metaso-p2p maintainers later restored the local `127.0.0.1:18091` service to a
 real MVC indexed instance. This follow-up re-ran the live Bothub acceptance path
 on 2026-06-01 16:13 CST / 2026-06-01 08:13 UTC.
 
@@ -602,10 +602,10 @@ on 2026-06-01 16:13 CST / 2026-06-01 08:13 UTC.
 
 | Check | Result | Evidence |
 | --- | --- | --- |
-| Local health | passed | `curl http://127.0.0.1:18091/healthz` returned a healthy meta-socket envelope. |
-| Local smoke | passed | `META_SOCKET_BASE_URL=http://127.0.0.1:18091 pnpm smoke:meta-socket` passed with skill-service list/detail and Socket.IO heartbeat evidence. |
+| Local health | passed | `curl http://127.0.0.1:18091/healthz` returned a healthy metaso-p2p envelope. |
+| Local smoke | passed | `METASO_P2P_BASE_URL=http://127.0.0.1:18091 pnpm smoke:metaso-p2p` passed with skill-service list/detail and Socket.IO heartbeat evidence. |
 | Chrome wallet connect | passed | Chrome showed the connected Metalet identity `SunnyFung` / `idq1zf...kgv0`. |
-| Real service list/detail | passed | Chrome loaded real services from local meta-socket, including `Free Ecommerce Store Blueprint`; its detail showed price `0 SPACE`, settlement `Native`, payment chain `MVC`, provider `Dan Mercier`, and a provider chat public key. |
+| Real service list/detail | passed | Chrome loaded real services from local metaso-p2p, including `Free Ecommerce Store Blueprint`; its detail showed price `0 SPACE`, settlement `Native`, payment chain `MVC`, provider `Dan Mercier`, and a provider chat public key. |
 | Free order request entry | passed | The request modal accepted `Bothub smoke test for the 0 SPACE free service order flow. Please ignore this test request.` and the review step showed provider, price, and settlement. |
 | Metalet createPin prompt | reached | `Confirm & pay` opened the Metalet `CreatePin` prompt for chain `MVC`, one `/protocols/simplemsg` pin, broadcast `Yes`, and total network cost `1,091 sats` / `0.00001091 SPACE`. The user explicitly approved clicking Confirm. |
 | Post-confirm app state | blocked | After Metalet returned, Bothub reported `The free order message failed. The request was saved in Delivery for recovery.` Delivery displayed a local recovery order for Dan Mercier with `failed_to_send` details. |
@@ -613,7 +613,7 @@ on 2026-06-01 16:13 CST / 2026-06-01 08:13 UTC.
 
 ### Empty Private-Chat History Shape
 
-The same live history probe exposed a frontend tolerance gap: meta-socket returns
+The same live history probe exposed a frontend tolerance gap: metaso-p2p returns
 `data.list: null` for an empty private-chat history page. Bothub previously
 treated that as an invalid envelope, which could make empty histories look like
 sync failures.
@@ -622,7 +622,7 @@ Implementation changes in this follow-up:
 
 - `src/api/privateChat.ts` now normalizes `data.list: null` to an empty array
   for private-chat homes and history pages.
-- `scripts/smoke-meta-socket.mjs` now treats `data.list: null` as an empty list
+- `scripts/smoke-metaso-p2p.mjs` now treats `data.list: null` as an empty list
   for optional private-chat smoke checks.
 - `tests/api/privateChat.test.ts` covers null empty homes/history lists.
 
@@ -631,7 +631,7 @@ Verification:
 | Command | Result | Notes |
 | --- | --- | --- |
 | `pnpm test -- tests/api/privateChat.test.ts` | passed | The repo test script ran all 56 test files; 428 tests passed. Existing React Router, FocusTrap, profile-offline, and act warnings were observed. |
-| `META_SOCKET_PRIVATE_CHAT_METAID=idq1zfazvxaq69uw6txe3ewce30ewyhy9a7mzykgv0 META_SOCKET_PRIVATE_CHAT_OTHER_METAID=12FxJzsxhQ5snAieJ5MPo9x9bhAZ2e3ejc pnpm smoke:meta-socket` | passed | Private-chat homes count was 6; Dan Mercier history count was 0 and normalized as an empty compatible list. |
+| `METASO_P2P_PRIVATE_CHAT_METAID=idq1zfazvxaq69uw6txe3ewce30ewyhy9a7mzykgv0 METASO_P2P_PRIVATE_CHAT_OTHER_METAID=12FxJzsxhQ5snAieJ5MPo9x9bhAZ2e3ejc pnpm smoke:metaso-p2p` | passed | Private-chat homes count was 6; Dan Mercier history count was 0 and normalized as an empty compatible list. |
 | `pnpm build` | passed | TypeScript build and Vite production build completed. Vite reported the existing large-chunk warning. |
 | `pnpm lint` | passed | ESLint completed with `--max-warnings 0`. |
 | `git diff --check` | passed | No whitespace errors after the null-list tolerance changes and run-log update. |
@@ -642,21 +642,21 @@ The earlier local skill-service availability blocker is superseded for this
 machine: local real services are now available. Full real free-order acceptance
 is still not complete because the user-approved Metalet `CreatePin` attempt did
 not produce an observable Dan Mercier private-chat history row through
-meta-socket, and Bothub saved the request as a recovery record instead of a
+metaso-p2p, and Bothub saved the request as a recovery record instead of a
 confirmed sent order.
 
 ## CreatePin Diagnostic And Final Live Follow-Up
 
 The controller added temporary-development diagnostics around the Metalet
-`createPin` boundary and re-ran the live free-order flow after meta-socket's
+`createPin` boundary and re-ran the live free-order flow after metaso-p2p's
 real MVC indexer was restored.
 
 - Date checked: 2026-06-01 17:38 CST
 - Bothub branch: `codex/delivery-workspace-release-hardening`
 - Dev server: `http://127.0.0.1:5177/`
-- Dev env: `VITE_META_SOCKET_BASE_URL=/meta-socket`,
+- Dev env: `VITE_METASO_P2P_BASE_URL=/metaso-p2p`,
   `VITE_USE_AGGREGATOR_MOCK=false`, `VITE_USE_WS_MOCK=false`
-- Local meta-socket: `http://127.0.0.1:18091`
+- Local metaso-p2p: `http://127.0.0.1:18091`
 
 ### CreatePin Diagnostic Hardening
 
@@ -692,22 +692,22 @@ the diagnostics were added.
 | Check | Result | Evidence |
 | --- | --- | --- |
 | Wallet connect | passed | Chrome showed `SunnyFung` / `idq1zf...kgv0`. |
-| Service detail | passed | `Free Ecommerce Store Blueprint` loaded from local meta-socket with `0 SPACE`, native MVC settlement, payment address `12FxJzsxhQ5snAieJ5MPo9x9bhAZ2e3ejc`, and provider chat key. |
+| Service detail | passed | `Free Ecommerce Store Blueprint` loaded from local metaso-p2p with `0 SPACE`, native MVC settlement, payment address `12FxJzsxhQ5snAieJ5MPo9x9bhAZ2e3ejc`, and provider chat key. |
 | Metalet createPin prompt | reached | Wallet displayed one MVC `/protocols/simplemsg` createPin, broadcast `Yes`, and cost `1,175 sats` / `0.00001175 SPACE`; the user explicitly confirmed the final wallet click. |
 | Bothub post-confirm state | passed | Bothub navigated to `/delivery?order=idq1zfazvxaq69uw6txe3ewce30ewyhy9a7mzykgv0%3A12FxJzsxhQ5snAieJ5MPo9x9bhAZ2e3ejc%3A02ac4091512dfc67492adb590b00db1eee575969a7d9a3042ae6d4b3d44e4ffa`, showed status `等待接单`, timeline `请求已发送`, and the free request record. |
 | RPC transaction lookup | passed | MVC RPC `getrawtransaction` found tx `f49060769beb4644338e31577301390fd5827d372a60fdac763ad96db206fd75`; decoded OP_RETURN path was `/protocols/simplemsg`. |
 | Mempool status | pending confirmation | MVC RPC `getmempoolentry` still returned the tx at block height `175627` with fee `0.00001175`. No confirmations were present at the latest check. |
-| meta-socket private-chat visibility | pending confirmation/indexing | `private-chat-list` for buyer/provider still returned `total: 0`, `list: null`; meta-socket logs showed indexing through block `175625` while the RPC tip and mempool entry were at `175627`. |
+| metaso-p2p private-chat visibility | pending confirmation/indexing | `private-chat-list` for buyer/provider still returned `total: 0`, `list: null`; metaso-p2p logs showed indexing through block `175625` while the RPC tip and mempool entry were at `175627`. |
 
 This supersedes the earlier failed free-order retry. The latest frontend path is
 accepted through buyer order creation. Provider-side visibility is not yet
-proven because the transaction is still unconfirmed and the local meta-socket
-instance has `META_SOCKET_ZMQ_ENABLED=false`, so it does not index mempool
+proven because the transaction is still unconfirmed and the local metaso-p2p
+instance has `METASO_P2P_ZMQ_ENABLED=false`, so it does not index mempool
 events.
 
-### Paid Native Live Order Retry After Meta-Socket Fix
+### Paid Native Live Order Retry After Metaso-P2P Fix
 
-After meta-socket fixed the paid service payment metadata gap, the paid native
+After metaso-p2p fixed the paid service payment metadata gap, the paid native
 order flow was retried in Chrome with the real Metalet wallet.
 
 | Check | Result | Evidence |
@@ -720,15 +720,15 @@ order flow was retried in Chrome with the real Metalet wallet.
 | Metalet order PIN prompt | passed | Wallet displayed one MVC `/protocols/simplemsg` createPin, broadcast `Yes`, and cost `1,347 sats` / `0.00001347 SPACE`. The user explicitly confirmed this wallet action too. |
 | Order PIN transaction | passed | MVC mempool scan found tx `bef7f0e1bbc693bd3264f7620344c02b72e77c8d27d5303411f9fac55e0f83f0`; decoded vout 1 is `nulldata` with path `/protocols/simplemsg` and body `to: "125DQu9dBCXksYWg7HnmnmU3TpBNqnMsZF"`. |
 | Bothub post-confirm state | passed | Bothub navigated to `/delivery?order=idq1zfazvxaq69uw6txe3ewce30ewyhy9a7mzykgv0%3A125DQu9dBCXksYWg7HnmnmU3TpBNqnMsZF%3Abe6aba9e7a2e0b2eadb4a9630de7cb8f624865c25031a9dfbcccd29b0925806d`, showed status `等待接单`, timeline `请求已发送`, and the paid request record with fee `0.01 SPACE`. |
-| Provider-side visibility | pending confirmation/indexing | Payment tx `be6aba9e...5806d` and order PIN tx `bef7f0e1...83f0` were still in mempool at height `175635`; RPC tip was `175636`; local meta-socket private-chat history for buyer/provider returned `total: 0`, `list: null`; latest observed local indexer log had not yet saved this new private message. |
+| Provider-side visibility | pending confirmation/indexing | Payment tx `be6aba9e...5806d` and order PIN tx `bef7f0e1...83f0` were still in mempool at height `175635`; RPC tip was `175636`; local metaso-p2p private-chat history for buyer/provider returned `total: 0`, `list: null`; latest observed local indexer log had not yet saved this new private message. |
 
 ### AI_Sunny Online Service Acceptance
 
 The user asked to use AI_Sunny's online service because the earlier paid test
 provider might not respond immediately. The AI_Sunny service did respond in
 IDChat, which proved the buyer-to-provider live path. It also exposed a remaining
-meta-socket identity gap that prevents Bothub Delivery from hydrating that
-provider response through local meta-socket APIs.
+metaso-p2p identity gap that prevents Bothub Delivery from hydrating that
+provider response through local metaso-p2p APIs.
 
 | Check | Result | Evidence |
 | --- | --- | --- |
@@ -740,25 +740,25 @@ provider response through local meta-socket APIs.
 | Bothub Delivery state | blocked externally | Chrome showed the order in Delivery with status `等待接单`, timeline `请求已发送` / `服务处理中`, banner `交付记录需要同步`, and the saved request details, but not AI_Sunny's provider reply. |
 | Local identity contract | blocked externally | Local service detail exposes AI_Sunny provider/payment identity as `1GrqX7K9jdnUor8hAoAfDx99uFH2tT75Za`. Local private-chat history for that peer returned older rows but not the order/status pins; local history for IDChat's live peer `idq14hmv23j5fnlx4ccnmvlyldjd38xjsechzwg9xz` returned `total: 0`. Public `https://api.idchat.io/chat-api` for the live peer returned the current order and AI_Sunny reply pins. |
 
-A meta-socket issue was filed at:
+A metaso-p2p issue was filed at:
 
 ```text
-/Users/tusm/Documents/MetaID_Projects/meta-socket/issues/2026-06-01-bothub-ai-sunny-provider-chat-identity-gap.md
+/Users/tusm/Documents/MetaID_Projects/metaso-p2p/issues/2026-06-01-bothub-ai-sunny-provider-chat-identity-gap.md
 ```
 
 ### Current Release Implication
 
 Bothub's frontend release-hardening work is complete for this plan's frontend
 scope, including the latest createPin diagnostic safety net and real free/paid
-buyer-send paths against the local meta-socket + Metalet runtime. The later
-meta-socket AI_Sunny alias fix restored canonical provider detail and
+buyer-send paths against the local metaso-p2p + Metalet runtime. The later
+metaso-p2p AI_Sunny alias fix restored canonical provider detail and
 private-chat history locally, and Bothub can now hydrate canonical-provider
 replies back into the original address-keyed order. Strict live release
 acceptance still has external runtime conditions:
 
 1. Free and paid provider-side visibility should be rechecked after MVC
-   confirmation and meta-socket block indexing catch up. If unconfirmed
-   provider visibility is required, meta-socket would need mempool/ZMQ support.
-2. A production/staging meta-socket base URL still needs to be provided and
+   confirmation and metaso-p2p block indexing catch up. If unconfirmed
+   provider visibility is required, metaso-p2p would need mempool/ZMQ support.
+2. A production/staging metaso-p2p base URL still needs to be provided and
    verified for native BotHub, private-chat, and Socket.IO routes. BotHub should
    not treat idchat `/chat-api/` as that base URL.

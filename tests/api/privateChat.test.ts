@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import homesFixture from '../fixtures/meta-socket/private-chat-homes-live-shape.json'
-import historyFixture from '../fixtures/meta-socket/private-chat-list-live-shape.json'
+import homesFixture from '../fixtures/metaso-p2p/private-chat-homes-live-shape.json'
+import historyFixture from '../fixtures/metaso-p2p/private-chat-list-live-shape.json'
 import type { WalletIdentity } from '@/wallet/types'
 
 async function loadPrivateChat() {
@@ -16,7 +16,7 @@ describe('private chat API client', () => {
 
   describe('fetch mode', () => {
     beforeEach(() => {
-      vi.stubEnv('VITE_META_SOCKET_BASE_URL', '/meta-socket/')
+      vi.stubEnv('VITE_METASO_P2P_BASE_URL', '/metaso-p2p/')
     })
 
     it('listPrivateChatHomes fetches canonical encoded homes endpoint and unwraps list', async () => {
@@ -32,7 +32,7 @@ describe('private chat API client', () => {
 
       expect(fetchMock).toHaveBeenCalledOnce()
       expect(fetchMock.mock.calls[0][0]).toBe(
-        '/meta-socket/api/private-chat/homes/wallet%20address%2Fwith%20space',
+        '/metaso-p2p/api/private-chat/homes/wallet%20address%2Fwith%20space',
       )
       expect(homes).toHaveLength(1)
       expect(homes[0]).toMatchObject({
@@ -61,7 +61,7 @@ describe('private chat API client', () => {
 
       expect(fetchMock).toHaveBeenCalledOnce()
       expect(fetchMock.mock.calls[0][0]).toBe(
-        '/meta-socket/api/private-chat/messages?metaId=1JzFmwf498bXRyFiJTrxikSP7xh9iZ3JrX&otherMetaId=peer+id%2Fwith%3F&cursor=&size=5&timestamp=1777322934',
+        '/metaso-p2p/api/private-chat/messages?metaId=1JzFmwf498bXRyFiJTrxikSP7xh9iZ3JrX&otherMetaId=peer+id%2Fwith%3F&cursor=&size=5&timestamp=1777322934',
       )
       expect(page.total).toBe(3)
       expect(page.nextCursor).toBe('')
@@ -221,8 +221,8 @@ describe('private chat API client', () => {
       await expect(listPrivateChatHomes('me')).resolves.toEqual([])
 
       expect(fetchMock).toHaveBeenCalledTimes(2)
-      expect(fetchMock.mock.calls[0][0]).toBe('/meta-socket/api/private-chat/homes/me')
-      expect(fetchMock.mock.calls[1][0]).toBe('/meta-socket/api/group-chat/chat/homes/me')
+      expect(fetchMock.mock.calls[0][0]).toBe('/metaso-p2p/api/private-chat/homes/me')
+      expect(fetchMock.mock.calls[1][0]).toBe('/metaso-p2p/api/group-chat/chat/homes/me')
     })
 
     it('falls back to legacy history route when canonical route returns 405', async () => {
@@ -256,10 +256,10 @@ describe('private chat API client', () => {
 
       expect(fetchMock).toHaveBeenCalledTimes(2)
       expect(fetchMock.mock.calls[0][0]).toBe(
-        '/meta-socket/api/private-chat/messages?metaId=me&otherMetaId=peer&size=5',
+        '/metaso-p2p/api/private-chat/messages?metaId=me&otherMetaId=peer&size=5',
       )
       expect(fetchMock.mock.calls[1][0]).toBe(
-        '/meta-socket/api/group-chat/private-chat-list?metaId=me&otherMetaId=peer&size=5',
+        '/metaso-p2p/api/group-chat/private-chat-list?metaId=me&otherMetaId=peer&size=5',
       )
     })
 

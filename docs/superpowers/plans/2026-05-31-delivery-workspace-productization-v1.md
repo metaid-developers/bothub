@@ -4,7 +4,7 @@
 
 **Goal:** Turn BotHub Delivery from a private-message debug surface into an order-centered digital-delivery workspace where ordinary buyers can see request progress, manage delivered assets, and recover previous deliveries after login.
 
-**Architecture:** Keep BotHub as a pure frontend React app backed by meta-socket, Socket.IO, Metalet, and IndexedDB. Build a derived Delivery workspace model over the existing orders/sessions/messages/assets stores, then replace the current session/message-first layout with buyer-facing order list, progress timeline, asset library, and sync/recovery states. Preserve the repaired private-chat/profile/decrypt pipeline from `2026-05-31-delivery-message-profile-parity.md`.
+**Architecture:** Keep BotHub as a pure frontend React app backed by metaso-p2p, Socket.IO, Metalet, and IndexedDB. Build a derived Delivery workspace model over the existing orders/sessions/messages/assets stores, then replace the current session/message-first layout with buyer-facing order list, progress timeline, asset library, and sync/recovery states. Preserve the repaired private-chat/profile/decrypt pipeline from `2026-05-31-delivery-message-profile-parity.md`.
 
 **Tech Stack:** Vite 5, React 18, TypeScript 5 strict, Tailwind CSS, zustand, IndexedDB, socket.io-client, CryptoJS, Vitest + Testing Library, Chrome + Metalet for real manual acceptance.
 
@@ -46,12 +46,12 @@ Do not implement:
 - Provider-side workflows.
 - Dedicated BotHub backend.
 - Bulk zip generation or local file downloads beyond normal browser links.
-- New meta-socket APIs unless real testing proves an interface is missing or broken.
+- New metaso-p2p APIs unless real testing proves an interface is missing or broken.
 
-If an observed failure is caused by missing or broken meta-socket data, create an issue markdown file in:
+If an observed failure is caused by missing or broken metaso-p2p data, create an issue markdown file in:
 
 ```text
-/Users/tusm/Documents/MetaID_Projects/meta-socket/issues/
+/Users/tusm/Documents/MetaID_Projects/metaso-p2p/issues/
 ```
 
 Use a filename like `YYYY-MM-DD-bothub-delivery-workspace-gap.md`, include:
@@ -66,7 +66,7 @@ Use a filename like `YYYY-MM-DD-bothub-delivery-workspace-gap.md`, include:
 
 Read these before coding:
 
-- `docs/architecture/meta-socket-local-api.md`
+- `docs/architecture/metaso-p2p-local-api.md`
 - `docs/superpowers/plans/2026-05-31-delivery-message-profile-parity.md`
 - `src/routes/Delivery.tsx`
 - `src/components/WalletHydrator.tsx`
@@ -99,7 +99,7 @@ Design reference:
 Useful pieces exist, but the product shape is still low:
 
 - `DeliveryPage` is session/message-first. It shows `Sessions`, a private-message area, and `Delivered assets`, which exposes technical implementation rather than buyer workflow.
-- The page title/subtitle still says `Private simplemsg sessions delivered over meta-socket Socket.IO.`, which is debug/developer copy.
+- The page title/subtitle still says `Private simplemsg sessions delivered over metaso-p2p Socket.IO.`, which is debug/developer copy.
 - Empty state is wallet/session oriented, not buyer-outcome oriented.
 - Local `BuyerOrder` rows are loaded, but the visible workspace is mostly derived from `byPeer` sessions. A pending order with no provider reply can feel thin or invisible unless it has a message-derived session.
 - Assets are parsed and persisted, but the asset area is a passive list. There is no filter, preview modal, copy-link action, selected asset state, or clear "download/open" affordance.
@@ -194,7 +194,7 @@ The final implementation must satisfy all of these:
 - Refreshing the page after a delivered asset still restores the selected order and stored assets from IndexedDB after wallet login.
 - Socket/history sync issues are visible but do not erase local cached deliveries.
 - Delivery still supports follow-up messages using the repaired provider chat key logic.
-- UI does not contain implementation copy such as `simplemsg`, `Socket.IO`, `meta-socket`, `chat key`, or `ciphertext` in normal buyer states. Technical details can stay behind explicit diagnostic controls for decrypt failures.
+- UI does not contain implementation copy such as `simplemsg`, `Socket.IO`, `metaso-p2p`, `chat key`, or `ciphertext` in normal buyer states. Technical details can stay behind explicit diagnostic controls for decrypt failures.
 
 ## 6. Implementation Tasks
 
@@ -946,7 +946,7 @@ Design requirements:
   - buyer-facing status pill
   - asset count
   - last activity time
-- Do not include terms `session`, `simplemsg`, `Socket.IO`, `meta-socket`, or `chat key`.
+- Do not include terms `session`, `simplemsg`, `Socket.IO`, `metaso-p2p`, or `chat key`.
 - Keep dimensions stable; long service/request text must truncate rather than resize the layout.
 - Use existing `PeerAvatar`.
 - Use existing `t()` keys, not hard-coded production copy, except test helper text.
@@ -1018,7 +1018,7 @@ Update `tests/components/delivery/DeliveryPage.test.tsx` to prove:
 - connected buyer with order-only IndexedDB row sees it in the order list
 - selected `?order=` is preserved after refresh
 - legacy `?session=` redirects or resolves to the same selection
-- normal page copy does not show `Private simplemsg sessions delivered over meta-socket Socket.IO.`
+- normal page copy does not show `Private simplemsg sessions delivered over metaso-p2p Socket.IO.`
 - selected `?order=` whose provider profile lacks display fields calls `fetchUserProfileByGlobalMetaId()` and renders the returned provider name/avatar
 - selected `?order=` with encrypted provider message calls `retryDecryptPeerMessages()` after provider profile returns a chat key
 - visible non-selected orders with missing provider names/avatars are hydrated conservatively, preserving the existing request-storm guard
@@ -1634,7 +1634,7 @@ it('uses buyer-facing delivery copy instead of implementation copy', () => {
   render(<DeliveryPage />)
 
   expect(screen.getByRole('heading', { name: '我的交付' })).toBeInTheDocument()
-  expect(screen.queryByText(/simplemsg|Socket.IO|meta-socket|chat key|ciphertext/i)).not.toBeInTheDocument()
+  expect(screen.queryByText(/simplemsg|Socket.IO|metaso-p2p|chat key|ciphertext/i)).not.toBeInTheDocument()
 })
 ```
 
@@ -1800,7 +1800,7 @@ After committing, post an Eric development journal with `metabot-post-buzz`.
 
 - Create or modify only if evidence must be recorded:
   - `docs/superpowers/acceptance/2026-05-31-delivery-workspace-v1.md`
-  - `/Users/tusm/Documents/MetaID_Projects/meta-socket/issues/YYYY-MM-DD-bothub-delivery-workspace-gap.md`
+  - `/Users/tusm/Documents/MetaID_Projects/metaso-p2p/issues/YYYY-MM-DD-bothub-delivery-workspace-gap.md`
 
 - [ ] **Step 1: Run automated gates**
 
@@ -1818,7 +1818,7 @@ Expected:
 - build passes
 - diff check has no output
 
-- [ ] **Step 2: Confirm local meta-socket**
+- [ ] **Step 2: Confirm local metaso-p2p**
 
 ```bash
 curl -s http://127.0.0.1:18091/healthz
@@ -1827,7 +1827,7 @@ curl -s http://127.0.0.1:18091/healthz
 Expected shape:
 
 ```json
-{"code":0,"data":{"service":"meta-socket","status":"ok","version":"dev"}}
+{"code":0,"data":{"service":"metaso-p2p","status":"ok","version":"dev"}}
 ```
 
 If the port changed, find the real listener with `lsof -nP -iTCP -sTCP:LISTEN | rg meta-sock`.
@@ -1946,7 +1946,7 @@ Include:
 - confirmations clicked
 - pass/fail checklist
 - screenshots paths
-- meta-socket issues filed, if any
+- metaso-p2p issues filed, if any
 - remaining blockers
 
 - [ ] **Step 7: Commit acceptance notes if created**
@@ -1984,7 +1984,7 @@ The implementation is complete only when:
 - Sync failures are visible but do not hide local cached deliveries.
 - Follow-up composer still sends through the repaired private simplemsg ECDH path.
 - Chrome + Metalet free-order acceptance is attempted and recorded.
-- Any meta-socket gaps discovered during real testing are documented under `/Users/tusm/Documents/MetaID_Projects/meta-socket/issues/`.
+- Any metaso-p2p gaps discovered during real testing are documented under `/Users/tusm/Documents/MetaID_Projects/metaso-p2p/issues/`.
 
 ## 9. Handoff Prompt For The Next Development Session
 

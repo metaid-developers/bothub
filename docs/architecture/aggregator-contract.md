@@ -1,10 +1,10 @@
 # BotHub 聚合接口契约（消费方视角 v1）
 
-> **⚠️ 权威规格已迁移** → [`meta-socket/docs/specs/2026-05-28-bot-hub-skill-service-aggregation-api.md`](../../meta-socket/docs/specs/2026-05-28-bot-hub-skill-service-aggregation-api.md)（若本地路径不同，以 meta-socket 仓库为准）。  
-> **成功码**：`code === 0`（meta-socket 风格），**不是**本文档早期草稿中的 `code === 1`。  
-> 下文保留作历史对照；实现以 meta-socket spec 为准。
+> **⚠️ 权威规格已迁移** → [`metaso-p2p/docs/specs/2026-05-28-bot-hub-skill-service-aggregation-api.md`](../../metaso-p2p/docs/specs/2026-05-28-bot-hub-skill-service-aggregation-api.md)（若本地路径不同，以 metaso-p2p 仓库为准）。
+> **成功码**：`code === 0`（metaso-p2p 风格），**不是**本文档早期草稿中的 `code === 1`。
+> 下文保留作历史对照；实现以 metaso-p2p spec 为准。
 
-> **背景**：聚合服务由 **meta-socket** 实现并部署，BotHub 是纯消费方 SPA。  
+> **背景**：聚合服务由 **metaso-p2p** 实现并部署，BotHub 是纯消费方 SPA。
 > **范围**：Skill-Service 列表 / 详情。下单、私信、Delivery 不在聚合 API 内。
 
 ---

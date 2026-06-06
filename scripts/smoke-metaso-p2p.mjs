@@ -4,10 +4,10 @@ const DEFAULT_BASE_URL = 'http://127.0.0.1:18091'
 const DEFAULT_SMOKE_METAID = 'bothub-smoke-metaid'
 const REQUEST_TIMEOUT_MS = 8000
 const SOCKET_TIMEOUT_MS = 10000
-const baseUrl = normalizeBaseUrl(process.env.META_SOCKET_BASE_URL || DEFAULT_BASE_URL)
-const smokeMetaid = process.env.META_SOCKET_SMOKE_METAID || DEFAULT_SMOKE_METAID
-const privateChatMetaId = process.env.META_SOCKET_PRIVATE_CHAT_METAID || ''
-const privateChatOtherMetaId = process.env.META_SOCKET_PRIVATE_CHAT_OTHER_METAID || ''
+const baseUrl = normalizeBaseUrl(process.env.METASO_P2P_BASE_URL || DEFAULT_BASE_URL)
+const smokeMetaid = process.env.METASO_P2P_SMOKE_METAID || DEFAULT_SMOKE_METAID
+const privateChatMetaId = process.env.METASO_P2P_PRIVATE_CHAT_METAID || ''
+const privateChatOtherMetaId = process.env.METASO_P2P_PRIVATE_CHAT_OTHER_METAID || ''
 
 function normalizeBaseUrl(value) {
   return value.replace(/\/+$/, '')
@@ -15,7 +15,7 @@ function normalizeBaseUrl(value) {
 
 function fail(message, detail) {
   const suffix = detail ? `: ${detail}` : ''
-  console.error(`[smoke:meta-socket] ${message}${suffix}`)
+  console.error(`[smoke:metaso-p2p] ${message}${suffix}`)
   process.exit(1)
 }
 
@@ -131,7 +131,7 @@ async function smokePrivateChat() {
     return {
       skipped: true,
       reason:
-        'set META_SOCKET_PRIVATE_CHAT_METAID and META_SOCKET_PRIVATE_CHAT_OTHER_METAID to enable live private-chat checks',
+        'set METASO_P2P_PRIVATE_CHAT_METAID and METASO_P2P_PRIVATE_CHAT_OTHER_METAID to enable live private-chat checks',
     }
   }
 

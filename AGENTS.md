@@ -12,18 +12,18 @@ This file provides guidance to AI coding agents working in this repository.
 BotHub is a public caller-side React SPA for browsing remote `skill-service`
 providers, submitting a natural-language Pay & Request order with Metalet, and
 tracking provider replies plus delivered digital assets in Delivery. It reads
-service and private-chat data from `meta-socket`; payment, encryption, and
+service and private-chat data from `metaso-p2p`; payment, encryption, and
 simplemsg order submission happen through `window.metaidwallet`.
 
 It is not a provider runtime, service-publishing console, OAC Core client, or
-custom backend. Keep the app frontend-only unless a documented `meta-socket`
+custom backend. Keep the app frontend-only unless a documented `metaso-p2p`
 boundary forces a thin proxy.
 
 Main modules:
 - `src/routes/`: top-level Bot Hub and Delivery pages.
 - `src/components/hub/`: service cards, filters, detail panel, request modal.
 - `src/components/delivery/`: session list, timeline, composer, delivered assets.
-- `src/api/`: `meta-socket` HTTP clients, types, and TanStack Query hooks.
+- `src/api/`: `metaso-p2p` HTTP clients, types, and TanStack Query hooks.
 - `src/ws/`: Socket.IO setup and private-chat envelope handling.
 - `src/wallet/`: Metalet wrapper, wallet state, identity normalization.
 - `src/order/`: Pay & Request payload building, diagnostics, pin/payment flow.

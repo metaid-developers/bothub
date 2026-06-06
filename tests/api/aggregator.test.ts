@@ -18,7 +18,7 @@ describe('aggregator client', () => {
   describe('mock mode', () => {
     beforeEach(() => {
       vi.stubEnv('VITE_USE_AGGREGATOR_MOCK', 'true')
-      vi.stubEnv('VITE_META_SOCKET_BASE_URL', 'https://api.test')
+      vi.stubEnv('VITE_METASO_P2P_BASE_URL', 'https://api.test')
     })
 
     it('listServices returns mock list with at least 3 items', async () => {
@@ -61,7 +61,7 @@ describe('aggregator client', () => {
   describe('fetch mode', () => {
     beforeEach(() => {
       vi.stubEnv('VITE_USE_AGGREGATOR_MOCK', 'false')
-      vi.stubEnv('VITE_META_SOCKET_BASE_URL', 'https://api.test')
+      vi.stubEnv('VITE_METASO_P2P_BASE_URL', 'https://api.test')
     })
 
     it('listServices fetches list endpoint and unwraps envelope', async () => {
@@ -81,8 +81,8 @@ describe('aggregator client', () => {
       expect(data.total).toBe(3)
     })
 
-    it('listServices preserves relative meta-socket base when building endpoint URLs', async () => {
-      vi.stubEnv('VITE_META_SOCKET_BASE_URL', '/meta-socket/')
+    it('listServices preserves relative metaso-p2p base when building endpoint URLs', async () => {
+      vi.stubEnv('VITE_METASO_P2P_BASE_URL', '/metaso-p2p/')
       const fetchMock = vi.fn().mockResolvedValue({
         json: async () => listFixture,
       })
@@ -92,7 +92,7 @@ describe('aggregator client', () => {
       await listServices({ size: 3, chainName: 'mvc', sortBy: 'updated', order: 'desc' })
 
       expect(fetchMock.mock.calls[0][0]).toBe(
-        '/meta-socket/api/bot-hub/skill-service/list?size=3&chainName=mvc&sortBy=updated&order=desc',
+        '/metaso-p2p/api/bot-hub/skill-service/list?size=3&chainName=mvc&sortBy=updated&order=desc',
       )
     })
 

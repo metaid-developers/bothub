@@ -14,9 +14,9 @@
 | D2 | UI libraries | **Tailwind CSS 3 + Headless UI + Heroicons** | Same as IDBots; **do not** copy OAC daemon HTML styling |
 | D3 | State / data | **TanStack Query v5** (server) + **zustand** (wallet, WS, messages) | IDBots uses Redux; we skip Redux — our scope is simpler |
 | D4 | Router | React Router v6 | — |
-| D5 | WebSocket | `socket.io-client@4.8.x` | Same major as IDBots; meta-socket protocol |
+| D5 | WebSocket | `socket.io-client@4.8.x` | Same major as IDBots; metaso-p2p protocol |
 | D6 | Wallet | Metalet only | `window.metaidwallet` |
-| D7 | Backend | **None** — pure SPA → meta-socket | ✅ Confirmed |
+| D7 | Backend | **None** — pure SPA → metaso-p2p | ✅ Confirmed |
 | D8 | Order payload | Mirror `IDBots/src/main/shared/orderMessage.js` | Byte-for-byte contract |
 | D9 | i18n | zh-CN first; typed map for en later | — |
 | D10 | Repo layout | Single Vite app at repo root | No monorepo |
@@ -25,11 +25,11 @@
 | D13 | Lint | ESLint + typescript-eslint + Prettier | Match IDBots eslint setup |
 | D14 | Visual design | **`frontend-design` skill** + [`docs/design/bothub-mockup.png`](../design/bothub-mockup.png) | Layout only; v1 API has no deliverables/examples/tiers |
 | D15 | Data in dev | **`VITE_USE_AGGREGATOR_MOCK=true`** + fixtures | Aggregator API still building; flip mock off when live |
-| D16 | meta-socket URL | **Configured per environment** | `VITE_META_SOCKET_BASE_URL` must point to a meta-socket deployment exposing native `/api/bot-hub/*`, private-chat history routes, and `/socket/socket.io`; do not use idchat `/chat-api/` as the BotHub backend |
+| D16 | metaso-p2p URL | **Configured per environment** | `VITE_METASO_P2P_BASE_URL` must point to a metaso-p2p deployment exposing native `/api/bot-hub/*`, private-chat history routes, and `/socket/socket.io`; do not use idchat `/chat-api/` as the BotHub backend |
 | D17 | App chrome | **左上 Tab**（Bot Hub / Delivery）+ **右上连接钱包** | 设计稿未标清；实现以此为准 |
 | D18 | Product audience | **Caller / buyer only** | For users who do not want to install IDBots, run Codex, or configure LLM/runtime tools |
 | D19 | Request UX | **First release includes user input** | User writes a natural-language request in Bot Hub and can continue the conversation in Delivery |
-| D20 | Local persistence | **IndexedDB for sessions, messages, assets** | Fast return experience after reconnect/login; meta-socket remains source of truth |
+| D20 | Local persistence | **IndexedDB for sessions, messages, assets** | Fast return experience after reconnect/login; metaso-p2p remains source of truth |
 | D21 | Digital delivery | **First-class asset rendering and management** | Images, video, audio, and downloadable attachments are the main product value |
 | D22 | Refunds/ratings | **Architecture reserved, UI deferred** | Important next features; do not implement in first release cut, but keep order identity and asset metadata ready |
 
@@ -40,8 +40,8 @@
 | **UI patterns & GigSquare** | `IDBots/IDBots` — `src/renderer/components/gigSquare/`, `src/main/shared/orderMessage.js` | Layout, order flow, card fields, i18n keys |
 | **A2A delivery rendering** | `IDBots/IDBots` — `src/renderer/components/cowork/A2AMessageItem.tsx` | Delivery tags, metafile parsing, media preview/download behavior |
 | **Wallet** | `metalet-extension-next` — `src/content-script/actions.ts` | `getGlobalMetaid`, `transfer`, `createPin`, `eciesEncrypt/Decrypt` |
-| **HTTP aggregator API** | `meta-socket` — `docs/specs/2026-05-28-bot-hub-skill-service-aggregation-api.md` | List/detail contract |
-| **Socket.IO** | `meta-socket` — `docs/IDCHAT_API_CONTRACT.md` §5 | Envelope `{M,C,D}`, private chat payload |
+| **HTTP aggregator API** | `metaso-p2p` — `docs/specs/2026-05-28-bot-hub-skill-service-aggregation-api.md` | List/detail contract |
+| **Socket.IO** | `metaso-p2p` — `docs/IDCHAT_API_CONTRACT.md` §5 | Envelope `{M,C,D}`, private chat payload |
 | **OAC UI (tech only)** | `open-agent-connect/src/ui/pages/hub/`, `trace/` | ViewModel patterns, **not** visual style — OAC serves vanilla HTML, not React |
 
 > **Note on OAC `/ui`:** OAC hub/trace pages are TypeScript viewModels + vanilla HTML/CSS served by the Go daemon. They are **not** a React app. We align **tooling** (TS, socket.io-client, envelope shapes) with OAC/IDBots, but **React component stack** follows IDBots.
@@ -52,7 +52,7 @@
 
 ### Goals (MVP)
 
-- **Bot Hub**: browse online skill-services from `meta-socket` aggregator; filter/sort/search; service detail panel; "Pay & Request" via Metalet.
+- **Bot Hub**: browse online skill-services from `metaso-p2p` aggregator; filter/sort/search; service detail panel; "Pay & Request" via Metalet.
 - **Manual request input**: ordinary users can describe what they want in plain language before paying/sending the order. This is not a headless A2A-only flow.
 - **Delivery workspace**: receive caller-side private messages (provider replies, progress, delivered assets) over Socket.IO; render conversations grouped by order/session.
 - **Digital asset management**: parse delivered images, videos, audio, and attachments; preview/download them; persist an asset index locally so returning users can quickly find previous deliverables.
@@ -82,7 +82,7 @@ flowchart LR
     UI <-->|window.metaidwallet| M
   end
 
-  subgraph ms [meta-socket]
+  subgraph ms [metaso-p2p]
     HTTP[HTTP API<br/>skill-service, private chat history, user info]
     WS[Socket.IO<br/>/socket/socket.io?metaid=...&type=app]
   end
@@ -104,8 +104,8 @@ flowchart LR
   Chain -->|indexed history| HTTP
 ```
 
-**Key point:** BotHub never talks to a provider Bot directly. All communication is via on-chain pins. Provider responses flow back through meta-socket's Socket.IO push.
-The local IndexedDB cache is only a client-side acceleration layer; meta-socket remains the source of truth for indexed private chat history.
+**Key point:** BotHub never talks to a provider Bot directly. All communication is via on-chain pins. Provider responses flow back through metaso-p2p's Socket.IO push.
+The local IndexedDB cache is only a client-side acceleration layer; metaso-p2p remains the source of truth for indexed private chat history.
 
 ---
 
@@ -212,7 +212,7 @@ The user-entered prompt is required for first release. Services may later add st
 
 ```
 On login (Metalet connected):
-  → socket = io(`${META_SOCKET_WS_URL}/socket/socket.io?metaid=${gmid}&type=app`)
+  → socket = io(`${METASO_P2P_WS_URL}/socket/socket.io?metaid=${gmid}&type=app`)
   → socket.on('connect', () => start 30s ping loop)
   → socket.on('message', envelope => {
       if (envelope.M === 'WS_SERVER_NOTIFY_PRIVATE_CHAT' && envelope.D.toGlobalMetaId === gmid) {
@@ -224,7 +224,7 @@ On login (Metalet connected):
     })
 ```
 
-**Sessions** = grouped by `peerGlobalMetaId` plus optional `serviceId`, `paymentTxid`, or `orderReference` from order metadata. Sessions are hydrated from IndexedDB first, then reconciled with meta-socket history and live Socket.IO pushes.
+**Sessions** = grouped by `peerGlobalMetaId` plus optional `serviceId`, `paymentTxid`, or `orderReference` from order metadata. Sessions are hydrated from IndexedDB first, then reconciled with metaso-p2p history and live Socket.IO pushes.
 
 ### 4.4 Delivery history and local cache
 
@@ -232,7 +232,7 @@ On login (Metalet connected):
 On login:
   → load cached sessions/messages/assets for wallet.globalMetaId from IndexedDB
   → render immediately with "syncing" indicator
-  → fetch private chat history from meta-socket for known peers/orders
+  → fetch private chat history from metaso-p2p for known peers/orders
   → merge by pinId || txId || localClientId
   → decrypt new encrypted messages via Metalet
   → parse delivery assets and update asset index
@@ -250,7 +250,7 @@ Keep schema migrations explicit and small. If decryption fails, store raw conten
 
 - No JWT, no server-side session.
 - Identity = Metalet's `globalMetaId`. Persisted in `zustand` + `localStorage` for UI continuity.
-- meta-socket's WS uses `?metaid=<gmid>` query param (the same param IDBots uses) — no server-side proof needed for MVP; meta-socket trusts the client about its own metaid for the purpose of *receiving* messages addressed to it. (If this is wrong, see Risk R3.)
+- metaso-p2p's WS uses `?metaid=<gmid>` query param (the same param IDBots uses) — no server-side proof needed for MVP; metaso-p2p trusts the client about its own metaid for the purpose of *receiving* messages addressed to it. (If this is wrong, see Risk R3.)
 - All on-chain writes are signed by Metalet; nothing else.
 
 ---
@@ -331,7 +331,7 @@ A thin TS wrapper in `src/wallet/metalet.ts` exposes typed promises around `wind
 
 ## 8. Aggregator API consumption
 
-Consumes the two endpoints defined in `meta-socket/docs/specs/2026-05-28-bot-hub-skill-service-aggregation-api.md`:
+Consumes the two endpoints defined in `metaso-p2p/docs/specs/2026-05-28-bot-hub-skill-service-aggregation-api.md`:
 
 - `GET /api/bot-hub/skill-service/list` — list with cursor
 - `GET /api/bot-hub/skill-service/detail/{serviceId}` — detail
@@ -361,13 +361,13 @@ No global store object — each domain has its own. Stores never import UI; UI i
 
 | # | Risk | Mitigation |
 |---|------|------------|
-| R1 | meta-socket CORS blocks browser origin | confirm before MVP; if blocked, add thin Caddy/nginx reverse proxy on bothub domain |
+| R1 | metaso-p2p CORS blocks browser origin | confirm before MVP; if blocked, add thin Caddy/nginx reverse proxy on bothub domain |
 | R2 | Order payload format changes in IDBots → providers reject ours | freeze our copy + add a contract test against an IDBots fixture; track upstream |
-| R3 | Anyone can subscribe to anyone's WS feed by passing their `metaid=` (no auth) | acceptable for MVP if messages are E2E-encrypted (they are); confirm with meta-socket maintainers; otherwise add signed-token auth |
+| R3 | Anyone can subscribe to anyone's WS feed by passing their `metaid=` (no auth) | acceptable for MVP if messages are E2E-encrypted (they are); confirm with metaso-p2p maintainers; otherwise add signed-token auth |
 | R4 | Provider may take many minutes to reply; UX needs progress feedback | render "waiting for provider" state + push notification permission ask (later) |
 | R5 | MRC20 payments need 2 txids (commit + reveal); Metalet API ergonomics unknown for browser | spike Metalet `transfer({ tasks })` for MRC20 early in M5; fall back to native-only if MVP timeline is tight |
 | R6 | Decryption errors (wrong key, broken cipher) silently lose messages | log + show in a debug panel; never throw away the raw payload |
-| R7 | Browser storage can be cleared or quota-limited | treat IndexedDB as cache; always support meta-socket history re-sync |
+| R7 | Browser storage can be cleared or quota-limited | treat IndexedDB as cache; always support metaso-p2p history re-sync |
 | R8 | Large media previews can be slow or fail CORS/range requests | prefer direct metafile URL previews, fall back to download cards with clear status |
 | R9 | Refund/rating flows need historical proof | preserve order/payment/service/provider/message ids in the first-release data model |
 
@@ -380,7 +380,7 @@ No global store object — each domain has its own. Stores never import UI; UI i
 - **IndexedDB facade**: Vitest/fake-indexeddb-style coverage for migrations, dedupe, asset extraction, and wallet-scoped reads.
 - **Wallet wrapper**: mocked `window.metaidwallet` for unit tests; a real-wallet manual checklist for e2e.
 - **UI components**: light snapshot / behavior tests with Testing Library. Skip visual regression in MVP.
-- **End-to-end**: optional Playwright against staging meta-socket; not a blocker for MVP.
+- **End-to-end**: optional Playwright against staging metaso-p2p; not a blocker for MVP.
 
 Per AGENTS.md #4 "Goal-Driven Execution", each milestone has explicit "verify" steps in the plan.
 
@@ -402,8 +402,8 @@ Per AGENTS.md #4 "Goal-Driven Execution", each milestone has explicit "verify" s
 
 ## 13. References
 
-- Aggregator API spec: `meta-socket/docs/specs/2026-05-28-bot-hub-skill-service-aggregation-api.md`
-- Socket.IO contract: `meta-socket/docs/IDCHAT_API_CONTRACT.md` §5
+- Aggregator API spec: `metaso-p2p/docs/specs/2026-05-28-bot-hub-skill-service-aggregation-api.md`
+- Socket.IO contract: `metaso-p2p/docs/IDCHAT_API_CONTRACT.md` §5
 - Order payload reference: `IDBots/src/main/shared/orderMessage.js`
 - Delivery rendering reference: `IDBots/src/renderer/components/cowork/A2AMessageItem.tsx`
 - Metalet actions: `metalet-extension-next/src/content-script/actions.ts`

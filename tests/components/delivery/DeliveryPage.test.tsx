@@ -328,7 +328,7 @@ describe('DeliveryPage layout', () => {
       globalMetaId: peerGlobalMetaId,
       name: '余生请多指教',
       avatarUrl:
-        '/meta-socket/api/v1/users/avatar/accelerate/37efeed000000000000000000000000000000000000000000000000000000000i0?process=thumbnail',
+        '/metaso-p2p/api/v1/users/avatar/accelerate/37efeed000000000000000000000000000000000000000000000000000000000i0?process=thumbnail',
       chatPubkey: '049759',
     })
     mocks.walletState.identity = {
@@ -883,7 +883,7 @@ describe('DeliveryPage layout', () => {
 
     expect(screen.getByRole('region', { name: '我的交付' })).toBeInTheDocument()
     expect(
-      screen.queryByText(/simplemsg|Socket\.IO|meta-socket|chat key|ciphertext|session/i),
+      screen.queryByText(/simplemsg|Socket\.IO|metaso-p2p|chat key|ciphertext|session/i),
     ).not.toBeInTheDocument()
     expect(
       screen.queryByText(/Wallet not connected|Connect wallet to reply|Message provider/i),

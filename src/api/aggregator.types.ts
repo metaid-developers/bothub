@@ -1,4 +1,4 @@
-/** meta-socket envelope: code 0 is success */
+/** metaso-p2p envelope: code 0 is success */
 export interface ApiEnvelope<T> {
   code: number
   message: string

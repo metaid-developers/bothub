@@ -1,10 +1,10 @@
-/** meta-socket HTTP base URL (no trailing slash) */
-export function getMetaSocketBaseUrl(): string {
-  return import.meta.env.VITE_META_SOCKET_BASE_URL ?? ''
+/** metaso-p2p HTTP base URL (no trailing slash) */
+export function getMetasoP2PBaseUrl(): string {
+  return import.meta.env.VITE_METASO_P2P_BASE_URL ?? ''
 }
 
-export function getNormalizedMetaSocketBaseUrl(): string {
-  return getMetaSocketBaseUrl().replace(/\/+$/, '')
+export function getNormalizedMetasoP2PBaseUrl(): string {
+  return getMetasoP2PBaseUrl().replace(/\/+$/, '')
 }
 
 export const DEFAULT_METAFILE_ACCELERATE_CONTENT_BASE =

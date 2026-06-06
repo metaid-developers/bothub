@@ -3,23 +3,23 @@
 import viteConfig from '../../vite.config'
 
 describe('vite dev proxy config', () => {
-  it('proxies meta-socket websocket upgrades while preserving path rewrite', () => {
+  it('proxies metaso-p2p websocket upgrades while preserving path rewrite', () => {
     const proxy = viteConfig.server?.proxy
     expect(proxy).toBeDefined()
 
-    const metaSocketProxy = proxy?.['/meta-socket']
-    expect(metaSocketProxy).toMatchObject({
+    const metasoP2PProxy = proxy?.['/metaso-p2p']
+    expect(metasoP2PProxy).toMatchObject({
       target: 'http://127.0.0.1:18091',
       changeOrigin: true,
       ws: true,
     })
 
-    expect(typeof metaSocketProxy).toBe('object')
-    if (typeof metaSocketProxy !== 'object' || metaSocketProxy === null) {
-      throw new Error('Expected /meta-socket proxy to be an object')
+    expect(typeof metasoP2PProxy).toBe('object')
+    if (typeof metasoP2PProxy !== 'object' || metasoP2PProxy === null) {
+      throw new Error('Expected /metaso-p2p proxy to be an object')
     }
 
-    expect(metaSocketProxy.rewrite?.('/meta-socket/socket/socket.io')).toBe(
+    expect(metasoP2PProxy.rewrite?.('/metaso-p2p/socket/socket.io')).toBe(
       '/socket/socket.io',
     )
   })

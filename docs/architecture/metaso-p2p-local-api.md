@@ -1,6 +1,6 @@
-# meta-socket 本机真实数据对接文档
+# metaso-p2p 本机真实数据对接文档
 
-> 面向 Bothub 开发 AI。本文记录当前这台 Mac 上已经启动并同步过真实 MVC 链上数据的 meta-socket 服务，用于 Bothub 本地开发联调。
+> 面向 Bothub 开发 AI。本文记录当前这台 Mac 上已经启动并同步过真实 MVC 链上数据的 metaso-p2p 服务，用于 Bothub 本地开发联调。
 
 ## 1. 当前服务状态
 
@@ -11,29 +11,29 @@
 - 健康检查：`GET http://127.0.0.1:18091/healthz`
 - 当前运行实例：真实 MVC 索引实例，MVC block index 已开启
 - 最新核对时间：`2026-06-02 00:28 CST`
-- 本地启动方式：`launchctl` 后台服务，label 为 `com.metaid.meta-socket.mvc30d.18091`
-- 二进制：`/Users/tusm/.local/bin/meta-socket`
-- 本地数据目录：`/Users/tusm/.local/var/meta-socket/mvc-30d-pebble`
+- 本地启动方式：`launchctl` 后台服务，label 为 `com.metaid.metaso-p2p.mvc30d.18091`
+- 二进制：`/Users/tusm/.local/bin/metaso-p2p`
+- 本地数据目录：`/Users/tusm/.local/var/metaso-p2p/mvc-30d-pebble`
 
 停止本机服务：
 
 ```bash
-launchctl remove com.metaid.meta-socket.mvc30d.18091
+launchctl remove com.metaid.metaso-p2p.mvc30d.18091
 ```
 
 当前 `GET /healthz` 返回 `code=0`、`status=ok`，`GET /api/bot-hub/skill-service/list?size=3&chainName=mvc&sortBy=updated&order=desc` 返回 `count=3`。
 
 ## 2. Bothub 本地环境配置
 
-Bothub 当前配置读取 `VITE_META_SOCKET_BASE_URL`。本地/private beta 推荐在 `.env.local` 使用同源 Vite proxy：
+Bothub 当前配置读取 `VITE_METASO_P2P_BASE_URL`。本地/private beta 推荐在 `.env.local` 使用同源 Vite proxy：
 
 ```dotenv
-VITE_META_SOCKET_BASE_URL=/meta-socket
+VITE_METASO_P2P_BASE_URL=/metaso-p2p
 VITE_USE_AGGREGATOR_MOCK=false
 VITE_USE_WS_MOCK=false
 ```
 
-Vite dev server 已配置把 `/meta-socket` 代理到 `http://127.0.0.1:18091`，避免浏览器跨端口 CORS 预检问题。
+Vite dev server 已配置把 `/metaso-p2p` 代理到 `http://127.0.0.1:18091`，避免浏览器跨端口 CORS 预检问题。
 
 代理方向示例：
 
@@ -41,10 +41,10 @@ Vite dev server 已配置把 `/meta-socket` 代理到 `http://127.0.0.1:18091`�
 server: {
   port: 5176,
   proxy: {
-    '/meta-socket': {
+    '/metaso-p2p': {
       target: 'http://127.0.0.1:18091',
       changeOrigin: true,
-      rewrite: (path) => path.replace(/^\/meta-socket/, ''),
+      rewrite: (path) => path.replace(/^\/metaso-p2p/, ''),
     },
   },
 }
@@ -150,9 +150,9 @@ interface SkillServiceDetailEnvelope {
 }
 ```
 
-## 4. meta-socket 兼容 HTTP API
+## 4. metaso-p2p 兼容 HTTP API
 
-这些接口主要用于验证 meta-socket 对 IDChat 前端兼容面的覆盖情况。因为本轮只同步 30 天数据，较早的 user init、profile、group create 等元数据可能缺失；近期聊天消息、Bothub skill-service 数据已经有真实返回。
+这些接口主要用于验证 metaso-p2p 对 IDChat 前端兼容面的覆盖情况。因为本轮只同步 30 天数据，较早的 user init、profile、group create 等元数据可能缺失；近期聊天消息、Bothub skill-service 数据已经有真实返回。
 
 ### 4.1 用户信息
 
@@ -348,7 +348,7 @@ http://127.0.0.1:18091/socket/online/stats
 ## 6. 推荐给 Bothub 开发 AI 的对接顺序
 
 1. 先关闭 mock：`VITE_USE_AGGREGATOR_MOCK=false`。
-2. 处理 CORS：优先加 Vite proxy，把 `VITE_META_SOCKET_BASE_URL` 设为同源 `/meta-socket`。
+2. 处理 CORS：优先加 Vite proxy，把 `VITE_METASO_P2P_BASE_URL` 设为同源 `/metaso-p2p`。
 3. 用 `/api/bot-hub/skill-service/list?size=20&chainName=mvc&sortBy=updated&order=desc` 替换 fixture 列表源。
 4. 用 `/api/bot-hub/skill-service/detail/:serviceId?chainName=mvc` 替换 fixture 详情源。
 5. 修正 Socket.IO 连接方式：`io(baseUrl, { path: '/socket/socket.io', ... })`。

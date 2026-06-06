@@ -15,7 +15,7 @@ describe('peerProfile', () => {
   const expectedAvatar = expectedAvatarUrl(avatarPin)
 
   beforeEach(() => {
-    vi.stubEnv('VITE_META_SOCKET_BASE_URL', '/meta-socket/')
+    vi.stubEnv('VITE_METASO_P2P_BASE_URL', '/metaso-p2p/')
   })
 
   afterEach(() => {

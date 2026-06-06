@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest'
-import listEnvelope from '../fixtures/meta-socket/service-list-live-shape.json'
-import detailEnvelope from '../fixtures/meta-socket/service-detail-live-shape.json'
-import privateChatHomesEnvelope from '../fixtures/meta-socket/private-chat-homes-live-shape.json'
-import privateChatListEnvelope from '../fixtures/meta-socket/private-chat-list-live-shape.json'
-import privateChatListByIndexEnvelope from '../fixtures/meta-socket/private-chat-list-by-index-live-shape.json'
+import listEnvelope from '../fixtures/metaso-p2p/service-list-live-shape.json'
+import detailEnvelope from '../fixtures/metaso-p2p/service-detail-live-shape.json'
+import privateChatHomesEnvelope from '../fixtures/metaso-p2p/private-chat-homes-live-shape.json'
+import privateChatListEnvelope from '../fixtures/metaso-p2p/private-chat-list-live-shape.json'
+import privateChatListByIndexEnvelope from '../fixtures/metaso-p2p/private-chat-list-by-index-live-shape.json'
 import { isPrivateChatItem } from '../../src/ws/privateChat'
 
 function expectPrivateChatItemShape(value: unknown) {
@@ -18,7 +18,7 @@ function expectPrivateChatItemShape(value: unknown) {
   )
 }
 
-describe('meta-socket live contract fixtures', () => {
+describe('metaso-p2p live contract fixtures', () => {
   it('keeps the skill-service list envelope shape stable', () => {
     expect(listEnvelope.code).toBe(0)
     expect(listEnvelope.data?.schemaVersion).toBe('botHubSkillService.v1')

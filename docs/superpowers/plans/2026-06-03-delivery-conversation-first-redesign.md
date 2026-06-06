@@ -1214,14 +1214,14 @@ Run:
 npm test
 npm run typecheck
 npm run build
-npm run smoke:meta-socket
+npm run smoke:metaso-p2p
 ```
 
 Expected: all commands pass.
 
-If `npm run smoke:meta-socket` or browser acceptance proves the current
-meta-socket payloads are missing required fields, do not change BotHub to guess
-around the missing backend data. Document the backend gap in a meta-socket issue
+If `npm run smoke:metaso-p2p` or browser acceptance proves the current
+metaso-p2p payloads are missing required fields, do not change BotHub to guess
+around the missing backend data. Document the backend gap in a metaso-p2p issue
 with failing URL or socket payload, expected shape, actual shape, BotHub impact,
 and reproduction steps.
 

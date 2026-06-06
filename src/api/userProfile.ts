@@ -1,4 +1,4 @@
-import { getNormalizedMetaSocketBaseUrl } from '@/api/config'
+import { getNormalizedMetasoP2PBaseUrl } from '@/api/config'
 
 const FILE_INDEXER_INFO_BASE = 'https://file.metaid.io/metafile-indexer/api/v1/info'
 const FILE_INDEXER_CONTENT_BASE = 'https://file.metaid.io/metafile-indexer/content'
@@ -186,7 +186,7 @@ function normalizeUserProfile(raw: unknown): UserProfile {
   }
 }
 
-/** meta-socket uses code 0 for success; legacy manapi used code 1. Accept both. */
+/** metaso-p2p uses code 0 for success; legacy manapi used code 1. Accept both. */
 function unwrapLegacyInfoEnvelope(raw: unknown): unknown {
   const envelope = asRecord(raw)
   if (!envelope || !('code' in envelope)) return raw
@@ -221,7 +221,7 @@ async function fetchUserProfileByAddress(address: string): Promise<UserProfile> 
   const trimmed = address.trim()
   if (!trimmed) return {}
 
-  const baseUrl = getNormalizedMetaSocketBaseUrl()
+  const baseUrl = getNormalizedMetasoP2PBaseUrl()
   const response = await fetch(`${baseUrl}/api/info/address/${encodeURIComponent(trimmed)}`)
   if (!response.ok) return {}
   try {
@@ -303,7 +303,7 @@ export async function fetchUserProfileByGlobalMetaId(
   const trimmed = globalMetaId.trim()
   if (!trimmed) return {}
 
-  const baseUrl = getNormalizedMetaSocketBaseUrl()
+  const baseUrl = getNormalizedMetasoP2PBaseUrl()
   const response = await fetch(`${baseUrl}/api/info/globalmetaid/${encodeURIComponent(trimmed)}`)
   const payload: unknown = await response.json()
   let profile = normalizeUserProfile(unwrapLegacyInfoEnvelope(payload))

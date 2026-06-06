@@ -1,4 +1,4 @@
-import { getNormalizedMetaSocketBaseUrl } from '@/api/config'
+import { getNormalizedMetasoP2PBaseUrl } from '@/api/config'
 import type { ApiEnvelope } from '@/api/aggregator.types'
 import { normalizePrivateChatItem, type PrivateChatItem } from '@/ws/privateChat'
 import type { WalletIdentity } from '@/wallet/types'
@@ -140,7 +140,7 @@ async function fetchPrivateChatEnvelope(
   canonicalPath: string,
   legacyPath: string,
 ): Promise<ApiEnvelope<unknown>> {
-  const baseUrl = getNormalizedMetaSocketBaseUrl()
+  const baseUrl = getNormalizedMetasoP2PBaseUrl()
   const canonicalResponse = await fetch(`${baseUrl}${canonicalPath}`)
   if (canonicalResponse.ok || ![404, 405].includes(canonicalResponse.status)) {
     return (await canonicalResponse.json()) as ApiEnvelope<unknown>

@@ -18,7 +18,7 @@ BotHub should feel like a lightweight digital service marketplace and delivery i
 - Make the request input explicit in the first release. Users should be able to describe the job before payment.
 - Make Delivery the product center: sessions, progress, final assets, history, preview, download, and local management.
 - Persist enough local state so a returning wallet user can quickly reopen previous deliveries.
-- Keep the architecture pure frontend. meta-socket is the HTTP and Socket.IO boundary.
+- Keep the architecture pure frontend. metaso-p2p is the HTTP and Socket.IO boundary.
 - Reserve refund and rating data hooks without implementing their first-release UI.
 
 ### Non-goals
@@ -38,7 +38,7 @@ This design uses productization phases instead:
 
 | Phase | Name | Product outcome |
 | --- | --- | --- |
-| P0 | Release foundation | The existing app builds, configures, and talks to the right meta-socket boundary cleanly. |
+| P0 | Release foundation | The existing app builds, configures, and talks to the right metaso-p2p boundary cleanly. |
 | P1 | Buyer order flow | Users can enter a request, review cost, pay/send, and land in a pending Delivery session. |
 | P2 | Delivery workspace | Delivery matches the product mockup direction and supports session tracking plus follow-up input. |
 | P3 | Digital asset manager | Delivered images, video, audio, and attachments are parsed, previewed, downloaded, and indexed locally. |
@@ -65,7 +65,7 @@ The main product gap is Delivery. It currently behaves like a basic private-chat
 
 1. User opens BotHub.
 2. User connects Metalet.
-3. BotHub loads skill-service list from meta-socket.
+3. BotHub loads skill-service list from metaso-p2p.
 4. User searches or filters services.
 5. User opens a service detail panel.
 6. User clicks Pay & Request.
@@ -75,7 +75,7 @@ The main product gap is Delivery. It currently behaves like a basic private-chat
 10. BotHub encrypts the order payload for the provider and posts `/private/chat/simplemsg`.
 11. BotHub creates a pending local Delivery session immediately.
 12. User lands in Delivery and sees the order as pending.
-13. Provider replies through on-chain private chat; meta-socket pushes updates.
+13. Provider replies through on-chain private chat; metaso-p2p pushes updates.
 14. Delivery renders progress, status messages, final text, and delivered assets.
 
 ### 4.2 Returning user
@@ -83,7 +83,7 @@ The main product gap is Delivery. It currently behaves like a basic private-chat
 1. User reconnects the same wallet.
 2. BotHub hydrates Delivery from IndexedDB first.
 3. The user can immediately see prior sessions and delivered assets.
-4. BotHub syncs private chat history from meta-socket in the background.
+4. BotHub syncs private chat history from metaso-p2p in the background.
 5. Live Socket.IO messages merge into the same local sessions without duplicates.
 
 ### 4.3 Follow-up request
@@ -91,7 +91,7 @@ The main product gap is Delivery. It currently behaves like a basic private-chat
 1. User opens a completed or active Delivery session.
 2. User types a follow-up message in the Delivery input.
 3. BotHub encrypts and posts a normal private chat simplemsg to the same provider.
-4. The message is stored locally and reconciled when meta-socket indexes it.
+4. The message is stored locally and reconciled when metaso-p2p indexes it.
 
 Follow-up input does not create a new paid order by default. Paid follow-up orders can be added later through the same Pay & Request flow.
 
@@ -104,7 +104,7 @@ Bot Hub remains the discovery and ordering surface.
 Required behavior:
 
 - Show online-service marketplace layout from the approved mockup direction.
-- Render service list and detail from meta-socket aggregation data.
+- Render service list and detail from metaso-p2p aggregation data.
 - Support search, filter, sort, pagination, loading, empty, and error states.
 - Disable Pay & Request until the wallet is connected and the provider has a chat public key.
 - Open a request modal instead of sending a headless A2A order.
@@ -166,7 +166,7 @@ flowchart LR
     DB["IndexedDB"]
   end
 
-  subgraph MetaSocket["meta-socket"]
+  subgraph MetasoP2P["metaso-p2p"]
     HTTP["HTTP APIs"]
     WS["Socket.IO"]
   end
@@ -191,11 +191,11 @@ flowchart LR
 
 - React owns UI, local state, parsing, and cache.
 - Metalet owns identity, payment, ECDH, and pin creation.
-- meta-socket owns service aggregation, private chat history, and live private-chat push.
+- metaso-p2p owns service aggregation, private chat history, and live private-chat push.
 - Provider bots own execution and delivery.
 - BotHub does not call provider skill servers directly.
 
-## 7. meta-socket Integration Contract
+## 7. metaso-p2p Integration Contract
 
 ### 7.1 Service discovery
 
@@ -217,21 +217,21 @@ The first release requires these fields:
 
 ### 7.2 Private chat history
 
-Use meta-socket private chat endpoints. These may remain compatible with the
-legacy idchat group-chat shape, but BotHub's runtime dependency is meta-socket:
+Use metaso-p2p private chat endpoints. These may remain compatible with the
+legacy idchat group-chat shape, but BotHub's runtime dependency is metaso-p2p:
 
 - `GET /group-chat/private-chat-list`
 - `GET /group-chat/private-chat-list-by-index`
 
 Expected query identity:
 
-- `metaId`: current user identity as required by the deployed meta-socket contract.
+- `metaId`: current user identity as required by the deployed metaso-p2p contract.
 - `otherMetaId`: peer/provider identity.
 - `cursor`, `size`, `timestamp`, or `startIndex` depending on endpoint.
 
 Open contract:
 
-- Confirm whether `metaId` and `otherMetaId` should be local metaid or globalMetaId for the exact deployed meta-socket endpoint.
+- Confirm whether `metaId` and `otherMetaId` should be local metaid or globalMetaId for the exact deployed metaso-p2p endpoint.
 - Confirm whether history can be fetched without first knowing every peer. If not, use `/group-chat/private-group-paths` or an equivalent conversation list endpoint.
 - Confirm whether encrypted content from history matches Socket.IO private payload shape exactly.
 
@@ -240,7 +240,7 @@ Open contract:
 Connect with Socket.IO's `path` option instead of treating `/socket/socket.io` as a namespace:
 
 ```ts
-io('<meta-socket-base-url>', {
+io('<metaso-p2p-base-url>', {
   path: '/socket/socket.io',
   query: { metaid: '<globalMetaId>', type: 'app' },
   transports: ['websocket', 'polling'],
@@ -266,7 +266,7 @@ For `metafile://<pinId>.<ext>`:
 - Keep a normal content endpoint as fallback.
 - Do not require the frontend to upload, transform, or proxy files.
 
-The exact base URLs should be configurable because current IDBots code uses `https://file.metaid.io/metafile-indexer/api/v1/files/...`, while BotHub should eventually prefer meta-socket-compatible config if provided.
+The exact base URLs should be configurable because current IDBots code uses `https://file.metaid.io/metafile-indexer/api/v1/files/...`, while BotHub should eventually prefer metaso-p2p-compatible config if provided.
 
 ## 8. Order and Message Protocol
 
@@ -477,7 +477,7 @@ Migration rules:
 
 - Use explicit version numbers.
 - Migrations must be additive where possible.
-- If a migration fails, show a Delivery cache warning and allow the app to continue from live meta-socket data.
+- If a migration fails, show a Delivery cache warning and allow the app to continue from live metaso-p2p data.
 
 ## 11. State Derivation
 
@@ -607,9 +607,9 @@ These are the remaining unknowns that should be verified before feature implemen
 
 1. Whether `pnpm build` is clean in the current baseline.
 2. Whether private chat history endpoints require `metaId` or `globalMetaId` in each parameter.
-3. Whether meta-socket exposes a reliable conversation list for current user private chats.
+3. Whether metaso-p2p exposes a reliable conversation list for current user private chats.
 4. Whether Socket.IO private message payload and HTTP history payload are identical enough to normalize through one adapter.
-5. Whether metafile preview/download should keep IDBots file API bases or move behind meta-socket config.
+5. Whether metafile preview/download should keep IDBots file API bases or move behind metaso-p2p config.
 6. Whether Metalet `transfer` return shapes are stable for native and MRC20 payments.
 7. Whether paid-order retry after successful payment but failed order broadcast is technically supportable with Metalet.
 

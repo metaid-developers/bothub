@@ -4,7 +4,7 @@ Checked from Bothub `main` at `15eeb19` on 2026-06-02 00:52 CST.
 Local dev server was started with:
 
 ```bash
-VITE_META_SOCKET_BASE_URL=/meta-socket VITE_USE_AGGREGATOR_MOCK=false VITE_USE_WS_MOCK=false pnpm dev -- --host 127.0.0.1
+VITE_METASO_P2P_BASE_URL=/metaso-p2p VITE_USE_AGGREGATOR_MOCK=false VITE_USE_WS_MOCK=false pnpm dev -- --host 127.0.0.1
 ```
 
 Vite reported `http://localhost:5177/`; in the Codex in-app Browser the
@@ -19,23 +19,23 @@ reachable URL was `http://[::1]:5177/`.
 | `pnpm lint` | passed | ESLint completed with `--max-warnings 0`. |
 | `git diff --check` | passed | No whitespace errors before recording this run-log evidence. |
 
-## Local Meta-Socket Smoke
+## Local Metaso-P2P Smoke
 
 | Check | Result | Evidence |
 | --- | --- | --- |
-| `pnpm smoke:meta-socket` | passed | `baseUrl: http://127.0.0.1:18091`, health `ok`, skill-service list `count: 3`, Socket heartbeat ack `true`. |
+| `pnpm smoke:metaso-p2p` | passed | `baseUrl: http://127.0.0.1:18091`, health `ok`, skill-service list `count: 3`, Socket heartbeat ack `true`. |
 | Canonical private chat | passed | Smoke used `/api/private-chat/homes/...` and `/api/private-chat/messages?...`; `routeMode.homes` and `routeMode.privateChatList` were both `canonical`. Homes returned `count: 6`; messages returned `count: 5`. |
 
-## Public Meta-Socket Follow-Up
+## Public Metaso-P2P Follow-Up
 
-Meta-socket was later deployed at `https://socket.metaid.io`.
+Metaso-p2p was later deployed at `https://so.metaid.io`.
 
 | Check | Result | Evidence |
 | --- | --- | --- |
-| Health | passed | `curl https://socket.metaid.io/healthz` returned HTTP 200 with service `meta-socket`, status `ok`, version `c416816`, and CORS `Access-Control-Allow-Origin: *`. |
-| Skill-service list | passed | `curl https://socket.metaid.io/api/bot-hub/skill-service/list` returned HTTP 200 and real service rows including `紫微斗数算命 v2` and `Free Ecommerce Store Blueprint`. |
-| Full smoke | passed | `META_SOCKET_BASE_URL=https://socket.metaid.io META_SOCKET_PRIVATE_CHAT_METAID=idq1zfazvxaq69uw6txe3ewce30ewyhy9a7mzykgv0 META_SOCKET_PRIVATE_CHAT_OTHER_METAID=idq14hmv23j5fnlx4ccnmvlyldjd38xjsechzwg9xz pnpm smoke:meta-socket` returned `ok: true`, skill-service `count: 3`, Socket heartbeat ack `true`, `routeMode.homes: canonical`, and `routeMode.privateChatList: canonical`. |
-| Browser direct endpoint | passed | Dev server started with `VITE_META_SOCKET_BASE_URL=https://socket.metaid.io VITE_USE_AGGREGATOR_MOCK=false VITE_USE_WS_MOCK=false`; In-app Browser at `http://localhost:5176/` loaded real services and showed no service-loading error. Screenshot: `/tmp/bothub-public-meta-socket-home.png`. |
+| Health | passed | `curl https://so.metaid.io/healthz` returned HTTP 200 with service `metaso-p2p`, status `ok`, version `c416816`, and CORS `Access-Control-Allow-Origin: *`. |
+| Skill-service list | passed | `curl https://so.metaid.io/api/bot-hub/skill-service/list` returned HTTP 200 and real service rows including `紫微斗数算命 v2` and `Free Ecommerce Store Blueprint`. |
+| Full smoke | passed | `METASO_P2P_BASE_URL=https://so.metaid.io METASO_P2P_PRIVATE_CHAT_METAID=idq1zfazvxaq69uw6txe3ewce30ewyhy9a7mzykgv0 METASO_P2P_PRIVATE_CHAT_OTHER_METAID=idq14hmv23j5fnlx4ccnmvlyldjd38xjsechzwg9xz pnpm smoke:metaso-p2p` returned `ok: true`, skill-service `count: 3`, Socket heartbeat ack `true`, `routeMode.homes: canonical`, and `routeMode.privateChatList: canonical`. |
+| Browser direct endpoint | passed | Dev server started with `VITE_METASO_P2P_BASE_URL=https://so.metaid.io VITE_USE_AGGREGATOR_MOCK=false VITE_USE_WS_MOCK=false`; In-app Browser at `http://localhost:5176/` loaded real services and showed no service-loading error. Screenshot: `/tmp/bothub-public-metaso-p2p-home.png`. |
 
 ## Browser UI Copy Smoke
 
@@ -79,14 +79,14 @@ to verify fallback cards and actions.
 
 ## Remaining Blockers
 
-- The non-local meta-socket endpoint blocker is resolved by
-  `https://socket.metaid.io`; smoke and browser checks passed against it.
+- The non-local metaso-p2p endpoint blocker is resolved by
+  `https://so.metaid.io`; smoke and browser checks passed against it.
 - Chrome + Metalet real free/paid order acceptance is blocked externally until
   the Metalet extension authorization can be manually approved and the Codex
   Chrome Extension backend is available again.
 
 ## Final Readiness Decision
 
-Local automated, local/public meta-socket, Browser UI, and controlled asset
+Local automated, local/public metaso-p2p, Browser UI, and controlled asset
 acceptance passed. The real Chrome + Metalet buyer-flow acceptance did not
 complete, so this run does not yet prove the full private buyer-flow beta.

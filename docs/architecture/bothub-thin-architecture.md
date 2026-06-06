@@ -16,7 +16,7 @@
 
 ### 要做
 
-- 聚合展示在线 skill-service，数据来自 `meta-socket` Bot Hub skill-service API。
+- 聚合展示在线 skill-service，数据来自 `metaso-p2p` Bot Hub skill-service API。
 - 钱包登录（Metalet）：`globalMetaId`、地址、支付、加密、发 `/private/chat/simplemsg`。
 - **Pay & Request**：用户必须能输入自然语言需求；前端完成支付、订单正文构造、加密、发单。
 - **Delivery**：登录后 Socket.IO 只订阅当前用户 GMID 的私信推送；前端解密、解析、渲染。
@@ -28,7 +28,7 @@
 - 不引入 OAC Core / `metabot` daemon / `services.call` 状态机。
 - 不作为技能提供方 runtime，不 `execute`，不 provider listener。
 - 不提供 provider 侧服务发布、管理、运行、退款处理后台。
-- 不做自有 BotHub 后端；除非 meta-socket CORS 或鉴权策略强制需要极薄代理。
+- 不做自有 BotHub 后端；除非 metaso-p2p CORS 或鉴权策略强制需要极薄代理。
 - 首版不做退款和评价 UI，但保留订单、支付、消息、成果元数据，方便后续马上加。
 
 ---
@@ -47,7 +47,7 @@ flowchart LR
     Del <--> DB
   end
 
-  subgraph metasocket [meta-socket]
+  subgraph metasoP2P [metaso-p2p]
     API[HTTP<br/>skill-service / private chat history / user info]
     WS[Socket.IO<br/>private chat push]
   end
@@ -67,7 +67,7 @@ flowchart LR
   Chain -->|push| WS
 ```
 
-**关键点**：BotHub 不直接调用 provider bot。下单与交付都走链上 simplemsg；meta-socket 负责聚合与推送；IndexedDB 只是前端缓存和资产索引，不是权威后端。
+**关键点**：BotHub 不直接调用 provider bot。下单与交付都走链上 simplemsg；metaso-p2p 负责聚合与推送；IndexedDB 只是前端缓存和资产索引，不是权威后端。
 
 ---
 
@@ -75,7 +75,7 @@ flowchart LR
 
 | 能力 | OAC | IDBots | BotHub |
 |------|-----|--------|--------|
-| 服务发现 | daemon + cache | SQLite + sync | 读 `meta-socket` 聚合 API |
+| 服务发现 | daemon + cache | SQLite + sync | 读 `metaso-p2p` 聚合 API |
 | 下单 | `services.call` 全流程 | `gigSquare:sendOrder` 主进程 | Metalet 支付 + simplemsg 发单 |
 | 用户输入 | A2A 调用参数 | GigSquare order prompt | 首版必须提供自然语言输入框 |
 | 收消息 | 本地 listener | privateChatDaemon | Socket.IO + 仅当前用户 GMID |
@@ -86,9 +86,9 @@ flowchart LR
 
 ---
 
-## 4. meta-socket 依赖面
+## 4. metaso-p2p 依赖面
 
-| 能力 | meta-socket 来源 | 用途 |
+| 能力 | metaso-p2p 来源 | 用途 |
 |------|------------------|------|
 | 服务列表 | `GET /api/bot-hub/skill-service/list` | Bot Hub 首屏、搜索、筛选、排序 |
 | 服务详情 | `GET /api/bot-hub/skill-service/detail/:serviceId` | 详情、provider chat pubkey、支付声明 |
@@ -97,7 +97,7 @@ flowchart LR
 | 用户信息 | `GET /api/info/globalmetaid/:globalMetaId` | provider/user 名称、头像、chatpubkey 回填 |
 | 文件内容 | `https://file.metaid.io/...` | metafile 预览与下载 |
 
-若 meta-socket 后续把 IDBots 仍在使用的 HTTP API 和 socket 协议统一迁移过来，BotHub 只需要更新 `src/api/*` 和 `src/ws/*` 边界，不应影响 UI 和 Delivery 解析层。
+若 metaso-p2p 后续把 IDBots 仍在使用的 HTTP API 和 socket 协议统一迁移过来，BotHub 只需要更新 `src/api/*` 和 `src/ws/*` 边界，不应影响 UI 和 Delivery 解析层。
 
 ---
 
@@ -129,7 +129,7 @@ flowchart LR
 | `assets` | metafile URI、kind、preview/download URL、source message、order/session |
 | `pendingOrders` | 本地已发起但未被 provider 回复的订单 |
 
-IndexedDB 让用户下次登录能快速看到历史交付物；meta-socket 私聊历史用于补全和纠偏。
+IndexedDB 让用户下次登录能快速看到历史交付物；metaso-p2p 私聊历史用于补全和纠偏。
 
 ---
 
@@ -155,7 +155,7 @@ IndexedDB 让用户下次登录能快速看到历史交付物；meta-socket 私�
 
 ## 7. 近期实现顺序
 
-1. **M9 发布地基**：构建修复、meta-socket API 边界、README 部署说明。
+1. **M9 发布地基**：构建修复、metaso-p2p API 边界、README 部署说明。
 2. **M10 下单产品化**：三步 Pay & Request、pending session、失败可恢复。
 3. **M11 Delivery 工作台**：设计稿级布局、session 状态、timeline、底部输入框。
 4. **M12 数字成果管理**：message/asset parser、preview/download、IndexedDB。

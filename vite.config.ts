@@ -14,11 +14,11 @@ export default defineConfig({
     port: 5176,
     strictPort: true,
     proxy: {
-      '/meta-socket': {
+      '/metaso-p2p': {
         target: 'http://127.0.0.1:18091',
         changeOrigin: true,
         ws: true,
-        rewrite: (path) => path.replace(/^\/meta-socket/, ''),
+        rewrite: (path) => path.replace(/^\/metaso-p2p/, ''),
       },
     },
   },

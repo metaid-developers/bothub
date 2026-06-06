@@ -1,5 +1,5 @@
 import { io, type Socket } from 'socket.io-client'
-import { getNormalizedMetaSocketBaseUrl } from '@/api/config'
+import { getNormalizedMetasoP2PBaseUrl } from '@/api/config'
 import { parseSocketEnvelope, type SocketEnvelope } from './envelope'
 
 export type SocketConnectionStatus = 'disconnected' | 'connecting' | 'connected' | 'error'
@@ -48,12 +48,12 @@ function buildSocketEndpoint(baseUrl: string): SocketEndpoint {
 export function connectSocket(options: ConnectSocketOptions): SocketController {
   const baseUrl = options.baseUrl
     ? normalizeBaseUrl(options.baseUrl)
-    : getNormalizedMetaSocketBaseUrl()
+    : getNormalizedMetasoP2PBaseUrl()
   const globalMetaId = options.globalMetaId.trim()
 
   if (!baseUrl || !globalMetaId) {
     options.onStatus?.('error')
-    options.onError?.('meta-socket base URL and globalMetaId are required')
+    options.onError?.('metaso-p2p base URL and globalMetaId are required')
     return { disconnect: () => undefined }
   }
 

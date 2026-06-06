@@ -111,7 +111,7 @@ describe('useSocket delivery persistence', () => {
     ])
   })
 
-  it('normalizes live meta-socket private chat with from/to fields before delivery filtering', async () => {
+  it('normalizes live metaso-p2p private chat with from/to fields before delivery filtering', async () => {
     const liveEnvelope: SocketEnvelope<unknown> = {
       M: WS_SERVER_NOTIFY_PRIVATE_CHAT,
       C: 0,

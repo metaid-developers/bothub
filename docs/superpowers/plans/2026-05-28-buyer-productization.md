@@ -2,9 +2,9 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development. Each implementation task gets a fresh implementer subagent, then a fresh spec-review subagent, then a fresh code-quality review subagent. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Turn BotHub into a basic usable pure-frontend buyer-side product: live meta-socket service browsing, request/pay/order flow, Delivery session tracking, delivered asset preview/download, IndexedDB cache, history sync, and release-grade verification.
+**Goal:** Turn BotHub into a basic usable pure-frontend buyer-side product: live metaso-p2p service browsing, request/pay/order flow, Delivery session tracking, delivered asset preview/download, IndexedDB cache, history sync, and release-grade verification.
 
-**Architecture:** Vite + React + TypeScript SPA talks directly to meta-socket through a same-origin Vite proxy in dev and configurable production base URLs. Metalet performs wallet identity, payment, encryption, and pin creation. Delivery normalizes local pending orders, HTTP private-chat history, and Socket.IO pushes into wallet-scoped IndexedDB stores and React views.
+**Architecture:** Vite + React + TypeScript SPA talks directly to metaso-p2p through a same-origin Vite proxy in dev and configurable production base URLs. Metalet performs wallet identity, payment, encryption, and pin creation. Delivery normalizes local pending orders, HTTP private-chat history, and Socket.IO pushes into wallet-scoped IndexedDB stores and React views.
 
 **Tech Stack:** Vite 5, React 18, TypeScript 5 strict, Tailwind CSS 3, Headless UI, Heroicons, React Router v6, TanStack Query v5, zustand, socket.io-client 4.8, IndexedDB, Vitest + Testing Library, Chrome + Metalet for manual acceptance.
 
@@ -13,7 +13,7 @@
 ## Source Documents
 
 - Product design: `docs/architecture/buyer-productization-design.md`
-- Local meta-socket API: `docs/architecture/meta-socket-local-api.md`
+- Local metaso-p2p API: `docs/architecture/metaso-p2p-local-api.md`
 - Current architecture baseline: `docs/architecture/bothub-design.md`
 - Historical implementation baseline: `docs/architecture/bothub-dev-plan.md`
 - IDBots order payload reference: `/Users/tusm/Documents/MetaID_Projects/IDBots/IDBots/src/main/shared/orderMessage.js`
@@ -51,11 +51,11 @@ Computer-use / Chrome acceptance rules:
 
 ## Baseline Facts
 
-- Local meta-socket is available at `http://127.0.0.1:18091`.
+- Local metaso-p2p is available at `http://127.0.0.1:18091`.
 - Recommended dev env uses Vite proxy and same-origin base:
 
 ```dotenv
-VITE_META_SOCKET_BASE_URL=/meta-socket
+VITE_METASO_P2P_BASE_URL=/metaso-p2p
 VITE_USE_AGGREGATOR_MOCK=false
 VITE_USE_WS_MOCK=false
 ```
@@ -66,10 +66,10 @@ VITE_USE_WS_MOCK=false
 server: {
   port: 5176,
   proxy: {
-    '/meta-socket': {
+    '/metaso-p2p': {
       target: 'http://127.0.0.1:18091',
       changeOrigin: true,
-      rewrite: (path) => path.replace(/^\/meta-socket/, ''),
+      rewrite: (path) => path.replace(/^\/metaso-p2p/, ''),
     },
   },
 }
@@ -78,7 +78,7 @@ server: {
 - Socket.IO must use `io(baseUrl, { path: '/socket/socket.io', query: { metaid, type: 'app' } })`, not `io(baseUrl + '/socket/socket.io')`.
 - `pnpm build` currently fails with `TS18048` in `src/wallet/useWallet.ts` rehydrate handling. Fix this in Task 1.
 - `pnpm test` currently passes: 19 files, 67 tests.
-- Local meta-socket smoke already returns real data:
+- Local metaso-p2p smoke already returns real data:
   - `GET /healthz` returns `code=0`
   - `GET /api/bot-hub/skill-service/list?size=3&chainName=mvc&sortBy=updated&order=desc` returns real services including `openagentkey-mock-starter-key`, `openagentkey-mock-starter-renewal`, and `free-weather-service`
   - `GET /socket/online/stats` returns `code=0`
@@ -89,7 +89,7 @@ server: {
 Expected created files:
 
 - `src/api/http.ts` — shared envelope fetch and base URL helpers.
-- `src/api/privateChat.ts` — meta-socket private-chat history and conversation homes client.
+- `src/api/privateChat.ts` — metaso-p2p private-chat history and conversation homes client.
 - `src/delivery/db.ts` — IndexedDB facade and migrations.
 - `src/delivery/domain.ts` — shared buyer order/session/message/asset types.
 - `src/delivery/orderStore.ts` — pending/completed buyer order actions backed by IndexedDB.
@@ -100,8 +100,8 @@ Expected created files:
 - `src/components/delivery/DeliveryComposer.tsx`
 - `src/components/delivery/DeliveredAssetsPanel.tsx`
 - `src/components/delivery/AssetPreviewCard.tsx`
-- `scripts/smoke-meta-socket.mjs`
-- `docs/qa/meta-socket-private-chat-contract.md`
+- `scripts/smoke-metaso-p2p.mjs`
+- `docs/qa/metaso-p2p-private-chat-contract.md`
 - `docs/qa/buyer-productization-acceptance.md`
 - Tests mirroring each new module under `tests/`.
 
@@ -131,9 +131,9 @@ Expected modified files:
 
 ---
 
-## Task 1: P0 Release Foundation and Local meta-socket Wiring
+## Task 1: P0 Release Foundation and Local metaso-p2p Wiring
 
-**Purpose:** Make the current app buildable and connectable to local real meta-socket data without CORS issues.
+**Purpose:** Make the current app buildable and connectable to local real metaso-p2p data without CORS issues.
 
 **Files:**
 
@@ -152,7 +152,7 @@ Expected modified files:
 Add tests that prove:
 
 - `useWallet` rehydrate callback handles `undefined` state without TypeScript errors.
-- HTTP base `/meta-socket` produces `/meta-socket/api/bot-hub/...` URLs.
+- HTTP base `/metaso-p2p` produces `/metaso-p2p/api/bot-hub/...` URLs.
 - `connectSocket` calls Socket.IO with base URL and `path: '/socket/socket.io'`.
 - `buildSocketUrl` is removed or changed so it no longer encourages namespace-style Socket.IO usage.
 
@@ -185,14 +185,14 @@ onRehydrateStorage: () => (state) => {
 
 - [ ] **Step 3: Add Vite proxy**
 
-In `vite.config.ts`, add the `/meta-socket` proxy from `docs/architecture/meta-socket-local-api.md`.
+In `vite.config.ts`, add the `/metaso-p2p` proxy from `docs/architecture/metaso-p2p-local-api.md`.
 
 - [ ] **Step 4: Update env docs**
 
 In `.env.example`, document local real-data mode:
 
 ```dotenv
-VITE_META_SOCKET_BASE_URL=/meta-socket
+VITE_METASO_P2P_BASE_URL=/metaso-p2p
 VITE_USE_AGGREGATOR_MOCK=false
 VITE_USE_WS_MOCK=false
 ```
@@ -204,8 +204,8 @@ Keep production example `https://api.idchat.io` as a commented option.
 In `src/api/config.ts`, add a helper that trims trailing slashes but preserves relative bases:
 
 ```ts
-export function getNormalizedMetaSocketBaseUrl(): string {
-  return (import.meta.env.VITE_META_SOCKET_BASE_URL ?? '').replace(/\/+$/, '')
+export function getNormalizedMetasoP2PBaseUrl(): string {
+  return (import.meta.env.VITE_METASO_P2P_BASE_URL ?? '').replace(/\/+$/, '')
 }
 ```
 
@@ -232,7 +232,7 @@ io(baseUrl, {
 })
 ```
 
-If `baseUrl` is relative (`/meta-socket`), confirm Socket.IO works with that base and path under Vite proxy. If it does not, add a documented `VITE_META_SOCKET_SOCKET_BASE_URL` override and test both paths.
+If `baseUrl` is relative (`/metaso-p2p`), confirm Socket.IO works with that base and path under Vite proxy. If it does not, add a documented `VITE_METASO_P2P_SOCKET_BASE_URL` override and test both paths.
 
 - [ ] **Step 7: Verify**
 
@@ -254,32 +254,32 @@ Expected:
 ```bash
 git status --short
 # stage only task-owned changed files after inspecting the diff
-git commit -m "fix: wire local meta-socket and restore production build"
+git commit -m "fix: wire local metaso-p2p and restore production build"
 ```
 
 Then post an Eric development-journal buzz.
 
 ---
 
-## Task 2: P0 Real meta-socket Smoke Script and API Contract Fixtures
+## Task 2: P0 Real metaso-p2p Smoke Script and API Contract Fixtures
 
-**Purpose:** Give every later task a reliable local verification command against the real meta-socket service.
+**Purpose:** Give every later task a reliable local verification command against the real metaso-p2p service.
 
 **Files:**
 
-- Create: `scripts/smoke-meta-socket.mjs`
-- Create: `tests/fixtures/meta-socket/service-list-live-shape.json`
-- Create: `tests/fixtures/meta-socket/service-detail-live-shape.json`
+- Create: `scripts/smoke-metaso-p2p.mjs`
+- Create: `tests/fixtures/metaso-p2p/service-list-live-shape.json`
+- Create: `tests/fixtures/metaso-p2p/service-detail-live-shape.json`
 - Modify: `package.json`
 - Modify: `README.md`
-- Test: `tests/api/metaSocketShape.test.ts`
+- Test: `tests/api/metasoP2PShape.test.ts`
 
 - [ ] **Step 1: Add fixture-based shape tests**
 
 Create fixture tests that assert real local response shape without depending on live service availability:
 
 ```ts
-import listEnvelope from '../fixtures/meta-socket/service-list-live-shape.json'
+import listEnvelope from '../fixtures/metaso-p2p/service-list-live-shape.json'
 
 it('matches skill-service list v1 shape', () => {
   expect(listEnvelope.code).toBe(0)
@@ -298,15 +298,15 @@ it('matches skill-service list v1 shape', () => {
 
 - [ ] **Step 2: Add smoke script**
 
-`scripts/smoke-meta-socket.mjs` should:
+`scripts/smoke-metaso-p2p.mjs` should:
 
-- Read `META_SOCKET_BASE_URL`, default `http://127.0.0.1:18091`.
-- Read `META_SOCKET_SMOKE_METAID`, default `bothub-smoke-metaid`.
+- Read `METASO_P2P_BASE_URL`, default `http://127.0.0.1:18091`.
+- Read `METASO_P2P_SMOKE_METAID`, default `bothub-smoke-metaid`.
 - Check `/healthz`.
 - Fetch `/api/bot-hub/skill-service/list?size=3&chainName=mvc&sortBy=updated&order=desc`.
 - Fetch detail for the first returned service id with `?chainName=mvc`.
 - Check `/socket/online/stats`.
-- Use `socket.io-client` to connect to `META_SOCKET_BASE_URL` with:
+- Use `socket.io-client` to connect to `METASO_P2P_BASE_URL` with:
 
 ```js
 io(baseUrl, {
@@ -325,7 +325,7 @@ io(baseUrl, {
 In `package.json`:
 
 ```json
-"smoke:meta-socket": "node scripts/smoke-meta-socket.mjs"
+"smoke:metaso-p2p": "node scripts/smoke-metaso-p2p.mjs"
 ```
 
 - [ ] **Step 4: Update README local development section**
@@ -333,8 +333,8 @@ In `package.json`:
 Document:
 
 ```bash
-pnpm smoke:meta-socket
-VITE_META_SOCKET_BASE_URL=/meta-socket
+pnpm smoke:metaso-p2p
+VITE_METASO_P2P_BASE_URL=/metaso-p2p
 VITE_USE_AGGREGATOR_MOCK=false
 VITE_USE_WS_MOCK=false
 pnpm dev
@@ -346,7 +346,7 @@ Run:
 
 ```bash
 pnpm test api
-pnpm smoke:meta-socket
+pnpm smoke:metaso-p2p
 pnpm build
 ```
 
@@ -362,7 +362,7 @@ Expected:
 ```bash
 git status --short
 # stage only task-owned changed files after inspecting the diff
-git commit -m "chore: add local meta-socket smoke verification"
+git commit -m "chore: add local metaso-p2p smoke verification"
 ```
 
 Then post an Eric development-journal buzz.
@@ -375,11 +375,11 @@ Then post an Eric development-journal buzz.
 
 **Files:**
 
-- Modify: `scripts/smoke-meta-socket.mjs`
-- Create: `docs/qa/meta-socket-private-chat-contract.md`
-- Create: `tests/fixtures/meta-socket/private-chat-homes-live-shape.json`
-- Create: `tests/fixtures/meta-socket/private-chat-list-live-shape.json`
-- Test: `tests/api/metaSocketShape.test.ts`
+- Modify: `scripts/smoke-metaso-p2p.mjs`
+- Create: `docs/qa/metaso-p2p-private-chat-contract.md`
+- Create: `tests/fixtures/metaso-p2p/private-chat-homes-live-shape.json`
+- Create: `tests/fixtures/metaso-p2p/private-chat-list-live-shape.json`
+- Test: `tests/api/metasoP2PShape.test.ts`
 
 - [ ] **Step 1: Add private-chat fixtures and shape tests**
 
@@ -395,18 +395,18 @@ Tests must assert:
 - Both endpoints return `code = 0`.
 - Homes response contains a list-like conversation payload, or document if local data returns an empty but valid list.
 - Private-chat list returns `data.list`.
-- Each private-chat row can be normalized into the existing `PrivateChatItem` shape or the exact differences are documented in `docs/qa/meta-socket-private-chat-contract.md`.
+- Each private-chat row can be normalized into the existing `PrivateChatItem` shape or the exact differences are documented in `docs/qa/metaso-p2p-private-chat-contract.md`.
 
 - [ ] **Step 2: Extend smoke script with optional private-chat contract check**
 
 Add env vars:
 
 ```bash
-META_SOCKET_PRIVATE_CHAT_METAID=1JzFmwf498bXRyFiJTrxikSP7xh9iZ3JrX
-META_SOCKET_PRIVATE_CHAT_OTHER_METAID=idq160rca8swdygt7hn59em03nqhr96zmjd4yd668z
+METASO_P2P_PRIVATE_CHAT_METAID=1JzFmwf498bXRyFiJTrxikSP7xh9iZ3JrX
+METASO_P2P_PRIVATE_CHAT_OTHER_METAID=idq160rca8swdygt7hn59em03nqhr96zmjd4yd668z
 ```
 
-When both are set, `pnpm smoke:meta-socket` must:
+When both are set, `pnpm smoke:metaso-p2p` must:
 
 - Fetch `chat/homes/:metaid`.
 - Fetch `private-chat-list`.
@@ -418,7 +418,7 @@ Default behavior may skip private-chat live checks when env vars are absent, but
 
 - [ ] **Step 3: Document contract result**
 
-`docs/qa/meta-socket-private-chat-contract.md` must record:
+`docs/qa/metaso-p2p-private-chat-contract.md` must record:
 
 - Exact local URLs tested.
 - Whether `metaId` currently expects wallet MVC address, local metaid, or globalMetaId.
@@ -433,7 +433,7 @@ Run:
 
 ```bash
 pnpm test api ws
-META_SOCKET_PRIVATE_CHAT_METAID=1JzFmwf498bXRyFiJTrxikSP7xh9iZ3JrX META_SOCKET_PRIVATE_CHAT_OTHER_METAID=idq160rca8swdygt7hn59em03nqhr96zmjd4yd668z pnpm smoke:meta-socket
+METASO_P2P_PRIVATE_CHAT_METAID=1JzFmwf498bXRyFiJTrxikSP7xh9iZ3JrX METASO_P2P_PRIVATE_CHAT_OTHER_METAID=idq160rca8swdygt7hn59em03nqhr96zmjd4yd668z pnpm smoke:metaso-p2p
 pnpm build
 ```
 
@@ -1123,9 +1123,9 @@ Then post an Eric development-journal buzz.
 
 ## Task 10: P4 Private Chat History API Client
 
-**Purpose:** Fetch current wallet's prior private chat sessions/messages from local meta-socket.
+**Purpose:** Fetch current wallet's prior private chat sessions/messages from local metaso-p2p.
 
-**Prerequisite:** Task 2A must be complete. Use `docs/qa/meta-socket-private-chat-contract.md` as the source of truth for observed local identity parameters and response shape.
+**Prerequisite:** Task 2A must be complete. Use `docs/qa/metaso-p2p-private-chat-contract.md` as the source of truth for observed local identity parameters and response shape.
 
 **Files:**
 
@@ -1136,7 +1136,7 @@ Then post an Eric development-journal buzz.
 
 - [ ] **Step 1: Add fixtures**
 
-Use shapes from `docs/architecture/meta-socket-local-api.md`:
+Use shapes from `docs/architecture/metaso-p2p-local-api.md`:
 
 - `GET /api/group-chat/chat/homes/:metaid`
 - `GET /api/group-chat/private-chat-list?metaId=&otherMetaId=&cursor=&size=20`
@@ -1161,7 +1161,7 @@ export async function listPrivateChatHomes(metaId: string): Promise<PrivateChatH
 export async function listPrivateChatHistory(params: PrivateChatHistoryParams): Promise<PrivateChatHistoryPage>
 ```
 
-Use `/api/group-chat/...` under `getNormalizedMetaSocketBaseUrl()`.
+Use `/api/group-chat/...` under `getNormalizedMetasoP2PBaseUrl()`.
 
 - [ ] **Step 3: Identity resolution helper**
 
@@ -1173,7 +1173,7 @@ export function resolvePrivateChatMetaId(identity: WalletIdentity): string {
 }
 ```
 
-Reason: local meta-socket samples use an address-like value for `metaId`; if later contract changes, only this helper should change.
+Reason: local metaso-p2p samples use an address-like value for `metaId`; if later contract changes, only this helper should change.
 
 - [ ] **Step 4: Add error handling**
 
@@ -1199,7 +1199,7 @@ curl -sS 'http://127.0.0.1:18091/api/group-chat/chat/homes/1JzFmwf498bXRyFiJTrxi
 ```bash
 git status --short
 # stage only task-owned changed files after inspecting the diff
-git commit -m "feat: add meta-socket private chat history client"
+git commit -m "feat: add metaso-p2p private chat history client"
 ```
 
 Then post an Eric development-journal buzz.
@@ -1208,7 +1208,7 @@ Then post an Eric development-journal buzz.
 
 ## Task 11: P4 History Sync, Cache Hydration, and Live Merge
 
-**Purpose:** On wallet connect, render cached Delivery immediately, then merge meta-socket history and Socket.IO live messages without duplicates.
+**Purpose:** On wallet connect, render cached Delivery immediately, then merge metaso-p2p history and Socket.IO live messages without duplicates.
 
 **Files:**
 
@@ -1269,12 +1269,12 @@ Run:
 ```bash
 pnpm test delivery ws api
 pnpm build
-pnpm smoke:meta-socket
+pnpm smoke:metaso-p2p
 ```
 
 Manual:
 
-- Start dev server with local meta-socket env.
+- Start dev server with local metaso-p2p env.
 - Connect wallet.
 - Delivery should show cached data first if present and not duplicate live/history rows.
 
@@ -1306,9 +1306,9 @@ Then post an Eric development-journal buzz.
 
 Document:
 
-- Local meta-socket service prerequisites.
+- Local metaso-p2p service prerequisites.
 - `.env.local` values.
-- `pnpm smoke:meta-socket`.
+- `pnpm smoke:metaso-p2p`.
 - `pnpm dev`.
 - Chrome + Metalet login check.
 - Free-service order path.
@@ -1325,7 +1325,7 @@ Run:
 ```bash
 pnpm test
 pnpm build
-pnpm smoke:meta-socket
+pnpm smoke:metaso-p2p
 ```
 
 - [ ] **Step 3: Start dev server**
@@ -1333,7 +1333,7 @@ pnpm smoke:meta-socket
 Run:
 
 ```bash
-VITE_META_SOCKET_BASE_URL=/meta-socket VITE_USE_AGGREGATOR_MOCK=false VITE_USE_WS_MOCK=false pnpm dev -- --host 127.0.0.1
+VITE_METASO_P2P_BASE_URL=/metaso-p2p VITE_USE_AGGREGATOR_MOCK=false VITE_USE_WS_MOCK=false pnpm dev -- --host 127.0.0.1
 ```
 
 Do not leave the server running after the task is complete unless the user asks.
@@ -1343,7 +1343,7 @@ Do not leave the server running after the task is complete unless the user asks.
 Use Browser for basic UI:
 
 - Open `http://127.0.0.1:5176`.
-- Confirm real services load from local meta-socket.
+- Confirm real services load from local metaso-p2p.
 - Open service detail for `free-weather-service` if present.
 - Confirm Pay & Request modal opens.
 - Confirm Delivery layout renders.
@@ -1378,7 +1378,7 @@ Confirm:
 Allowed fixes:
 
 - Broken build/test.
-- Broken local meta-socket wiring.
+- Broken local metaso-p2p wiring.
 - Wallet connect UI impossible to use.
 - Delivery asset preview/download unusable.
 - Severe responsive layout overlap.
@@ -1417,7 +1417,7 @@ The full plan is complete only when:
 - The final independent review subagent has approved or all findings have been resolved.
 - `pnpm test` passes.
 - `pnpm build` passes.
-- `pnpm smoke:meta-socket` passes against `http://127.0.0.1:18091`.
+- `pnpm smoke:metaso-p2p` passes against `http://127.0.0.1:18091`.
 - Chrome + Metalet acceptance has been attempted and documented.
 - No provider-side feature, refund UI, or rating UI was added.
 - Working tree is clean.

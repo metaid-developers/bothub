@@ -6,7 +6,7 @@ async function loadOnlineBots() {
 
 describe('online bots API client', () => {
   beforeEach(() => {
-    vi.stubEnv('VITE_META_SOCKET_BASE_URL', 'https://socket.test')
+    vi.stubEnv('VITE_METASO_P2P_BASE_URL', 'https://metaso-p2p.test')
   })
 
   afterEach(() => {
@@ -18,7 +18,7 @@ describe('online bots API client', () => {
   it('hydrates current socket online items through profile data for display avatars', async () => {
     const avatarPin = `${'e'.repeat(64)}i0`
     const fetchMock = vi.fn(async (url: string) => {
-      if (url === 'https://socket.test/socket/online/list?page=1&size=20') {
+      if (url === 'https://metaso-p2p.test/socket/online/list?page=1&size=20') {
         return {
           json: async () => ({
             code: 0,
@@ -34,7 +34,7 @@ describe('online bots API client', () => {
           }),
         }
       }
-      if (url === 'https://socket.test/api/info/globalmetaid/1OnlineAddress') {
+      if (url === 'https://metaso-p2p.test/api/info/globalmetaid/1OnlineAddress') {
         return {
           ok: true,
           json: async () => ({

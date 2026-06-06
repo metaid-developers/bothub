@@ -4,7 +4,7 @@
 
 **Goal:** Make BotHub Delivery behave like the caller-side private chat view in `idframework/demo-chat`: provider/counterparty messages decrypt reliably, profile names and avatars render throughout Delivery, and follow-up messages can be sent from the Delivery input box.
 
-**Architecture:** Keep BotHub as a pure frontend React app using meta-socket for profile, private-chat history, and Socket.IO events. Reuse the existing Delivery store, IndexedDB cache, and ECDH AES crypto path; add the missing profile hydration and re-decryption loop so messages that arrived before a chat key was available can repair themselves after profile data loads.
+**Architecture:** Keep BotHub as a pure frontend React app using metaso-p2p for profile, private-chat history, and Socket.IO events. Reuse the existing Delivery store, IndexedDB cache, and ECDH AES crypto path; add the missing profile hydration and re-decryption loop so messages that arrived before a chat key was available can repair themselves after profile data loads.
 
 **Tech Stack:** Vite 5, React 18, TypeScript 5 strict, Tailwind CSS, zustand, IndexedDB, socket.io-client, CryptoJS, Vitest + Testing Library, Chrome + Metalet for manual acceptance.
 
@@ -27,10 +27,10 @@ Do not implement:
 - Rich delivered asset management beyond making decrypted messages and existing asset previews work.
 - Any dedicated BotHub backend.
 
-If an observed failure is caused by missing or broken meta-socket data, create an issue markdown file in:
+If an observed failure is caused by missing or broken metaso-p2p data, create an issue markdown file in:
 
 ```text
-/Users/tusm/Documents/MetaID_Projects/meta-socket/issues/
+/Users/tusm/Documents/MetaID_Projects/metaso-p2p/issues/
 ```
 
 Use a filename like `YYYY-MM-DD-bothub-delivery-profile-gap.md`, include the failing URL, expected shape, actual shape, and BotHub impact.
@@ -39,7 +39,7 @@ Use a filename like `YYYY-MM-DD-bothub-delivery-profile-gap.md`, include the fai
 
 Read these before coding:
 
-- `docs/architecture/meta-socket-local-api.md`
+- `docs/architecture/metaso-p2p-local-api.md`
 - `src/routes/Delivery.tsx`
 - `src/delivery/decrypt.ts`
 - `src/delivery/deliverySync.ts`
@@ -69,7 +69,7 @@ Several useful pieces already exist, but they do not yet close the user-visible 
 - `src/routes/Delivery.tsx` can fetch a selected provider profile and apply profile fallback to display messages.
 - However, if a message was first stored as ciphertext because the peer chat key was missing, `Delivery.tsx` later attaches the fetched key to the message object but does not re-run decryption. The UI can still show ciphertext even after the key is known.
 - Session list avatar/name hydration is mostly selected-session driven. Non-selected visible sessions can continue showing initials and truncated IDs.
-- `src/ws/privateChat.ts` normalizes common fields, but it should explicitly cover demo-chat/meta-socket variants such as `createUserInfo`, `receiveUserInfo`, `chat_public_key`, `chatPublicKeyPinId`, and alternate `from`/`to` aliases.
+- `src/ws/privateChat.ts` normalizes common fields, but it should explicitly cover demo-chat/metaso-p2p variants such as `createUserInfo`, `receiveUserInfo`, `chat_public_key`, `chatPublicKeyPinId`, and alternate `from`/`to` aliases.
 - `src/delivery/sendMessage.ts` should reuse the createPin response-lost handling from the order flow so a successful wallet broadcast with lost extension response does not look like a hard send failure.
 
 ## 3. File Plan
@@ -753,7 +753,7 @@ Add tests in `tests/api/userProfile.test.ts` for these inputs:
 
 ```ts
 const pinId = `${'c'.repeat(64)}i0`
-const expected = `/meta-socket/api/v1/users/avatar/accelerate/${pinId}?process=thumbnail`
+const expected = `/metaso-p2p/api/v1/users/avatar/accelerate/${pinId}?process=thumbnail`
 
 expect(normalizeAvatarUrl(`/api/v1/users/avatar/accelerate/${pinId}?process=thumbnail`))
   .toBe(expected)
@@ -765,14 +765,14 @@ expect(normalizeAvatarUrl(`https://file.metaid.io/metafile-indexer/content/${pin
   .toBe(expected)
 ```
 
-Use the existing test setup style: `vi.stubEnv('VITE_META_SOCKET_BASE_URL', '/meta-socket/')`, so expected URLs should start with `/meta-socket`.
+Use the existing test setup style: `vi.stubEnv('VITE_METASO_P2P_BASE_URL', '/metaso-p2p/')`, so expected URLs should start with `/metaso-p2p`.
 
 - [ ] **Step 2: Implement only missing URL cases**
 
 In `normalizeAvatarUrl()`:
 
 - Keep `metafile://` -> `/api/v1/users/avatar/accelerate/:pinId?process=thumbnail`.
-- Treat bare `/api/v1/...`, `/users/avatar/accelerate/...`, `/metafile-indexer/...`, and `/files/content/...` paths as meta-socket-relative URLs.
+- Treat bare `/api/v1/...`, `/users/avatar/accelerate/...`, `/metafile-indexer/...`, and `/files/content/...` paths as metaso-p2p-relative URLs.
 - Convert `file.metaid.io/metafile-indexer/content/:pinId` and `file.metaid.io/metafile-indexer/api/v1/files/content/:pinId` to the local accelerated avatar thumbnail when a pin id is present.
 - Continue returning `undefined` for placeholder `/content/` values.
 
@@ -924,7 +924,7 @@ Only include optional files if actually changed. Post an Eric development-journa
 **Files:**
 
 - Modify docs only if acceptance findings need to be recorded.
-- Create meta-socket issue docs only if meta-socket is missing required data.
+- Create metaso-p2p issue docs only if metaso-p2p is missing required data.
 
 - [ ] **Step 1: Run full automated verification**
 
@@ -940,7 +940,7 @@ git diff --check
 
 Expected: all pass.
 
-- [ ] **Step 2: Confirm local meta-socket is healthy**
+- [ ] **Step 2: Confirm local metaso-p2p is healthy**
 
 Run:
 
@@ -951,7 +951,7 @@ curl -sS http://127.0.0.1:18091/healthz
 Expected:
 
 ```json
-{"code":0,"data":{"service":"meta-socket","status":"ok","version":"dev"}}
+{"code":0,"data":{"service":"metaso-p2p","status":"ok","version":"dev"}}
 ```
 
 If not healthy, do not rewrite BotHub to work around it. Record the environment issue.
@@ -985,7 +985,7 @@ Acceptance checks:
 11. Let Metalet show the createPin authorization for `/protocols/simplemsg`.
 12. Ask for or wait for human action-time confirmation before clicking the final wallet confirm.
 13. After confirmation, confirm the composer clears and an outgoing message appears.
-14. Query meta-socket history to verify the follow-up is present:
+14. Query metaso-p2p history to verify the follow-up is present:
 
 ```bash
 curl -sS 'http://127.0.0.1:18091/api/group-chat/private-chat-list?metaId=<buyer-metaid-or-address>&otherMetaId=<provider-globalMetaId>&size=5'
@@ -1017,7 +1017,7 @@ Check:
 
 If only code tasks were already committed and no docs changed, no extra commit is required.
 
-If acceptance notes or meta-socket issue docs were added:
+If acceptance notes or metaso-p2p issue docs were added:
 
 ```bash
 git add <changed-docs>
@@ -1036,7 +1036,7 @@ This task is done only when all are true:
 - `pnpm build` passes.
 - No standard private simplemsg flow calls `metalet.eciesDecrypt`.
 - Historical Delivery messages that first stored as ciphertext are retried after profile chat key hydration.
-- Session list, session header, and incoming message bubbles use fetched profile names and avatars where meta-socket provides them.
+- Session list, session header, and incoming message bubbles use fetched profile names and avatars where metaso-p2p provides them.
 - Delivery composer can send a follow-up using the resolved provider chat key.
 - Chrome + Metalet acceptance has been attempted and recorded. If blocked, the blocker is explicit and reproducible.
 - Every commit has an Eric development-journal buzz.

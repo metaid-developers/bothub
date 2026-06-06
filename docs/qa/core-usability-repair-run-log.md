@@ -5,11 +5,11 @@ Task 7 independent acceptance run for `codex/buyer-productization`.
 - Date: 2026-05-30 00:06 CST
 - Baseline: `1fc5eb4` (`fix: verify delivery asset protocol rendering`)
 - Local app: `http://localhost:5177`
-- meta-socket: `http://127.0.0.1:18091`
+- metaso-p2p: `http://127.0.0.1:18091`
 - Dev command:
 
 ```bash
-VITE_META_SOCKET_BASE_URL=/meta-socket VITE_USE_AGGREGATOR_MOCK=false VITE_USE_WS_MOCK=false pnpm dev -- --host 127.0.0.1
+VITE_METASO_P2P_BASE_URL=/metaso-p2p VITE_USE_AGGREGATOR_MOCK=false VITE_USE_WS_MOCK=false pnpm dev -- --host 127.0.0.1
 ```
 
 Vite reported port `5176` in use and selected `5177`.
@@ -18,15 +18,15 @@ Vite reported port `5176` in use and selected `5177`.
 
 | Check | Result | Evidence |
 | --- | --- | --- |
-| meta-socket health | passed | `curl http://127.0.0.1:18091/healthz` returned `code: 0`, `status: ok`, `version: dev`. |
-| meta-socket smoke | passed | `pnpm smoke:meta-socket` returned `ok: true`, list count `3`, service detail id `f6b810a...c1ai0`, online stats, and Socket.IO `heartbeatAck: true`. |
-| Dev server | passed | Vite served `http://localhost:5177/` with real `/meta-socket` proxy settings and mocks disabled. |
+| metaso-p2p health | passed | `curl http://127.0.0.1:18091/healthz` returned `code: 0`, `status: ok`, `version: dev`. |
+| metaso-p2p smoke | passed | `pnpm smoke:metaso-p2p` returned `ok: true`, list count `3`, service detail id `f6b810a...c1ai0`, online stats, and Socket.IO `heartbeatAck: true`. |
+| Dev server | passed | Vite served `http://localhost:5177/` with real `/metaso-p2p` proxy settings and mocks disabled. |
 
 ## Browser Smoke
 
 | Acceptance item | Status | Evidence |
 | --- | --- | --- |
-| Bot Hub loads real services | passed | In-app Browser showed real service cards including `Free Ecommerce Store Blueprint`, `Free Social Media Growth Plan`, and other meta-socket services. |
+| Bot Hub loads real services | passed | In-app Browser showed real service cards including `Free Ecommerce Store Blueprint`, `Free Social Media Growth Plan`, and other metaso-p2p services. |
 | Delivery route renders | passed | `/delivery` rendered `Delivery`, `Sessions`, `Delivered assets`, and `Delivery follow-up composer` sections. |
 | Console crashes | passed | In-app Browser `tab.dev.logs({ levels: ['error'] })` returned `[]` for desktop and mobile Delivery checks. |
 | Desktop layout | passed | At `1440x900`, `document.body.scrollWidth` was `1440`, matching viewport width; no obvious control overlap was observed. |
@@ -39,7 +39,7 @@ Vite reported port `5176` in use and selected `5177`.
 | Connect Metalet | passed | Chrome opened `http://localhost:5177/` already connected; header showed fallback identity `idq1zf...kgv0` with full title `idq1zfazvxaq69uw6txe3ewce30ewyhy9a7mzykgv0`. |
 | Delivery hydration | passed with concerns | `/delivery` hydrated existing sessions and rendered encrypted historical rows without app console errors. |
 | ECIES popup loop | passed with concerns | Five stale Metalet `EciesDecrypt` authorize tabs from 2026-05-29 15:37 UTC were already open. A fresh Delivery reload waited 5 seconds and the count stayed `5`; no new ECIES authorize tab was created during this run. |
-| Socket reconnect | concern | Chrome Delivery showed a `WebSocket connection failed: timeout` banner while direct terminal Socket.IO probes with the same `globalMetaId` heartbeat-acked. This suggests a browser/proxy/session issue worth follow-up, not a terminal meta-socket outage. |
+| Socket reconnect | concern | Chrome Delivery showed a `WebSocket connection failed: timeout` banner while direct terminal Socket.IO probes with the same `globalMetaId` heartbeat-acked. This suggests a browser/proxy/session issue worth follow-up, not a terminal metaso-p2p outage. |
 
 ## Free Order Flow
 
@@ -101,7 +101,7 @@ Run before commit:
 pnpm test delivery components/delivery
 pnpm build
 pnpm lint
-pnpm smoke:meta-socket
+pnpm smoke:metaso-p2p
 ```
 
 | Command | Result | Notes |
@@ -109,4 +109,4 @@ pnpm smoke:meta-socket
 | `pnpm test delivery components/delivery` | passed | 20 test files / 140 tests passed. Existing React Router future-flag warnings were observed. |
 | `pnpm build` | passed | TypeScript project build and Vite production build completed. |
 | `pnpm lint` | failed | Existing source lint failures: `src/api/aggregator.ts` violates `react-hooks/rules-of-hooks`, `src/delivery/assetParser.ts` has `no-useless-escape`, and fast-refresh warnings exist in `FiltersBar.tsx`, `main.tsx`, and `BotHub.tsx`. These were not introduced by this docs-only Task 7 run. |
-| `pnpm smoke:meta-socket` | passed | `ok: true` against `http://127.0.0.1:18091`; private-chat live check skipped because optional env pair was unset. |
+| `pnpm smoke:metaso-p2p` | passed | `ok: true` against `http://127.0.0.1:18091`; private-chat live check skipped because optional env pair was unset. |

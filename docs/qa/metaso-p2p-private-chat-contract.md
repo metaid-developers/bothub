@@ -1,6 +1,6 @@
-# Meta-Socket Private Chat Contract Spike
+# Metaso-P2P Private Chat Contract Spike
 
-Task 2A sampled the local meta-socket service at `http://127.0.0.1:18091` on `2026-05-28` for the HTTP private-chat history contract.
+Task 2A sampled the local metaso-p2p service at `http://127.0.0.1:18091` on `2026-05-28` for the HTTP private-chat history contract.
 
 ## Exact Local URLs Tested
 

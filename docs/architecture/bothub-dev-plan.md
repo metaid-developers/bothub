@@ -4,7 +4,7 @@
 
 **Goal:** Build a static React SPA for ordinary caller-side users who do not want to install IDBots, run Codex, or configure LLM/runtime tools: they browse remote skill-service providers, submit a manual request with Metalet, and manage delivered digital assets.
 
-**Architecture:** Vite + React + TS SPA. Talks directly to `meta-socket` HTTP (`/api/bot-hub/skill-service/*`) and Socket.IO (`/socket/socket.io`). All wallet operations go through Metalet (`window.metaidwallet.*`). No BotHub backend in MVP.
+**Architecture:** Vite + React + TS SPA. Talks directly to `metaso-p2p` HTTP (`/api/bot-hub/skill-service/*`) and Socket.IO (`/socket/socket.io`). All wallet operations go through Metalet (`window.metaidwallet.*`). No BotHub backend in MVP.
 
 **Tech Stack:** Vite 5, React 18, TypeScript 5 (strict), Tailwind CSS 3, Headless UI, Heroicons, React Router v6, TanStack Query v5, zustand, socket.io-client 4.8, Vitest + Testing Library. Package manager: **pnpm**.
 
@@ -14,10 +14,10 @@
 - UI / GigSquare: `/Users/tusm/Documents/MetaID_Projects/IDBots/IDBots`
 - A2A delivery rendering: `/Users/tusm/Documents/MetaID_Projects/IDBots/IDBots/src/renderer/components/cowork/A2AMessageItem.tsx`
 - Wallet: `/Users/tusm/Documents/MetaID_Projects/metalet-extension-next`
-- API + WS: `/Users/tusm/Documents/MetaID_Projects/meta-socket`
+- API + WS: `/Users/tusm/Documents/MetaID_Projects/metaso-p2p`
 
 **Spec & design references:**
-- `meta-socket/docs/specs/2026-05-28-bot-hub-skill-service-aggregation-api.md`
+- `metaso-p2p/docs/specs/2026-05-28-bot-hub-skill-service-aggregation-api.md`
 - `bothub/docs/architecture/bothub-design.md`
 - `IDBots/src/main/shared/orderMessage.js` (order payload contract)
 
@@ -26,7 +26,7 @@
 ## Pre-flight
 
 - [x] Decisions D1–D14 locked — see `bothub-design.md` §0.
-- [x] **`VITE_META_SOCKET_BASE_URL`** → environment-specific meta-socket deployment URL; override in `.env.local` for local/staging. The target must expose native `/api/bot-hub/*`, private-chat history routes, and `/socket/socket.io`; do not use idchat `/chat-api/` as the BotHub backend.
+- [x] **`VITE_METASO_P2P_BASE_URL`** → environment-specific metaso-p2p deployment URL; override in `.env.local` for local/staging. The target must expose native `/api/bot-hub/*`, private-chat history routes, and `/socket/socket.io`; do not use idchat `/chat-api/` as the BotHub backend.
 - [x] **CORS** — will allow BotHub origin when API ships; not a blocker for MVP.
 - [x] **Mock-first** — until aggregator is live, `VITE_USE_AGGREGATOR_MOCK=true` (default in dev) serves fixtures matching the frozen spec. Flip to `false` to hit real HTTP.
 - [x] **Design mockup** — layout reference: `docs/design/bothub-mockup.png` (three-column Bot Hub + Delivery sessions/chat).
@@ -78,17 +78,17 @@
 - `src/api/aggregator.types.ts` — `SkillServiceItem`, `ProviderInfo`, `ListResponse`, `DetailResponse`, `Envelope<T>`.
 - `src/api/aggregator.ts` — `listServices(params)`, `getServiceDetail(id, params?)`.
 - `src/api/queries.ts` — `useServicesQuery`, `useServiceDetailQuery` (TanStack Query hooks).
-- `src/api/config.ts` — read `import.meta.env.VITE_META_SOCKET_BASE_URL`.
+- `src/api/config.ts` — read `import.meta.env.VITE_METASO_P2P_BASE_URL`.
 - `tests/api/aggregator.test.ts` — uses `msw` (or fetch-mock) to verify list & detail parse + error envelope.
 - `tests/fixtures/aggregator/list.json`, `detail.json`, `error-40400.json`.
 
 **Files (modify):**
 - `src/main.tsx` — wrap app in `<QueryClientProvider>`.
-- `.env.example` — add `VITE_META_SOCKET_BASE_URL`.
+- `.env.example` — add `VITE_METASO_P2P_BASE_URL`.
 
 - [x] **M2 complete** — types, client, mock, queries, tests (commit `ab3151c`).
 
-**Verify:** `pnpm test api` green. Manual: with `VITE_META_SOCKET_BASE_URL=https://staging.example` and a live aggregator, a simple debug route logs the list.
+**Verify:** `pnpm test api` green. Manual: with `VITE_METASO_P2P_BASE_URL=https://staging.example` and a live aggregator, a simple debug route logs the list.
 
 **Commit:** `feat: aggregator api types, client, and react query hooks`
 
@@ -282,9 +282,9 @@ Refunds and ratings remain out of the first release UI, but all order/session/as
 
 ---
 
-## M9: Release foundation + meta-socket boundary hardening
+## M9: Release foundation + metaso-p2p boundary hardening
 
-**Goal:** Make the app buildable, deployable as a pure SPA, and explicit about every meta-socket boundary before touching larger UI work.
+**Goal:** Make the app buildable, deployable as a pure SPA, and explicit about every metaso-p2p boundary before touching larger UI work.
 
 **Files (create):**
 - `src/api/privateChat.ts` — HTTP client for `/group-chat/private-chat-list` and `/group-chat/private-chat-list-by-index`.
@@ -297,10 +297,10 @@ Refunds and ratings remain out of the first release UI, but all order/session/as
 - `src/wallet/useWallet.ts` — fix TypeScript rehydrate undefined-state build failure.
 - `src/api/config.ts` — centralize base URL, mock flags, and production/staging env validation.
 - `.env.example` — document production, staging, and mock modes.
-- `README.md` — document pure frontend deployment and meta-socket dependencies.
+- `README.md` — document pure frontend deployment and metaso-p2p dependencies.
 
 - [ ] **Step 1:** Fix `useWallet` rehydrate guard so `pnpm build` passes.
-- [ ] **Step 2:** Add `privateChat.ts` types that mirror `meta-socket/docs/IDCHAT_API_CONTRACT.md` PrivateMessage shape.
+- [ ] **Step 2:** Add `privateChat.ts` types that mirror `metaso-p2p/docs/IDCHAT_API_CONTRACT.md` PrivateMessage shape.
 - [ ] **Step 3:** Add `userInfo.ts` for provider/user profile hydration.
 - [ ] **Step 4:** Add API tests for success envelope, error envelope, empty history, and cursor/index params.
 - [ ] **Step 5:** Add deployment notes: static hosting, required env vars, no BotHub backend, CORS expectation.
@@ -308,9 +308,9 @@ Refunds and ratings remain out of the first release UI, but all order/session/as
 **Verify:**
 - `pnpm test api wallet`
 - `pnpm build`
-- Manual: set `VITE_USE_AGGREGATOR_MOCK=false` and confirm list/detail requests target `VITE_META_SOCKET_BASE_URL`.
+- Manual: set `VITE_USE_AGGREGATOR_MOCK=false` and confirm list/detail requests target `VITE_METASO_P2P_BASE_URL`.
 
-**Commit:** `fix: harden meta-socket api boundary and build readiness`
+**Commit:** `fix: harden metaso-p2p api boundary and build readiness`
 
 ---
 
@@ -432,7 +432,7 @@ Refunds and ratings remain out of the first release UI, but all order/session/as
 
 ## M13: History sync, completion states, and release checklist
 
-**Goal:** Make Delivery reliable after refresh, reconnect, and time gaps by merging meta-socket history with IndexedDB and live Socket.IO pushes.
+**Goal:** Make Delivery reliable after refresh, reconnect, and time gaps by merging metaso-p2p history with IndexedDB and live Socket.IO pushes.
 
 **Files (create):**
 - `src/delivery/historySync.ts`
@@ -467,7 +467,7 @@ Refunds and ratings remain out of the first release UI, but all order/session/as
 **Verify:**
 - `pnpm test`
 - `pnpm build`
-- Manual checklist in `docs/release/manual-checklist.md` completed against staging meta-socket.
+- Manual checklist in `docs/release/manual-checklist.md` completed against staging metaso-p2p.
 
 **Commit:** `feat: sync delivery history and define release checklist`
 

@@ -32,14 +32,14 @@ describe('socket client', () => {
 
     const { connectSocket } = await loadSocketModule()
     connectSocket({
-      baseUrl: '/meta-socket/',
+      baseUrl: '/metaso-p2p/',
       globalMetaId: ' idq1abc ',
       onEnvelope: vi.fn(),
     })
 
     expect(ioMock).toHaveBeenCalledOnce()
     expect(ioMock).toHaveBeenCalledWith({
-      path: '/meta-socket/socket/socket.io',
+      path: '/metaso-p2p/socket/socket.io',
       query: { metaid: 'idq1abc', type: 'app' },
       transports: ['websocket', 'polling'],
       reconnection: true,
@@ -48,19 +48,19 @@ describe('socket client', () => {
     })
   })
 
-  it('connectSocket keeps absolute host URL with meta-socket Socket.IO path', async () => {
+  it('connectSocket keeps absolute host URL with metaso-p2p Socket.IO path', async () => {
     const socket = stubSocket()
     ioMock.mockReturnValue(socket)
 
     const { connectSocket } = await loadSocketModule()
     connectSocket({
-      baseUrl: 'https://meta-socket.example.com/',
+      baseUrl: 'https://metaso-p2p.example.com/',
       globalMetaId: 'idq1abc',
       onEnvelope: vi.fn(),
     })
 
     expect(ioMock).toHaveBeenCalledOnce()
-    expect(ioMock).toHaveBeenCalledWith('https://meta-socket.example.com', {
+    expect(ioMock).toHaveBeenCalledWith('https://metaso-p2p.example.com', {
       path: '/socket/socket.io',
       query: { metaid: 'idq1abc', type: 'app' },
       transports: ['websocket', 'polling'],
@@ -76,14 +76,14 @@ describe('socket client', () => {
 
     const { connectSocket } = await loadSocketModule()
     connectSocket({
-      baseUrl: 'https://host.example/meta-socket/',
+      baseUrl: 'https://host.example/metaso-p2p/',
       globalMetaId: 'idq1abc',
       onEnvelope: vi.fn(),
     })
 
     expect(ioMock).toHaveBeenCalledOnce()
     expect(ioMock).toHaveBeenCalledWith('https://host.example', {
-      path: '/meta-socket/socket/socket.io',
+      path: '/metaso-p2p/socket/socket.io',
       query: { metaid: 'idq1abc', type: 'app' },
       transports: ['websocket', 'polling'],
       reconnection: true,
